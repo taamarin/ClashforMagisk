@@ -1,0 +1,27 @@
+#!/system/bin/sh
+
+scripts=`realpath $0`
+scripts_dir=`dirname ${scripts}`
+service_path="${scripts_dir}/clash.service"
+php_path="${scripts_dir}/php.service"
+tproxy_path="${scripts_dir}/clash.tproxy"
+signal_file="${scripts_dir}/../run/cmdRunning"
+Clash_run_path="${scripts_dir}/../run"
+
+events=$1
+monitor_dir=$2
+monitor_file=$3
+
+service_control() {
+    if [ "${monitor_file}" = "disable" ] ; then
+        touch ${signal_file}
+        if [ "${events}" = "d" ] ; then
+            ${service_path} -s && ${tproxy_path} -s
+        elif [ "${events}" = "n" ] ; then
+            ${service_path} -k && ${tproxy_path} -k
+        fi
+        rm ${signal_file}
+    fi
+}
+
+service_control

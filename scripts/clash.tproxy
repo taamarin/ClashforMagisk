@@ -1,0 +1,71 @@
+#!/system/bin/sh
+
+scripts=`realpath $0`
+scripts_dir=`dirname ${scripts}`
+. /${scripts_dir}/clash.config
+
+apply_rules() {
+    ip rule add fwmark ${mark_id} lookup ${mark_id}
+    ip route add local default dev lo table ${mark_id}
+
+    ${iptables_wait} -t mangle -N CLASH
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH -d ${subnet} -j RETURN
+    done
+
+    ${iptables_wait} -t mangle -A CLASH -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH -p udp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+
+    ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+    ${iptables_wait} -t mangle -A PREROUTING -j CLASH
+    ${iptables_wait} -t mangle -N CLASH_LOCAL
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
+    done
+
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A OUTPUT -p tcp -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    ${iptables_wait} -t mangle -A OUTPUT -p udp -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+    ${iptables_wait} -t mangle -A OUTPUT -j CLASH_LOCAL
+    
+    echo "[info] : aturan Iptables diterapkan." >> ${CFM_logs_file}
+    echo "[info] : connected." >> ${CFM_logs_file}
+}
+
+flush_rules() {
+    ip rule del fwmark ${mark_id} table ${mark_id}
+    ip route del local default dev lo table ${mark_id}
+
+    ${iptables_wait} -t nat -D OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+    ${iptables_wait} -t mangle -D PREROUTING -j CLASH
+    ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
+    ${iptables_wait} -t mangle -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+    ${iptables_wait} -t mangle -F CLASH
+    ${iptables_wait} -t mangle -X CLASH
+    ${iptables_wait} -t mangle -F CLASH_LOCAL
+    ${iptables_wait} -t mangle -X CLASH_LOCAL
+
+    echo "[info] : aturan Iptables dihapus." >> ${CFM_logs_file}
+    echo "[info] : disconnect." >> ${CFM_logs_file}
+}
+
+while getopts ":sk" signal ; do
+    case ${signal} in
+        s)
+            apply_rules
+            ;;
+        k)
+            flush_rules
+            ;;
+        ?)
+            echo ""
+            ;;
+    esac
+done
