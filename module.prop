@@ -1,6 +1,6 @@
-id=ClashforMagisk
+id=Clash_for_Magisk
 name=Clash For Magisk
 version=v1.9.1
 versionCode=20220225
 author=Taamarin
-description= Proxy Transparan Clash.
+description=Clash core with service scripts for Android

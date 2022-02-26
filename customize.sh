@@ -5,7 +5,8 @@ status=""
 architecture=""
 system_gid="1000"
 system_uid="1000"
-clash_data_dir="/data/adb/clash"
+clash_data_dir="/data/clash"
+#clash_data_dir="/data/adb/clash"
 modules_dir="/data/adb/modules"
 bin_path="/system/bin/"
 dns_path="/system/etc"
@@ -33,7 +34,6 @@ mkdir -p ${MODPATH}${ca_path}
 mkdir -p ${clash_data_dir}/yacd-gh-pages
 mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
-mkdir -p ${clash_data_dir}/confs
 mkdir -p ${clash_data_dir}/scripts
 
 download_clash_zip="${clash_data_dir}/run/clash-core.zip"
@@ -69,9 +69,9 @@ else
     latest_clash_version=custom
   else
     # download latest clash core from official link
-    ui_print "- Hubungkan tautan unduhan clash resmi."
+    ui_print "- Hubungkan tautan unduhan forks-clash."
     
-    official_clash_link="https://github.com/taamarin/MetaforCfm/releases"
+    forks_clash_link="https://github.com/taamarin/MetaforCfm/releases"
 
     if [ -x "$(which wget)" ] ; then
       latest_clash_version=`wget -qO- https://api.github.com/repos/taamarin/MetaforCfm/releases | grep -m 1 "tag_name" | grep -o "v[0-9.]*"`
@@ -93,11 +93,11 @@ else
     ui_print "- Unduh inti clash terbaru ${latest_clash_version}-${ARCH}"
 
     if [ -x "$(which wget)" ] ; then
-      wget "${official_clash_link}/download/${latest_clash_version}/${version}" -O "${download_clash_zip}" >&2
+      wget "${forks_clash_link}/download/${latest_clash_version}/${version}" -O "${download_clash_zip}" >&2
     elif [ -x "$(which curl)" ]; then
-      curl "${official_clash_link}/download/${latest_clash_version}/${version}" -kLo "${download_clash_zip}" >&2
+      curl "${forks_clash_link}/download/${latest_clash_version}/${version}" -kLo "${download_clash_zip}" >&2
     elif [ -x "/data/adb/magisk/busybox" ] ; then
-      ${busybox_data_dir} wget "${official_clash_link}/download/${latest_clash_version}/${version}" -O "${download_clash_zip}" >&2
+      ${busybox_data_dir} wget "${forks_clash_link}/download/${latest_clash_version}/${version}" -O "${download_clash_zip}" >&2
     else
       ui_print "- Error: tidak dapat menemukan curl atau wget, silakan instal."
       abort
@@ -129,9 +129,8 @@ fi
 ui_print "- Unduh Selesai"
 unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
-#unzip -j -o "${ZIPFILE}" 'cfm_service.sh' -d ${clash_service} >&2
+rm -rf ${clash_data_dir_core}/clash
 set_perm  ${MODPATH}/service.sh    0  0  0755
-#set_perm  ${clash_service}/cfm_service.sh    0  0  0755
 
 # install clash execute file
 ui_print "- Proses Core $ARCH execute files"
@@ -151,8 +150,6 @@ rm "${download_scripts_zip}"
 
 # copy clash data and config
 ui_print "- Salin konfigurasi Clash dan file data"
-#unzip -j -o "${ZIPFILE}" "scripts/*" -d ${clash_data_sc} >&2
-#unzip -j -o "${ZIPFILE}" "confs/*" -d ${clash_data_dir}/confs >&2
 unzip -o "${ZIPFILE}" -x 'META-INF/*' -d ${MODPATH} >&2
 
 if [ ! -f "${clash_data_dir}/config.yaml" ] ; then
@@ -160,8 +157,6 @@ if [ ! -f "${clash_data_dir}/config.yaml" ] ; then
 fi
 
 rm -rf ${MODPATH}/scripts
-rm -rf ${MODPATH}/confs
-rm -rf ${MODPATH}/cfm_service.sh
 rm -rf ${clash_data_dir}/scripts/config.yaml
 sleep 1
 
@@ -169,7 +164,7 @@ sleep 1
 ui_print "- Create module.prop"
 rm -rf ${MODPATH}/module.prop
 touch ${MODPATH}/module.prop
-echo "id=ClashforMagisk" > ${MODPATH}/module.prop
+echo "id=Clash_for_Magisk" > ${MODPATH}/module.prop
 echo "name=Clash for Magisk" >> ${MODPATH}/module.prop
 echo -n "version=Module v1.9.1, Core " >> ${MODPATH}/module.prop
 echo ${latest_clash_version} >> ${MODPATH}/module.prop
@@ -195,14 +190,7 @@ set_perm  ${clash_data_dir}/scripts/clash.tproxy 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.tool 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.inotify 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.service 0  0  0755
-set_perm  ${clash_data_dir}/scripts/start.sh 0  0  0755
 set_perm  ${clash_data_dir}/clash.config ${system_uid} ${system_gid} 0755
-set_perm  ${clash_data_dir}/packages.list ${system_uid} ${system_gid} 0644
-set_perm  ${clash_service}/cfm_service.sh  0  0  0755
-
-
-
-
 
 
 
