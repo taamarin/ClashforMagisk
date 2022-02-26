@@ -5,8 +5,7 @@ status=""
 architecture=""
 system_gid="1000"
 system_uid="1000"
-clash_data_dir="/data/clash"
-#clash_data_dir="/data/adb/clash"
+clash_data_dir="/data/adb/clash"
 modules_dir="/data/adb/modules"
 bin_path="/system/bin/"
 dns_path="/system/etc"
@@ -164,7 +163,7 @@ sleep 1
 ui_print "- Create module.prop"
 rm -rf ${MODPATH}/module.prop
 touch ${MODPATH}/module.prop
-echo "id=Clash_for_Magisk" > ${MODPATH}/module.prop
+echo "id=ClashforMagisk" > ${MODPATH}/module.prop
 echo "name=Clash for Magisk" >> ${MODPATH}/module.prop
 echo -n "version=Module v1.9.1, Core " >> ${MODPATH}/module.prop
 echo ${latest_clash_version} >> ${MODPATH}/module.prop
