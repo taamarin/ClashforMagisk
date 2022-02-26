@@ -14,8 +14,6 @@ dns:
   enhanced-mode: redir-host
   nameserver:
     - 1.1.1.1
-  fallback:
-    - 1.0.0.1
 proxies:
   - {name: SG 1, server: 194.233.79.194, port: 443, udp: true, type: trojan, password: 9c4ead50-7889-11ec-8ec5-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
   
