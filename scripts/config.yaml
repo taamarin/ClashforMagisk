@@ -1,36 +1,35 @@
-redir-port: 7890
 tproxy-port: 9898
+bind-address: '*'
+mode: rule
+allow-lan: true
+log-level: silent
+external-controller: 0.0.0.0:9090
+external-ui: yacd-gh-pages
+unified-delay: true
+ipv6: false
 dns:
   enable: true
   ipv6: true
   listen: 0.0.0.0:1053
-  enhanced-mode: fake-ip
-tun:
-  enable: false
+  enhanced-mode: redir-host
+  nameserver:
+    - 1.1.1.1
+  fallback:
+    - 1.0.0.1
 proxies:
+  - {name: SG 1, server: 194.233.79.194, port: 443, udp: true, type: trojan, password: 9c4ead50-7889-11ec-8ec5-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
+  
+  - {name: SG 2, server: 103.253.24.248, port: 443, udp: true, type: trojan, password: ad6ec570-7889-11ec-8ecc-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
+  
+  - {name: SG 3, server: 103.253.24.77, port: 443, udp: true, type: trojan, password: bc210a20-7889-11ec-b2c1-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
+
 proxy-groups:
-  - name: "수업"
-    type: select
-    use:
-      - "your"
-  - name: "ads-all"
+  - name: Clash
     type: select
     proxies:
-      - DIRECT
-      - REJECT
-proxy-providers:
-  your:
-    type: file
-    path: ./confs/clash.yaml
-    health-check:
-      enable: true
-      interval: 600
-      url: http://www.gstatic.com/generate_204
-rules:
-  - GEOSITE,category-ads-all,ads-all
-  - MATCH,수업
+      - SG 1
+      - SG 2
+      - SG 3
 
-#  nameserver:
-#    - https://ipv6a.cloudflare-dns.com/dns-query
-#    - https://dns.cloudflare.com/dns-query
-#    - tls://1dot1dot1dot1.cloudflare-dns.com
+rules:
+ - MATCH,Clash
