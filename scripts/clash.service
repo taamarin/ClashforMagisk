@@ -14,15 +14,15 @@ null_clash() {
     
     chown ${Clash_user_group} ${Clash_bin_path}
     chmod ${Clash_permissions} ${Clash_bin_path}
-    chown ${Clash_user_group} ${temporary_config_file}
-    chmod 0644 ${temporary_config_file}
+    chown ${Clash_user_group} ${Clash_config_file}
+    chmod 0644 ${Clash_config_file}
     setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
+    echo "[info] : create permissions." >> ${CFM_logs_file}
 
     ${busybox_path} crontab -c ${Clash_run_path} -r
     touch ${Clash_run_path}/root
     chmod 0600 ${Clash_run_path}/root
 
-# hapus tanda "#" untuk update Geo* Otomatis
     # echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
     # && echo "[info] : auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
     echo "*/1 * * * * ${scripts_dir}/clash.tool -c" >> ${Clash_run_path}/root \
@@ -55,12 +55,12 @@ start_clash() {
     fi
 
     if [ -f "${Clash_bin_path}" ] ; then
-        if [ -f ${temporary_config_file} ] ; then
-            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.logs
+        if [ -f ${Clash_config_file} ] ; then
+            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Clash_config_file} > ${Clash_run_path}/clash.logs
             if [ "$?" = 0 ] ; then
 
             ulimit -SHn 1000000
-            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
+            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_config_file} > /dev/null 2>&1 &
             echo -n $! > ${Clash_pid_file}
             grep "level=" ${Clash_run_path}/clash.logs | awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
             echo "[info] : clash dimulai." >> ${CFM_logs_file}
