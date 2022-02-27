@@ -3,7 +3,6 @@
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 service_path="${scripts_dir}/clash.service"
-php_path="${scripts_dir}/php.service"
 tproxy_path="${scripts_dir}/clash.tproxy"
 signal_file="${scripts_dir}/../run/cmdRunning"
 Clash_run_path="${scripts_dir}/../run"

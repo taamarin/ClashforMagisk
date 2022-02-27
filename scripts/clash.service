@@ -4,32 +4,10 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . /${scripts_dir}/clash.config
 
-null_clash() {
-    if [ ! -f "${Clash_run_path}" ] ; then
-       mkdir -p ${Clash_run_path}
-    fi
-
-    rm -rf ${CFM_logs_file}
-    echo "[info] : ${date_day}" >> ${CFM_logs_file}
-    
-    chown ${Clash_user_group} ${Clash_bin_path}
-    chmod ${Clash_permissions} ${Clash_bin_path}
-    chown ${Clash_user_group} ${Clash_config_file}
-    chmod 0644 ${Clash_config_file}
-    setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-    echo "[info] : create permissions." >> ${CFM_logs_file}
-
-    ${busybox_path} crontab -c ${Clash_run_path} -r
-    touch ${Clash_run_path}/root
-    chmod 0600 ${Clash_run_path}/root
-
-    # echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
-    # && echo "[info] : auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
-    echo "*/1 * * * * ${scripts_dir}/clash.tool -c" >> ${Clash_run_path}/root \
-    && echo "[info] : dns dibuka." >> ${CFM_logs_file}
-}
-
 start_clash() {
+    mkdir -p ${Clash_run_path}
+    rm -rf ${CFM_logs_file}
+            
     if [ "${ipv6}" = "false" ] ; then
         for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
             echo ${net} | grep -q wlan
@@ -47,39 +25,58 @@ start_clash() {
             echo 0 > ${net}/disable_ipv6
         done
     fi
-
+    
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${pid}/cmdline | grep -q clash) ; then
-        echo "[info] : mendeteksi bahwa Clash telah dimulai." >> ${CFM_logs_file}
+        echo "[info] : Mendeteksi bahwa Clash telah dimulai." >> ${CFM_logs_file}
         exit 1
     fi
 
+        echo "[info] : ${date_day}" >> ${CFM_logs_file}
+
     if [ -f "${Clash_bin_path}" ] ; then
-        if [ -f ${Clash_config_file} ] ; then
-            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Clash_config_file} > ${Clash_run_path}/clash.logs
+        if [ -f ${temporary_config_file} ] ; then
+            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.logs
             if [ "$?" = 0 ] ; then
+            chown ${Clash_user_group} ${Clash_bin_path}
+            chmod ${Clash_permissions} ${Clash_bin_path}
+            chown ${Clash_user_group} ${temporary_config_file}
+            chown ${Clash_user_group} ${config_yaml}
+            chmod 0644 ${temporary_config_file}
+            chmod 0644 ${config_yaml}
+            setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
+            
+            ${busybox_path} crontab -c ${Clash_run_path} -r
+            touch ${Clash_run_path}/root
+            chmod 0600 ${Clash_run_path}/root
+        
+            # echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
+            # && echo "[info] : auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
+            echo "*/1 * * * * ${scripts_dir}/clash.tool -c" >> ${Clash_run_path}/root \
+            && echo "[info] : DNS open." >> ${CFM_logs_file}
 
             ulimit -SHn 1000000
-            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_config_file} > /dev/null 2>&1 &
+            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
             echo -n $! > ${Clash_pid_file}
             grep "level=" ${Clash_run_path}/clash.logs | awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
-            echo "[info] : clash dimulai." >> ${CFM_logs_file}
+            echo "[info] : Clash dimulai." >> ${CFM_logs_file}
         else
            grep "level=" ${Clash_run_path}/clash.logs | awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
-           echo "[err] : clash berhenti" >> ${CFM_logs_file}
-           echo "[err] : periksa kembali Config.yaml" >> ${CFM_logs_file}
+           echo "[err] : Clash berhenti" >> ${CFM_logs_file}
+           echo "[err] : Periksa kembali Config.yaml" >> ${CFM_logs_file}
            exit 1
         fi
     else
-       echo "[err] : clash berhenti" >> ${CFM_logs_file}
-       echo "[err] : config.yaml tidak terdeteksi" >> ${CFM_logs_file}
+       echo "[err] : Clash berhenti" >> ${CFM_logs_file}
+       echo "[err] : Config.yaml tidak terdeteksi" >> ${CFM_logs_file}
        exit 1
     fi
 else
-   echo "[err] : clash berhenti" >> ${CFM_logs_file}
-   echo "[err] : kernel clash tidak terdeteksi" >> ${CFM_logs_file}
+   echo "[err] : Clash berhenti" >> ${CFM_logs_file}
+   echo "[err] : Clash kernel tidak terdeteksi" >> ${CFM_logs_file}
    exit 1
 fi
+
 }
 
 stop_clash() {
@@ -87,18 +84,16 @@ stop_clash() {
     rm -rf ${Clash_pid_file}
     rm -rf ${Clash_run_path}/root
     rm -f ${Clash_run_path}/clash.logs
-    echo "[info] : clash dihentikan." >> ${CFM_logs_file}
+    echo "[info] : Clash berhenti." >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-            null_clash
             start_clash
             ;;
         k)
             stop_clash
-            sleep 0.5
             ;;
         ?)
             echo ""
