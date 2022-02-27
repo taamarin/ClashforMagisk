@@ -40,6 +40,9 @@ start_tproxy() {
 #    ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 
     ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
+
+    echo "[info] : aturan Iptables Clash-Tproxy diterapkan." >> ${CFM_logs_file}
+    echo "[info] : Connected." >> ${CFM_logs_file}
 }
 
 start_tun() {
@@ -65,6 +68,9 @@ start_tun() {
     ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
     
 #    ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+    echo "[info] : aturan Iptables Clash-Tum diterapkan." >> ${CFM_logs_file}
+    echo "[info] : Connected." >> ${CFM_logs_file}
 }
 
 stop_tproxy() {
@@ -85,6 +91,9 @@ stop_tproxy() {
     ${iptables_wait} -t mangle -X CLASH_EXTERNAL
     ${iptables_wait} -t mangle -F CLASH_LOCAL
     ${iptables_wait} -t mangle -X CLASH_LOCAL
+
+    echo "[info] : aturan Iptables Clash-Tproxy dihapus." >> ${CFM_logs_file}
+    echo "[info] : Disconnect." >> ${CFM_logs_file}
 }
 
 stop_tun() {
@@ -99,6 +108,9 @@ stop_tun() {
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH
     ${iptables_wait} -t mangle -F CLASH
     ${iptables_wait} -t mangle -X CLASH
+
+    echo "[info] : aturan Iptables Clash-Tun dihapus." >> ${CFM_logs_file}
+    echo "[info] : Disconnect." >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do

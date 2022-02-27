@@ -129,7 +129,7 @@ ui_print "- Unduh Selesai"
 unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
 rm -rf ${clash_data_dir_core}/clash
-set_perm  ${MODPATH}/service.sh    0  0  0755
+set_perm  ${MODPATH}/service.sh    0  0  0755:
 
 # install clash execute file
 ui_print "- Proses Core $ARCH execute files"
@@ -178,6 +178,8 @@ set_perm_recursive ${clash_data_dir} ${system_uid} ${system_gid} 0755 0644
 set_perm_recursive ${clash_data_dir}/scripts ${system_uid} ${system_gid} 0755 0755
 set_perm_recursive ${clash_data_dir}/core ${system_uid} ${system_gid} 0755 0755
 set_perm_recursive ${clash_data_dir}/yacd-gh-pages ${system_uid} ${system_gid} 0755 0644
+set_perm  ${MODPATH}/service.sh  0  0  0755
+set_perm  ${MODPATH}/uninstall.sh  0  0  0755
 set_perm  ${MODPATH}/system/bin/setcap  0  0  0755
 set_perm  ${MODPATH}/system/bin/getcap  0  0  0755
 set_perm  ${MODPATH}/system/bin/getpcaps  0  0  0755
