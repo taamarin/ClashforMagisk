@@ -89,7 +89,6 @@ while getopts ":sk" signal ; do
         k)
             stop_clash
             ;;
-
         ?)
             echo ""
             ;;
