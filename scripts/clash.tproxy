@@ -1,0 +1,159 @@
+#!/system/bin/sh
+scripts=`realpath $0`
+scripts_dir=`dirname ${scripts}`
+. ${scripts_dir}/clash.config
+
+start_tproxy() {
+    ip rule add fwmark ${mark_id} lookup ${mark_id}
+    ip route add local default dev lo table ${mark_id}
+
+    ${iptables_wait} -t mangle -N CLASH_EXTERNAL
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
+    done
+
+    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+
+    ${iptables_wait} -t mangle -A PREROUTING -j CLASH_EXTERNAL
+
+    ${iptables_wait} -t mangle -N CLASH_LOCAL
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
+    done
+
+    for AID in ${AIDs[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner ${AID} -j RETURN
+    done
+
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${mark_id}
+
+    ${iptables_wait} -t mangle -A OUTPUT -j CLASH_LOCAL
+    
+    ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
+    ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+    ${iptables_wait} -t mangle -N DIVERT
+    ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
+    ${iptables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -I PREROUTING -p udp -m socket -j DIVERT
+
+    ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
+
+    echo "info msg= aturan Iptables Clash-Tproxy diterapkan." >> ${CFM_logs_file}
+    echo "info msg= Connected." >> ${CFM_logs_file}
+}
+
+start_tun() {
+    ip rule add fwmark ${mark_id} table ${mark_id}
+    ip route add default dev ${tun_device} table ${mark_id}
+
+    ${iptables_wait} -t mangle -N CLASH
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH -d ${subnet} -j RETURN
+    done
+
+    for AID in ${AIDs[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH -m owner --uid-owner ${AID} -j RETURN
+    done
+    ${iptables_wait} -t mangle -A CLASH -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+    ${iptables_wait} -t mangle -A CLASH -j MARK --set-xmark ${mark_id}
+
+    ${iptables_wait} -t mangle -A OUTPUT -j CLASH
+
+    ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
+    ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+# hotspot tun
+    ${iptables_wait} -t nat -N AP_PROXY
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t nat -A AP_PROXY -d ${subnet} -j RETURN
+    done
+
+    ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
+    ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
+
+    echo "info msg= aturan Iptables Clash-Tun diterapkan." >> ${CFM_logs_file}
+    echo "info msg= Connected." >> ${CFM_logs_file}
+}
+
+stop_tproxy() {
+    ip rule del fwmark ${mark_id} table ${mark_id}
+    ip route del local default dev lo table ${mark_id}
+
+    ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
+    ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+    ${iptables_wait} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
+
+    ${iptables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
+    
+    ${iptables_wait} -t mangle -F CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -X CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -F CLASH_LOCAL
+    ${iptables_wait} -t mangle -X CLASH_LOCAL
+
+    ${iptables_wait} -t mangle -F DIVERT
+    ${iptables_wait} -t mangle -X DIVERT
+    ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -D PREROUTING -p udp -m socket -j DIVERT
+
+    echo "info msg= aturan Iptables Clash-Tproxy dihapus." >> ${CFM_logs_file}
+    echo "info msg= Disconnect." >> ${CFM_logs_file}
+}
+
+stop_tun() {
+    ip rule del fwmark ${mark_id} lookup ${mark_id}
+    ip route del default dev ${tun_device} table ${mark_id}
+    
+    ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
+    ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+    ${iptables_wait} -t mangle -D OUTPUT -j CLASH
+    ${iptables_wait} -t mangle -F CLASH
+    ${iptables_wait} -t mangle -X CLASH
+
+    # delete hotspot
+    ${iptables_wait} -t nat -D OUTPUT -j AP_PROXY
+    ${iptables_wait} -t nat -F AP_PROXY
+    ${iptables_wait} -t nat -X AP_PROXY
+    
+    ${iptables_wait} -t nat -D AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
+    ${iptables_wait} -t nat -D PREROUTING -j AP_PROXY
+
+    echo "info msg= aturan Iptables Clash-Tun dihapus." >> ${CFM_logs_file}
+    echo "info msg= Disconnect." >> ${CFM_logs_file}
+}
+
+while getopts ":sk" signal ; do
+    case ${signal} in
+        s)
+            if [ "${mode_iptables}" = "tproxy" ] ; then
+                start_tproxy
+            elif [ "${mode_iptables}" = "tun" ] ; then
+                sleep 5
+                start_tun
+            fi
+            ;;
+        k)
+            if [ "${mode_iptables}" = "tproxy" ] ; then
+                stop_tproxy
+            elif [ "${mode_iptables}" = "tun" ] ; then
+                sleep 0.5
+                stop_tun
+            fi
+            ;;
+        ?)
+            echo ""
+            ;;
+    esac
+done

@@ -1,0 +1,10 @@
+[submodule "yacd"]
+	path = yacd
+	url = https://github.com/haishanh/yacd.git
+[submodule "clash"]
+	path = clash
+	url = https://github.com/MetaCubeX/Clash.Meta.git
+	branch = Alpha
+[submodule "ui"]
+	path = ui
+	url = https://github.com/taamarin/UiClashMagisk.git
