@@ -1,3 +1,5 @@
+#!/bin/sh
+
 service_path=`realpath $0`
 module_dir=`dirname ${service_path}`
 scripts_dir="${module_dir}/../../modules/ClashforMagisk"

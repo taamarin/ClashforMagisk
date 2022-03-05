@@ -50,8 +50,8 @@ start_tproxy() {
 #   ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
 #   This rule blocks local access to tproxy-port to prevent traffic loopback.
 
-    echo "info msg= aturan Iptables Clash-Tproxy diterapkan." >> ${CFM_logs_file}
-    echo "info msg= Connected." >> ${CFM_logs_file}
+    echo "info msg= aturan Iptables Clash tproxy diterapkan." >> ${CFM_logs_file}
+    echo "info msg= connected." >> ${CFM_logs_file}
 }
 
 start_tun() {
@@ -75,8 +75,7 @@ start_tun() {
     ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
     
-#    ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-
+#   ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 #   hotspot tun
     ${iptables_wait} -t nat -N AP_PROXY
     for subnet in ${reserved_ip[@]} ; do
@@ -86,8 +85,8 @@ start_tun() {
     ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
     ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
 
-    echo "info msg= aturan Iptables Clash-Tun diterapkan." >> ${CFM_logs_file}
-    echo "info msg= Connected." >> ${CFM_logs_file}
+    echo "info msg= aturan Iptables Clash tun diterapkan." >> ${CFM_logs_file}
+    echo "info msg= connected." >> ${CFM_logs_file}
 }
 
 stop_tproxy() {
@@ -104,14 +103,17 @@ stop_tproxy() {
     ${iptables_wait} -t mangle -D PREROUTING -p udp -m socket -j DIVERT
     ${iptables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
-    
+
     ${iptables_wait} -t mangle -F CLASH_EXTERNAL
     ${iptables_wait} -t mangle -X CLASH_EXTERNAL
     ${iptables_wait} -t mangle -F CLASH_LOCAL
     ${iptables_wait} -t mangle -X CLASH_LOCAL
-    
-    echo "info msg= aturan Iptables Clash-Tproxy dihapus." >> ${CFM_logs_file}
-    echo "info msg= Disconnect." >> ${CFM_logs_file}
+
+    ${iptables_wait} -t mangle -F DIVERT
+    ${iptables_wait} -t mangle -X DIVERT
+
+    echo "info msg= aturan Iptables Clash tproxy dihapus." >> ${CFM_logs_file}
+    echo "info msg= disconnect." >> ${CFM_logs_file}
 }
 
 stop_tun() {
@@ -121,7 +123,7 @@ stop_tun() {
     ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
     
-#    ${iptables_wait} -t nat -D OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+#   ${iptables_wait} -t nat -D OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH
     ${iptables_wait} -t mangle -F CLASH
@@ -135,8 +137,8 @@ stop_tun() {
     ${iptables_wait} -t nat -D AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
     ${iptables_wait} -t nat -D PREROUTING -j AP_PROXY
 
-    echo "info msg= aturan Iptables Clash-Tun dihapus." >> ${CFM_logs_file}
-    echo "info msg= Disconnect." >> ${CFM_logs_file}
+    echo "info msg= aturan Iptables Clash tun dihapus." >> ${CFM_logs_file}
+    echo "info msg= disconnect." >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do
@@ -145,16 +147,14 @@ while getopts ":sk" signal ; do
             if [ "${mode_iptables}" = "tproxy" ] ; then
                 start_tproxy
             elif [ "${mode_iptables}" = "tun" ] ; then
-                sleep 5
-                start_tun
+                sleep 5 && start_tun
             fi
             ;;
         k)
             if [ "${mode_iptables}" = "tproxy" ] ; then
                 stop_tproxy
             elif [ "${mode_iptables}" = "tun" ] ; then
-                sleep 0.5
-                stop_tun
+                sleep 0.5 && stop_tun
             fi
             ;;
         ?)

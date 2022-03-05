@@ -1,5 +1,7 @@
-tproxy-port: 9898
-bind-address: '*'
+# ----------------------------jangan di edit--------------------------------#
+tproxy-port: 7893
+redir-port: 7890
+bind-address: "*"
 mode: rule
 allow-lan: true
 log-level: silent
@@ -9,25 +11,163 @@ unified-delay: true
 ipv6: false
 dns:
   enable: true
-  ipv6: true
+  ipv6: false
   listen: 0.0.0.0:1053
-  enhanced-mode: redir-host
+  enhanced-mode: fake-ip
+  use-host: true
   nameserver:
     - https://cloudflare-dns.com/dns-query
-  fallback:
-    - https://dns.google/dns-query
-proxies:
-  - {name: SG 1, server: 194.233.79.194, port: 443, udp: true, type: trojan, password: 9c4ead50-7889-11ec-8ec5-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
-  - {name: SG 2, server: 103.253.24.248, port: 443, udp: true, type: trojan, password: ad6ec570-7889-11ec-8ecc-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
-  - {name: SG 3, server: 103.253.24.77, port: 443, udp: true, type: trojan, password: bc210a20-7889-11ec-b2c1-1239d0255272, sni: "maps.google.com;podcasters.spotify.com;video.joox.com", skip-cert-verify: true}
+# --------------------- Jangan di edit > info cek grup gatcha-------------#
 
+proxies:
+  - name: "[Trojan] grpc"
+    type: trojan
+    server: trojan-ovh-sg01.globalssh.xyz
+    port: 443
+    password: cfm124
+    udp: true
+    tls: true
+    sni: bug.com
+    skip-cert-verify: true
+    network: grpc
+    grpc-opts:
+     grpc-service-name: trojan-grpc
+
+  - name: "[Trojan] gfw"
+    server: sg3-trojan.bonds.id
+    port: 443
+    type: trojan
+    password: 775f4b90-9c68-11ec-a7bc-1239d0255272
+    skip-cert-verify: true
+    sni: shopee.co.id
+    udp: true
+  - name: "[Trojan] go"
+    server: 104.18.21.226
+    port: 443
+    type: trojan
+    password: 775f4b90-9c68-11ec-a7bc-1239d0255272
+    skip-cert-verify: true
+    sni: sg3-trojan.bonds.id
+    network: ws
+    ws-opts:
+      path: /howdy
+      headers:
+        Host: sg3-trojan.bonds.id
+    udp: true
+  - name: "[VMess] ws-tls"
+    server: sg4.v2-ray.com
+    port: 443
+    type: vmess
+    uuid: 854fc069-23bc-4dd9-9c14-9f3bc50a3b76
+    alterId: 0
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: shopee.co.id
+    network: ws
+    ws-opts:
+      path: /fastssh/cfm123/622330f16f956/
+      headers:
+        Host: shopee.co.id
+    udp: true
+  - name: "[VMess] ntls"
+    server: 104.18.21.226
+    port: 80
+    type: vmess
+    uuid: 854fc069-23bc-4dd9-9c14-9f3bc50a3b76
+    alterId: 0
+    cipher: auto
+    tls: false
+    skip-cert-verify: true
+    servername: sg4.v2-ray.com
+    network: ws
+    ws-opts:
+      path: /fastssh/cfm123/622330f16f956/
+      headers:
+        Host: sg4.v2-ray.com
+    udp: true
+  - name: "[VMess] grpc"
+    server: sg1-grpc.serverssh.net
+    port: 443
+    type: vmess
+    uuid: 148d81a6-614a-4fe8-886e-fff223791577
+    alterId: 0
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: sg1-grpc.serverssh.net
+    network: grpc
+    grpc-opts:
+      grpc-mode: gun
+      grpc-service-name: grpc
+    udp: true
+  - name: "[Vless] grpc"
+    server: vless-ovh-sg01.globalssh.xyz
+    port: 443
+    type: vless
+    uuid: cbe21d84-c473-49d7-9a19-34276b8f162c
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: bug.com
+    network: grpc
+    grpc-opts:
+      grpc-mode: gun
+      grpc-service-name: grpc
+    udp: true
+  - name: "[Vless] tcp"
+    server: vless-ovh-sg01.globalssh.xyz
+    port: 443
+    type: vless
+    uuid: cbe21d84-c473-49d7-9a19-34276b8f162c
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: bug.com
+    udp: true
+  - name: "[Vless] ws-tls"
+    server: id-2.vless.co
+    port: 443
+    type: vless
+    uuid: 81f1f510-3ca7-4734-8956-0f4fce670af5
+    cipher: auto
+    tls: true
+    skip-cert-verify: true
+    servername: bug.vom
+    network: ws
+    ws-opts:
+      path: /fastssh/baku/6223369b05d85/
+      headers:
+        Host: bug.vom
+    udp: true
+  - name: "[Vless] ntls"
+    server: bug.com
+    port: 80
+    type: vless
+    uuid: 81f1f510-3ca7-4734-8956-0f4fce670af5
+    cipher: auto
+    tls: false
+    skip-cert-verify: true
+    servername: id-2.vless.co
+    network: ws
+    ws-opts:
+      path: /fastssh/baku/6223369b05d85/
+      headers:
+        Host: id-2.vless.co
+    udp: true
 proxy-groups:
-  - name: Clash
+  - name: FASTSSH-SSHKIT-HOWDY
     type: select
     proxies:
-      - SG 1
-      - SG 2
-      - SG 3
-
+      - "[Trojan] grpc"
+      - "[Trojan] gfw"
+      - "[Trojan] go"
+      - "[VMess] ws-tls"
+      - "[VMess] ntls"
+      - "[VMess] grpc"
+      - "[Vless] grpc"
+      - "[Vless] tcp"
+      - "[Vless] ws-tls"
+      - "[Vless] ntls"
 rules:
- - MATCH,Clash
+  - MATCH,FASTSSH-SSHKIT-HOWDY
