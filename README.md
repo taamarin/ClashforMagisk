@@ -8,21 +8,16 @@
 
 ## flash module
   > Flash Module Clash for Magisk
-
-  ![rxfetch](https://github.com/taamarin/SubConvert/blob/main/screenshot/1.png)
 >`reboot`
 
 ## Open Folder
 > ```/data/adb/clash```
 
-  ![rxfetch](https://github.com/taamarin/SubConvert/blob/main/screenshot/2.png)
 > Muncul file `clash.pid` & `run.logs`
 
 > buka file `run.logs,`
 
-  ![rxfetch](https://github.com/taamarin/SubConvert/blob/main/screenshot/3.png)
 > `[info] : Connect`
 
-  ![rxfetch](https://github.com/taamarin/SubConvert/blob/main/screenshot/4.png)
 > Buka panel `dashboard`, gunakan browser ketik
 > http://127.0.0.1:9090/ui
