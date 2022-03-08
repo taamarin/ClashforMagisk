@@ -92,9 +92,13 @@ else
     fi
 
     if [ "${latest_clash_version}" = "" ] ; then
-      ui_print "- Error: Sambungkan tautan unduhan clash resmi gagal."
-      ui_print "- Tips: You can download clash core manually,"
-      ui_print "      dan taruh di /sdcard/Download"
+      ui_print "- Error: Unduh Core clash Gagal"
+      ui_print " "
+      ui_print "- Tips: Download CORE ${version} Manual"
+      ui_print "- Step"
+      ui_print "        Download Disini https://github.com/taamarin/MetaforCfm/releases"
+      ui_print "        Simpan di folder Download, Memori Internal"
+      ui_print "        Selesai Download CORE, flash Ulang Module CFM"
       abort
     fi
     ui_print "- Unduh inti clash terbaru ${latest_clash_version}-${ARCH}"
@@ -111,9 +115,13 @@ else
     fi
 
     if [ "$?" != "0" ] ; then
-      ui_print "- Error: Unduh inti clash gagal."
-      ui_print "- Tips: anda dapat mengunduh clash core secara manual,"
-      ui_print "      dan taruh di /sdcard/Download"
+      ui_print "- Error: Unduh Core clash Gagal"
+      ui_print " "
+      ui_print "- Tips: Download CORE ${version} Manual"
+      ui_print "- Step"
+      ui_print "        Download Disini https://github.com/taamarin/MetaforCfm/releases"
+      ui_print "        Simpan di folder Download, Memori Internal"
+      ui_print "        Selesai Download CORE, flash Ulang Module CFM"
       abort
     fi
   fi
