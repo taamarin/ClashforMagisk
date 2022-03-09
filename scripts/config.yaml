@@ -1,6 +1,5 @@
-# ----------------------------jangan di edit--------------------------------#
-tproxy-port: 7893
-redir-port: 7890
+tproxy-port: 7890
+redir-port: 7891
 bind-address: "*"
 mode: rule
 allow-lan: true
@@ -14,13 +13,10 @@ dns:
   ipv6: false
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
-  use-host: true
-  nameserver:
-    - https://cloudflare-dns.com/dns-query
-# --------------------- Jangan di edit > info cek grup gatcha-------------#
+# BAGIAN ATAS, JANGAN DI EDIT > INFO CEK GRUP GATCHA
 
 proxies:
-  - name: "[Trojan] grpc"
+  - name: "[trojan] grpc"
     type: trojan
     server: trojan-ovh-sg01.globalssh.xyz
     port: 443
@@ -33,7 +29,7 @@ proxies:
     grpc-opts:
      grpc-service-name: trojan-grpc
 
-  - name: "[Trojan] gfw"
+  - name: "[trojan] gfw"
     server: sg3-trojan.bonds.id
     port: 443
     type: trojan
@@ -41,7 +37,7 @@ proxies:
     skip-cert-verify: true
     sni: shopee.co.id
     udp: true
-  - name: "[Trojan] go"
+  - name: "[trojan] go"
     server: 104.18.21.226
     port: 443
     type: trojan
@@ -54,7 +50,8 @@ proxies:
       headers:
         Host: sg3-trojan.bonds.id
     udp: true
-  - name: "[VMess] ws-tls"
+
+  - name: "[vmess] ws-tls"
     server: sg4.v2-ray.com
     port: 443
     type: vmess
@@ -70,7 +67,8 @@ proxies:
       headers:
         Host: shopee.co.id
     udp: true
-  - name: "[VMess] ntls"
+
+  - name: "[vmess] ntls"
     server: 104.18.21.226
     port: 80
     type: vmess
@@ -86,7 +84,8 @@ proxies:
       headers:
         Host: sg4.v2-ray.com
     udp: true
-  - name: "[VMess] grpc"
+
+  - name: "[vmess] grpc"
     server: sg1-grpc.serverssh.net
     port: 443
     type: vmess
@@ -101,7 +100,8 @@ proxies:
       grpc-mode: gun
       grpc-service-name: grpc
     udp: true
-  - name: "[Vless] grpc"
+
+  - name: "[vless] grpc"
     server: vless-ovh-sg01.globalssh.xyz
     port: 443
     type: vless
@@ -115,7 +115,8 @@ proxies:
       grpc-mode: gun
       grpc-service-name: grpc
     udp: true
-  - name: "[Vless] tcp"
+
+  - name: "[vless] tcp"
     server: vless-ovh-sg01.globalssh.xyz
     port: 443
     type: vless
@@ -125,7 +126,8 @@ proxies:
     skip-cert-verify: true
     servername: bug.com
     udp: true
-  - name: "[Vless] ws-tls"
+
+  - name: "[vless] ws-tls"
     server: id-2.vless.co
     port: 443
     type: vless
@@ -140,7 +142,8 @@ proxies:
       headers:
         Host: bug.vom
     udp: true
-  - name: "[Vless] ntls"
+
+  - name: "[vless] ntls"
     server: bug.com
     port: 80
     type: vless
@@ -155,19 +158,20 @@ proxies:
       headers:
         Host: id-2.vless.co
     udp: true
+
 proxy-groups:
   - name: FASTSSH-SSHKIT-HOWDY
     type: select
     proxies:
-      - "[Trojan] grpc"
-      - "[Trojan] gfw"
-      - "[Trojan] go"
-      - "[VMess] ws-tls"
-      - "[VMess] ntls"
-      - "[VMess] grpc"
-      - "[Vless] grpc"
-      - "[Vless] tcp"
-      - "[Vless] ws-tls"
-      - "[Vless] ntls"
+      - "[trojan] grpc"
+      - "[trojan] gfw"
+      - "[trojan] go"
+      - "[vmess] ws-tls"
+      - "[vmess] ntls"
+      - "[vmess] grpc"
+      - "[vless] grpc"
+      - "[vless] tcp"
+      - "[vless] ws-tls"
+      - "[vless] ntls"
 rules:
   - MATCH,FASTSSH-SSHKIT-HOWDY
