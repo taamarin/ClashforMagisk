@@ -7,6 +7,27 @@ scripts_dir=`dirname ${scripts}`
 null_clash() {
     if [ ! -f "${Clash_run_path}" ] ; then
        mkdir -p ${Clash_run_path}
+         if [ -f "${CFM_logs_file}" ] ; then
+            rm -rf ${CFM_logs_file}
+         fi
+    fi
+
+    if [ "${ipv6}" = "false" ] ; then
+        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
+            echo ${net} | grep -q wlan
+            if [ $? -eq 0 ] ; then
+                echo 0 > ${net}/accept_ra
+            fi
+            echo 1 > ${net}/disable_ipv6
+        done
+    else
+        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
+            echo ${net} | grep -q wlan
+            if [ $? -eq 0 ] ; then
+                echo 1 > ${net}/accept_ra
+            fi
+            echo 0 > ${net}/disable_ipv6
+        done
     fi
 
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -15,26 +36,41 @@ null_clash() {
         exit 1
     fi
 
+    sed -i '/^[  ]*$/d' ${Clash_dns}
+    cp -f ${Clash_dns} ${temporary_config_file}.swp
+    echo "" >> ${temporary_config_file}.swp
+
+#    while [ $(du ${temporary_config_file}.swp | awk '{print $1}') = $(du ${Clash_dns} | awk '{print $1}') ] ; do
+#        sleep 1
+#        cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
+        sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
+#        sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
+#    done
+
+    mv -f ${temporary_config_file}.swp ${temporary_config_file} \
+    && echo "config.yaml succes" > ${CFM_logs_file} || echo "err:配置文件合并失败"
+
     echo "info msg= ${date_day}" > ${CFM_logs_file}
 
-    chown ${Clash_user_group} ${Clash_bin_path}
-    # chown ${Clash_user_group} ${Clash_data_dir}/confs/*.yaml
-    chmod ${Clash_permissions} ${Clash_bin_path}
-    chown ${Clash_user_group} ${Clash_config_file}
-    chmod 0644 ${Clash_config_file}
-    # chmod 0644 ${Clash_data_dir}/confs/*.yaml
-    setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-    echo "info msg= create permissions." >> ${CFM_logs_file}
-
-    # dibawah untuk update GeoX dan Dns otomatis, tambah # diawal untuk nonaktifkan
+    if [ -f "${Clash_bin_path}" ] ; then
+       chown ${Clash_user_group} ${Clash_bin_path}
+       chown ${Clash_user_group} ${Clash_data_dir}/confs/*.yaml
+       chmod ${Clash_permissions} ${Clash_bin_path}
+       chown ${Clash_user_group} ${temporary_config_file}
+       chmod 0644 ${temporary_config_file}
+       chmod 0644 ${Clash_data_dir}/confs/*.yaml
+       setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
+       echo "info msg= create permissions." >> ${CFM_logs_file}
+    fi
+    
     ${busybox_path} crontab -c ${Clash_run_path} -r
     touch ${Clash_run_path}/root
     chmod 0600 ${Clash_run_path}/root
 
     echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
     && echo "info msg= auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
-    echo "0 0 * * * ${scripts_dir}/clash.tool -c" >> ${Clash_run_path}/root \
-    && echo "info msg= dns dibuka" >> ${CFM_logs_file}
+    echo "*/1 * * * * ${scripts_dir}/clash.tool -c" >> ${Clash_run_path}/root \
+    && echo "info msg= dns dibuka." >> ${CFM_logs_file}
 }
 
 start_clash() {
@@ -46,11 +82,11 @@ start_clash() {
     fi
 
     if [ -f "${Clash_bin_path}" ] ; then
-        if [ -f ${Clash_config_file} ] ; then
-            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Clash_config_file} > ${Clash_run_path}/clash.logs
+        if [ -f ${temporary_config_file} ] ; then
+            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.logs
             if [ "$?" = 0 ] ; then
             ulimit -SHn 1000000
-            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_config_file} > /dev/null 2>&1 &
+            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
             echo -n $! > ${Clash_pid_file}
             grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
             echo "info msg= `grep "file" ${Clash_run_path}/clash.logs`" >>  ${CFM_logs_file}
@@ -76,8 +112,6 @@ fi
 stop_clash() {
     kill -15 `cat ${Clash_pid_file}`
     rm -rf ${Clash_pid_file}
-    rm -rf ${Clash_run_path}/clash.logs
-    rm -rf ${Clash_run_path}/root
     echo "info msg= clash dihentikan" >> ${CFM_logs_file}
 }
 

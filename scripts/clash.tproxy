@@ -50,6 +50,8 @@ start_tproxy() {
 #   ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
 #   This rule blocks local access to tproxy-port to prevent traffic loopback.
 
+    rm -rf ${Clash_run_path}/clash.logs
+
     echo "info msg= aturan Iptables Clash tproxy diterapkan." >> ${CFM_logs_file}
     echo "info msg= connected." >> ${CFM_logs_file}
 }
