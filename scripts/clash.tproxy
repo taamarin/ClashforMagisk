@@ -1,7 +1,172 @@
 #!/system/bin/sh
+
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
+
+create_rule_rules() {
+    ip rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
+    ip route add local default dev lo table ${table_id}
+}
+
+flush_rule_rules() {
+    ip rule del fwmark ${mark_id} table ${table_id}
+    ip route flush table ${table_id}
+}
+
+create_mangle_prerouting_chain() {
+    ${iptables_wait} -t mangle -N CLASH_PRE
+
+    ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+}
+
+create_mangle_output_chain() {
+    ${iptables_wait} -t mangle -N CLASH_OUT
+
+    ${iptables_wait} -t mangle -A CLASH_OUT -p tcp -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_OUT -p udp -j MARK --set-mark ${mark_id}
+}
+
+create_mangle_prerouting_filter() {
+    ${iptables_wait} -t mangle -N FILTER_PRE_CLASH
+
+    for subnet in ${reserved_ip[*]} ; do
+        ${iptables_wait} -t mangle -A FILTER_PRE_CLASH -d ${subnet} -j ACCEPT
+    done
+
+    ${iptables_wait} -t mangle -A FILTER_PRE_CLASH -j CLASH_PRE
+}
+
+create_mangle_output_filter() {
+    ${scripts_dir}/clash.tool -f
+
+    ${iptables_wait} -t mangle -N FILTER_OUT_CLASH
+
+    for subnet in ${reserved_ip[*]} ; do
+        ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -d ${subnet} -j ACCEPT
+    done
+
+    if [ "${mode}" = "blacklist" ] ; then
+        for appuid in `cat ${appuid_file} | sort -u` ; do
+            ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j ACCEPT
+        done
+
+        ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner ! --gid-owner ${Clash_group} -j CLASH_OUT
+    elif [ "${mode}" = "whitelist" ] ; then
+        for appuid in `cat ${appuid_file} | sort -u` ; do
+            ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j CLASH_OUT
+        done
+    fi
+}
+
+create_nat_prerouting_dns() {
+    ${iptables_wait} -t nat -N DNS_PRE
+
+    ${iptables_wait} -t nat -A DNS_PRE -p udp -j REDIRECT --to-ports ${Clash_dns_port}
+}
+
+create_nat_output_dns() {
+    ${iptables_wait} -t nat -N DNS_OUT
+
+    ${iptables_wait} -t nat -A DNS_OUT -p udp -j REDIRECT --to-ports ${Clash_dns_port}
+}
+
+create_nat_output_filter() {
+    ${iptables_wait} -t nat -N FILTER_OUT_DNS
+
+    ${iptables_wait} -t nat -A FILTER_OUT_DNS -m owner --gid-owner ${Clash_group} -j ACCEPT
+    ${iptables_wait} -t nat -A FILTER_OUT_DNS -p udp --dport 53 -j DNS_OUT
+}
+
+create_nat_prerouting_filter() {
+    ${iptables_wait} -t nat -N FILTER_PRE_DNS
+
+    ${iptables_wait} -t nat -A FILTER_PRE_DNS -p udp --dport 53 -j DNS_PRE
+}
+
+creat_pre_divert() {
+    ${iptables_wait} -t mangle -N DIVERT
+
+    ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
+
+    ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
+}
+
+apply_rules() {
+    create_mangle_prerouting_chain
+    create_mangle_prerouting_filter
+
+    create_mangle_output_chain
+    create_mangle_output_filter
+    
+    create_nat_prerouting_dns
+    create_nat_prerouting_filter
+
+    create_nat_output_dns
+    create_nat_output_filter
+
+    creat_pre_divert
+    ${iptables_wait} -t mangle -A PREROUTING -p tcp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -A PREROUTING -p udp -m socket -j DIVERT
+
+    ${iptables_wait} -t mangle -N FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
+
+    ${iptables_wait} -t mangle -A PREROUTING -j FILTER_PRE_CLASH
+    ${iptables_wait} -t mangle -A OUTPUT -j FILTER_OUT_CLASH
+
+    ${iptables_wait} -t nat -A PREROUTING -j FILTER_PRE_DNS
+    ${iptables_wait} -t nat -A OUTPUT -j FILTER_OUT_DNS
+
+    ${scripts_dir}/clash.tool -m
+
+    echo "info msg= Iptables Clash tproxy diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Connected" >> ${CFM_logs_file}
+}
+
+flush_rules() {
+    ${iptables_wait} -t nat -D OUTPUT -j FILTER_OUT_DNS
+    ${iptables_wait} -t nat -D PREROUTING -j FILTER_PRE_DNS
+
+    ${iptables_wait} -t mangle -D OUTPUT -j FILTER_OUT_CLASH
+    ${iptables_wait} -t mangle -D PREROUTING -j FILTER_PRE_CLASH
+
+    ${iptables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -F FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -X FILTER_LOCAL_IP
+
+    ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -F DIVERT
+    ${iptables_wait} -t mangle -X DIVERT
+
+    ${iptables_wait} -t nat -F FILTER_OUT_DNS
+    ${iptables_wait} -t nat -X FILTER_OUT_DNS
+    ${iptables_wait} -t nat -F DNS_OUT
+    ${iptables_wait} -t nat -X DNS_OUT
+
+    ${iptables_wait} -t nat -F FILTER_PRE_DNS
+    ${iptables_wait} -t nat -X FILTER_PRE_DNS
+    ${iptables_wait} -t nat -F DNS_PRE
+    ${iptables_wait} -t nat -X DNS_PRE
+
+    ${iptables_wait} -t mangle -F FILTER_OUT_CLASH
+    ${iptables_wait} -t mangle -X FILTER_OUT_CLASH
+    ${iptables_wait} -t mangle -F CLASH_OUT
+    ${iptables_wait} -t mangle -X CLASH_OUT
+
+    ${iptables_wait} -t mangle -F FILTER_PRE_CLASH
+    ${iptables_wait} -t mangle -X FILTER_PRE_CLASH
+    ${iptables_wait} -t mangle -F CLASH_PRE
+    ${iptables_wait} -t mangle -X CLASH_PRE
+    
+    echo "info msg= Iptables Clash tproxy dihapus" >> ${CFM_logs_file}
+    echo "info msg= Discontinued" >> ${CFM_logs_file}
+}
+
+########### new_iptables Iptabes #######
 
 start_tproxy() {
     ip rule add fwmark ${mark_id} lookup ${mark_id}
@@ -49,11 +214,13 @@ start_tproxy() {
 
 #   ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
 #   This rule blocks local access to tproxy-port to prevent traffic loopback.
+    
+    if [ -f "${Clash_run_path}/clash.logs" ] ; then
+       rm -rf ${Clash_run_path}/clash.logs
+    fi
 
-    rm -rf ${Clash_run_path}/clash.logs
-
-    echo "info msg= aturan Iptables Clash tproxy diterapkan." >> ${CFM_logs_file}
-    echo "info msg= connected." >> ${CFM_logs_file}
+    echo "info msg= IPTABLES Clash tproxy diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Connected" >> ${CFM_logs_file}
 }
 
 start_tun() {
@@ -87,8 +254,8 @@ start_tun() {
     ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
     ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
 
-    echo "info msg= aturan Iptables Clash tun diterapkan." >> ${CFM_logs_file}
-    echo "info msg= connected." >> ${CFM_logs_file}
+    echo "info msg= IPTABLES Clash tun diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Connected" >> ${CFM_logs_file}
 }
 
 stop_tproxy() {
@@ -114,8 +281,8 @@ stop_tproxy() {
     ${iptables_wait} -t mangle -F DIVERT
     ${iptables_wait} -t mangle -X DIVERT
 
-    echo "info msg= aturan Iptables Clash tproxy dihapus." >> ${CFM_logs_file}
-    echo "info msg= disconnect." >> ${CFM_logs_file}
+    echo "info msg= IPTABLES Clash tproxy dihapus" >> ${CFM_logs_file}
+    echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
 stop_tun() {
@@ -139,26 +306,44 @@ stop_tun() {
     ${iptables_wait} -t nat -D AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
     ${iptables_wait} -t nat -D PREROUTING -j AP_PROXY
 
-    echo "info msg= aturan Iptables Clash tun dihapus." >> ${CFM_logs_file}
-    echo "info msg= disconnect." >> ${CFM_logs_file}
+    echo "info msg= IPTABLES Clash tun dihapus" >> ${CFM_logs_file}
+    echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-            if [ "${mode_iptables}" = "tproxy" ] ; then
-                start_tproxy
-            elif [ "${mode_iptables}" = "tun" ] ; then
-                sleep 5 && start_tun
+            if [ "${new_iptables}" = "true" ] ; then
+               echo "info msg= mengunakan IPTABES terbaru " >> ${CFM_logs_file}
+               if [ "${mode_iptables}" = "tproxy" ] ; then
+                   start_tproxy
+               elif [ "${mode_iptables}" = "tun" ] ; then
+                   sleep 0.5 && start_tun
+               fi
+            elif [ "${new_iptables}" = "false" ] ; then
+               echo "info msg= mengunakan IPTABES lama " >> ${CFM_logs_file}
+               if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
+                   create_rule_rules && apply_rules
+               else
+                   exit 0
+               fi
             fi
             ;;
         k)
-            if [ "${mode_iptables}" = "tproxy" ] ; then
-                stop_tproxy
-            elif [ "${mode_iptables}" = "tun" ] ; then
-                sleep 0.5 && stop_tun
+            if [ "${new_iptables}" = "true" ] ; then
+               if [ "${mode_iptables}" = "tproxy" ] ; then
+                   stop_tproxy
+               elif [ "${mode_iptables}" = "tun" ] ; then
+                   sleep 0.5 && stop_tun
+               fi
+            elif [ "${new_iptables}" = "false" ] ; then
+               if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
+                   flush_rule_rules && flush_rules
+               else
+                   exit 0
+               fi
             fi
-            ;;
+            ;;            
         ?)
             echo ""
             ;;

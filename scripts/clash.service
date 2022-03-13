@@ -7,70 +7,59 @@ scripts_dir=`dirname ${scripts}`
 null_clash() {
     if [ ! -f "${Clash_run_path}" ] ; then
        mkdir -p ${Clash_run_path}
-         if [ -f "${CFM_logs_file}" ] ; then
-            rm -rf ${CFM_logs_file}
-         fi
+    fi
+   
+    if [ -f "${CFM_logs_file}" ] ; then
+       rm -rf ${CFM_logs_file}
     fi
 
-    if [ "${ipv6}" = "false" ] ; then
-        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
-            echo ${net} | grep -q wlan
-            if [ $? -eq 0 ] ; then
-                echo 0 > ${net}/accept_ra
-            fi
-            echo 1 > ${net}/disable_ipv6
-        done
-    else
-        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
-            echo ${net} | grep -q wlan
-            if [ $? -eq 0 ] ; then
-                echo 1 > ${net}/accept_ra
-            fi
-            echo 0 > ${net}/disable_ipv6
-        done
+    if [ ! -f "${CFM_logs_file}" ] ; then
+       echo "info msg= ${date_day}" > ${CFM_logs_file}
     fi
-
+ 
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${pid}/cmdline | grep -q clash) ; then
         echo "info msg= mendeteksi bahwa Clash telah dimulai." >> ${CFM_logs_file}
         exit 1
     fi
 
-    sed -i '/^[  ]*$/d' ${Clash_dns}
-    cp -f ${Clash_dns} ${temporary_config_file}.swp
-    echo "" >> ${temporary_config_file}.swp
+    if [ -f "${temporary_config_file}" ] ; then
+       rm -rf ${temporary_config_file}
+    fi
 
-#    while [ $(du ${temporary_config_file}.swp | awk '{print $1}') = $(du ${Clash_dns} | awk '{print $1}') ] ; do
-#        sleep 1
-#        cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
-        sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
-#        sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
-#    done
+    if [ -f "${Clash_dns}" ] ; then
+       if [ -f "${Clash_config_file}" ] ; then
+          sed -i '/^[  ]*$/d' ${Clash_dns}
+          cp -f ${Clash_dns} ${temporary_config_file}.swp
+          echo "" >> ${temporary_config_file}.swp
+          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
+          else
+       echo "error msg= file konfigurasi  ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+       fi
+       else
+    echo "error msg= file konfigurasi  ''${Clash_dns}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+    fi
 
-    mv -f ${temporary_config_file}.swp ${temporary_config_file} \
-    && echo "config.yaml succes" > ${CFM_logs_file} || echo "err:配置文件合并失败"
-
-    echo "info msg= ${date_day}" > ${CFM_logs_file}
+    mv ${temporary_config_file}.swp ${temporary_config_file} \
+    && echo "info msg= pengabungan ''${Clash_dns}'' & ''${Clash_config_file}'' Succes" >> ${CFM_logs_file} || echo "error msg= Penggabungan file konfigurasi gagal" >> ${CFM_logs_file}
 
     if [ -f "${Clash_bin_path}" ] ; then
        chown ${Clash_user_group} ${Clash_bin_path}
-       chown ${Clash_user_group} ${Clash_data_dir}/confs/*.yaml
        chmod ${Clash_permissions} ${Clash_bin_path}
        chown ${Clash_user_group} ${temporary_config_file}
        chmod 0644 ${temporary_config_file}
-       chmod 0644 ${Clash_data_dir}/confs/*.yaml
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-       echo "info msg= create permissions." >> ${CFM_logs_file}
-    fi
-    
+       echo "info msg= mengatur permissions." >> ${CFM_logs_file}
+   fi
+
     ${busybox_path} crontab -c ${Clash_run_path} -r
     touch ${Clash_run_path}/root
     chmod 0600 ${Clash_run_path}/root
 
     echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
     && echo "info msg= auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
-    echo "*/1 * * * * ${scripts_dir}/clash.tool -c" >> ${Clash_run_path}/root \
-    && echo "info msg= dns dibuka." >> ${CFM_logs_file}
+    echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
+    && echo "info msg= DNS dibuka." >> ${CFM_logs_file}
 }
 
 start_clash() {
@@ -90,21 +79,25 @@ start_clash() {
             echo -n $! > ${Clash_pid_file}
             grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
             echo "info msg= `grep "file" ${Clash_run_path}/clash.logs`" >>  ${CFM_logs_file}
-            echo "info msg= clash dimulai." >> ${CFM_logs_file}
+            echo "info msg= Clash dimulai." >> ${CFM_logs_file}
         else
            grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
+           if [ -f "${temporary_config_file}" ] ; then
+              mv ${temporary_config_file} ${Clash_config_file}
+              rm -rf ${temporary_config_file}
+           fi
            echo "error msg= clash berhenti" >> ${CFM_logs_file}
-           echo "error msg= periksa kembali Config.yaml." >> ${CFM_logs_file}
+           echo "error msg= periksa kembali ''${Clash_config_file}''." >> ${CFM_logs_file}
            exit 1
         fi
     else
        echo "error msg= clash berhenti." >> ${CFM_logs_file}
-       echo "error msg= config.yaml tidak terdeteksi." >> ${CFM_logs_file}
+       echo "error msg= ''${Clash_config_file}'' tidak terdeteksi." >> ${CFM_logs_file}
        exit 1
     fi
 else
    echo "error msg= clash berhenti." >> ${CFM_logs_file}
-   echo "error msg= kernel clash tidak terdeteksi." >> ${CFM_logs_file}
+   echo "error msg= kernel Clash di ''${Clash_bin_path}'' tidak terdeteksi." >> ${CFM_logs_file}
    exit 1
 fi
 }
@@ -112,10 +105,13 @@ fi
 stop_clash() {
     kill -15 `cat ${Clash_pid_file}`
     rm -rf ${Clash_pid_file}
+    if [ -f "${Clash_run_path}/root" ] ; then
+       rm -rf ${Clash_run_path}/root
+    fi
     echo "info msg= clash dihentikan" >> ${CFM_logs_file}
 }
 
-while getopts ":sk" signal ; do
+while getopts ":skf" signal ; do
     case ${signal} in
         s)
             null_clash && start_clash

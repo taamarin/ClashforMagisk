@@ -14,7 +14,7 @@ if [ -f ${CLASH_PID_FILE} ] ; then
     rm -rf ${CLASH_PID_FILE}
 fi
 
-# nohup ${BUSYBOX_PATH} crond -c ${CLASH_RUN_PATH} > /dev/null 2>&1 &
+nohup ${BUSYBOX_PATH} crond -c ${CLASH_RUN_PATH} > /dev/null 2>&1 &
 
 start_tproxy () {
   ${SCRIPTS_DIR}/clash.service -s

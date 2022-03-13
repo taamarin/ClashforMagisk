@@ -1,4 +1,3 @@
-# KALAU TIDAK PAHAM JGN DI EDIT
 tproxy-port: 7890
 redir-port: 7891
 bind-address: "*"
@@ -14,3 +13,4 @@ dns:
   ipv6: false
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
+# YANG ATAS JANGAN DI EDIT > INFO CEK GRUP GATCHA,

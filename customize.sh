@@ -39,12 +39,12 @@ mkdir -p ${clash_data_dir}/scripts
 
 download_clash_zip="${clash_data_dir}/run/clash-core.zip"
 download_yacd_zip="${clash_data_dir}/yacd-gh-pages.zip"
-download_scripts_zip="${clash_data_dir}/master.zip"
+download_scripts_zip="${clash_data_dir}/beta.zip"
 download_cert="${clash_data_dir}/cacert.pem"
 download_GeoIP="${clash_data_dir}/GeoIP.dat"
 download_GeoSite="${clash_data_dir}/GeoSite.dat"
 official_yacd_link="https://github.com/taamarin/yacd/releases/download/v0.3.4/yacd-gh-pages.zip"
-official_scripts_link="https://github.com/taamarin/ClashforMagisk/archive/refs/heads/master.zip"
+official_scripts_link="https://github.com/taamarin/ClashforMagisk/archive/refs/heads/beta.zip"
 official_cert_link="http://curl.haxx.se/ca/cacert.pem"
 official_GeoIP_link="https://github.com/v2fly/geoip/releases/latest/download/geoip-only-cn-private.dat"
 official_GeoSite_link="https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
@@ -135,7 +135,8 @@ unzip -o "${download_yacd_zip}" -d ${clash_data_dir}/yacd-gh-pages/ >&2
 ui_print "- Unduh Scripts Clash"
 ${busybox_data_dir} wget ${official_scripts_link} -O ${download_scripts_zip}
 rm -rf "${clash_data_dir}/scripts/*"
-unzip -j -o "${download_scripts_zip}" "ClashforMagisk-master/scripts/*" -d ${clash_data_dir}/scripts/ >&2
+unzip -j -o "${download_scripts_zip}" "ClashforMagisk-beta/scripts/*" -d ${clash_data_dir}/scripts/ >&2
+mv -f ${clash_data_dir}/scripts/template ${clash_data_dir}
 
 ui_print "- Unduh Cert"
 ${busybox_data_dir} wget ${official_cert_link} -O ${download_cert}
@@ -163,6 +164,10 @@ if [ ! -f "${dns_path}/resolv.conf" ] ; then
   touch ${MODPATH}${dns_path}/resolv.conf
   echo nameserver 8.8.8.8 > ${MODPATH}${dns_path}/resolv.conf
   echo nameserver 1.1.1.1 >> ${MODPATH}${dns_path}/resolv.conf
+fi
+
+if [ ! -f "${clash_data_dir}/packages.list" ] ; then
+    touch ${clash_data_dir}/packages.list
 fi
 
 # hapus service lama
@@ -209,7 +214,7 @@ rm -rf ${MODPATH}/module.prop
 touch ${MODPATH}/module.prop
 echo "id=ClashforMagisk" > ${MODPATH}/module.prop
 echo "name=Clash for Magisk" >> ${MODPATH}/module.prop
-echo -n "version=Module v1.9.1, Core " >> ${MODPATH}/module.prop
+echo -n "version=Module v1.9.2-beta, Core " >> ${MODPATH}/module.prop
 echo ${latest_clash_version} >> ${MODPATH}/module.prop
 echo "versionCode=20220225" >> ${MODPATH}/module.prop
 echo "author=Taamarin" >> ${MODPATH}/module.prop
