@@ -7,6 +7,10 @@ scripts_dir=`dirname ${scripts}`
 create_rule_rules() {
     ip rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
     ip route add local default dev lo table ${table_id}
+
+    if [ -f "${Clash_run_path}/clash.logs" ] ; then
+       rm -rf ${Clash_run_path}/clash.logs
+    fi
 }
 
 flush_rule_rules() {
@@ -166,7 +170,7 @@ flush_rules() {
     echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
-########### new_iptables Iptabes #######
+########### NEW IPTABLES IPTABLES #######
 
 start_tproxy() {
     ip rule add fwmark ${mark_id} lookup ${mark_id}
@@ -199,6 +203,7 @@ start_tproxy() {
     for AID in ${AIDs[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${AID} -j RETURN
     done
+
 # Here we have already bypassed gid 3005, the user group used by Clash, so we will not bypass it again.
 
     ${iptables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
@@ -211,7 +216,6 @@ start_tproxy() {
 
 #   ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 #   This rule has almost the same effect as the above two rules, choose one (group) to use.
-
 #   ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
 #   This rule blocks local access to tproxy-port to prevent traffic loopback.
     
@@ -219,7 +223,7 @@ start_tproxy() {
        rm -rf ${Clash_run_path}/clash.logs
     fi
 
-    echo "info msg= IPTABLES Clash tproxy diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Iptables clash tproxy diterapkan" >> ${CFM_logs_file}
     echo "info msg= Connected" >> ${CFM_logs_file}
 }
 
@@ -254,12 +258,17 @@ start_tun() {
     ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
     ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
 
-    echo "info msg= IPTABLES Clash tun diterapkan" >> ${CFM_logs_file}
+    if [ -f "${Clash_run_path}/clash.logs" ] ; then
+       rm -rf ${Clash_run_path}/clash.logs
+    fi
+
+    echo "info msg= Iptables clash tun diterapkan" >> ${CFM_logs_file}
     echo "info msg= Connected" >> ${CFM_logs_file}
 }
 
 stop_tproxy() {
     ip rule del fwmark ${mark_id} table ${mark_id}
+    ip route flush table ${mark_id}
     ip route del local default dev lo table ${mark_id}
 
     ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
@@ -281,7 +290,7 @@ stop_tproxy() {
     ${iptables_wait} -t mangle -F DIVERT
     ${iptables_wait} -t mangle -X DIVERT
 
-    echo "info msg= IPTABLES Clash tproxy dihapus" >> ${CFM_logs_file}
+    echo "info msg= Iptables clash tproxy dihapus" >> ${CFM_logs_file}
     echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
@@ -306,7 +315,7 @@ stop_tun() {
     ${iptables_wait} -t nat -D AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
     ${iptables_wait} -t nat -D PREROUTING -j AP_PROXY
 
-    echo "info msg= IPTABLES Clash tun dihapus" >> ${CFM_logs_file}
+    echo "info msg= Iptables Clash tun dihapus" >> ${CFM_logs_file}
     echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
@@ -314,14 +323,14 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
             if [ "${new_iptables}" = "true" ] ; then
-               echo "info msg= mengunakan IPTABES terbaru " >> ${CFM_logs_file}
+               echo "info msg= Mengunakan new iptables" >> ${CFM_logs_file}
                if [ "${mode_iptables}" = "tproxy" ] ; then
                    start_tproxy
                elif [ "${mode_iptables}" = "tun" ] ; then
                    sleep 0.5 && start_tun
                fi
             elif [ "${new_iptables}" = "false" ] ; then
-               echo "info msg= mengunakan IPTABES lama " >> ${CFM_logs_file}
+               echo "info msg= Mengunakan old iptables" >> ${CFM_logs_file}
                if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
                    create_rule_rules && apply_rules
                else
