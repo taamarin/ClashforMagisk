@@ -56,9 +56,9 @@ monitor_local_ipv4() {
         unset a_subnet
         unset b_subnet
 
-        echo "info msg= iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
+        echo "info msg= Iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
     else
-        echo "info msg= ip lokal tidak berubah dan tidak akan diproses." >> ${CFM_logs_file}
+        echo "info msg= Ip lokal tidak berubah dan tidak akan diproses." >> ${CFM_logs_file}
         exit 0
     fi
 
