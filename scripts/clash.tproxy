@@ -170,7 +170,7 @@ flush_rules() {
     echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
-########### NEW IPTABLES IPTABLES #######
+################## NEW IPTABLES IPTABLES ###############
 
 start_tproxy() {
     ip rule add fwmark ${mark_id} lookup ${mark_id}
@@ -227,49 +227,10 @@ start_tproxy() {
     echo "info msg= Connected" >> ${CFM_logs_file}
 }
 
-start_tun() {
-    ip rule add fwmark ${mark_id} table ${mark_id}
-    ip route add default dev ${tun_device} table ${mark_id}
-
-    ${iptables_wait} -t mangle -N CLASH
-
-    for subnet in ${reserved_ip[@]} ; do
-        ${iptables_wait} -t mangle -A CLASH -d ${subnet} -j RETURN
-    done
-
-    for AID in ${AIDs[@]} ; do
-        ${iptables_wait} -t mangle -A CLASH -m owner --gid-owner ${AID} -j RETURN
-    done
-
-    ${iptables_wait} -t mangle -A CLASH -j MARK --set-xmark ${mark_id}
-
-    ${iptables_wait} -t mangle -A OUTPUT -j CLASH
-
-    ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
-    ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-    
-#   ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-#   hotspot tun
-    ${iptables_wait} -t nat -N AP_PROXY
-    for subnet in ${reserved_ip[@]} ; do
-        ${iptables_wait} -t nat -A AP_PROXY -d ${subnet} -j RETURN
-    done
-
-    ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
-    ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
-
-    if [ -f "${Clash_run_path}/clash.logs" ] ; then
-       rm -rf ${Clash_run_path}/clash.logs
-    fi
-
-    echo "info msg= Iptables clash tun diterapkan" >> ${CFM_logs_file}
-    echo "info msg= Connected" >> ${CFM_logs_file}
-}
-
 stop_tproxy() {
     ip rule del fwmark ${mark_id} table ${mark_id}
     ip route flush table ${mark_id}
-    ip route del local default dev lo table ${mark_id}
+#    ip route del local default dev lo table ${mark_id}
 
     ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
@@ -294,6 +255,48 @@ stop_tproxy() {
     echo "info msg= Discontinued" >> ${CFM_logs_file}
 }
 
+####################### MODE TUN ########################
+start_tun() {
+    ip rule add fwmark ${mark_id} table ${mark_id}
+    ip route add default dev ${tun_device} table ${mark_id}
+
+    ${iptables_wait} -t mangle -N CLASH
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH -d ${subnet} -j RETURN
+    done
+
+    for AID in ${AIDs[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH -m owner --gid-owner ${AID} -j RETURN
+    done
+
+    ${iptables_wait} -t mangle -A CLASH -j MARK --set-xmark ${mark_id}
+
+    ${iptables_wait} -t mangle -A OUTPUT -j CLASH
+
+    ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
+    ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+    
+#   ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+#   hotspot tun
+    ${iptables_wait} -t nat -N AP_PROXY
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t nat -A AP_PROXY -d ${subnet} -j RETURN
+    done
+
+    ${iptables_wait} -t nat -A AP_PROXY -i wlan0 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
+    ${iptables_wait} -t nat -A AP_PROXY -i wlan0 -p udp -j REDIRECT --to-port ${Clash_tproxy_port}
+    ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
+
+    if [ -f "${Clash_run_path}/clash.logs" ] ; then
+       rm -rf ${Clash_run_path}/clash.logs
+    fi
+
+    echo "info msg= Iptables clash tun diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Connected" >> ${CFM_logs_file}
+}
+
 stop_tun() {
     ip rule del fwmark ${mark_id} lookup ${mark_id}
     ip route del default dev ${tun_device} table ${mark_id}
@@ -302,7 +305,7 @@ stop_tun() {
     ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
     
 #   ${iptables_wait} -t nat -D OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-
+    
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH
     ${iptables_wait} -t mangle -F CLASH
     ${iptables_wait} -t mangle -X CLASH
@@ -327,7 +330,7 @@ while getopts ":sk" signal ; do
                if [ "${mode_iptables}" = "tproxy" ] ; then
                    start_tproxy
                elif [ "${mode_iptables}" = "tun" ] ; then
-                   sleep 0.5 && start_tun
+                   sleep 3 && start_tun
                fi
             elif [ "${new_iptables}" = "false" ] ; then
                echo "info msg= Mengunakan old iptables" >> ${CFM_logs_file}
@@ -343,7 +346,7 @@ while getopts ":sk" signal ; do
                if [ "${mode_iptables}" = "tproxy" ] ; then
                    stop_tproxy
                elif [ "${mode_iptables}" = "tun" ] ; then
-                   sleep 0.5 && stop_tun
+                   sleep 3 && stop_tun
                fi
             elif [ "${new_iptables}" = "false" ] ; then
                if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then

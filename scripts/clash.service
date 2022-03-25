@@ -5,16 +5,23 @@ scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
 start_clash() {
-    if [ ! -f "${Clash_run_path}" ] ; then
-       mkdir -p ${Clash_run_path}
-    fi
-   
-    if [ -f "${CFM_logs_file}" ] ; then
-       rm -rf ${CFM_logs_file}
+    if [ "${mode_iptables}" = "tun" ] ; then
+        mkdir -p /dev/net
+        if [ ! -L /dev/net/tun ] ; then
+            ln -s /dev/tun /dev/net/tun
+        fi
     fi
 
-    if [ ! -f "${CFM_logs_file}" ] ; then
-       echo "info msg= ${date_day}" > ${CFM_logs_file}
+    if [ ! -f "${Clash_run_path}" ] ; then
+        mkdir -p ${Clash_run_path}
+    fi
+
+    if [ -f "${CFM_logs_file}" ] ; then
+        echo "info msg= ${date_day}" > ${CFM_logs_file}
+    fi
+
+    if [ "${auto_iptables}" = "true" ] ; then
+       echo "info msg= auto iptables On" >> ${CFM_logs_file}
     fi
  
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -24,36 +31,63 @@ start_clash() {
     fi
 
     if [ -f "${temporary_config_file}" ] ; then
-       rm -rf ${temporary_config_file}
+        rm -rf ${temporary_config_file}
     fi
+
+#    if [ -f "${Clash_dns}" ] ; then
+#       if [ -f "${Clash_config_file}" ] ; then
+#          sed -i '/^[  ]*$/d' ${Clash_dns}
+#          cp -f ${Clash_dns} ${temporary_config_file}.swp
+#          echo "" >> ${temporary_config_file}.swp
+#          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
+#          else
+#       echo "error msg= File konfigurasi  ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+#       exit 1
+#       fi
+#       else
+#    echo "error msg= File konfigurasi  ''${Clash_dns}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+#    exit 1
+#    fi
 
     if [ -f "${Clash_dns}" ] ; then
        if [ -f "${Clash_config_file}" ] ; then
-          sed -i '/^[  ]*$/d' ${Clash_dns}
-          cp -f ${Clash_dns} ${temporary_config_file}.swp
-          echo "" >> ${temporary_config_file}.swp
+          cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
+          if [ "${auto_write_interface}" = "true" ] ; then
+             if [ -x "/system/bin/ss" ] ; then
+                echo "  inbound-interface: ${interface_name}" >> ${temporary_config_file}.swp
+                echo "interface-name: ${interface_name}" >> ${temporary_config_file}.swp
+                else
+             echo "error msg= detected interface-name: failed,write the manual in ${Clash_dns}" >> ${CFM_logs_file}
+             fi
+             else
+          echo "info msg= auto write interface Off " >> ${CFM_logs_file}
+          fi
           sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
+          sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
           else
        echo "error msg= File konfigurasi  ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+       exit 1
        fi
        else
     echo "error msg= File konfigurasi  ''${Clash_dns}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+    exit 1
     fi
 
     mv -f ${temporary_config_file}.swp ${temporary_config_file} \
     && echo "info msg= Pengabungan file konfigurasi berhasil" >> ${CFM_logs_file} || echo "error msg= Penggabungan file konfigurasi Gagal" >> ${CFM_logs_file}
 
     if [ ! -f "${temporary_config_file}" ] ; then
+       echo "error msg= ${temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
        exit 1
     fi
-    
+
     if [ -f "${Clash_bin_path}" ] ; then
        chown ${Clash_user_group} ${Clash_bin_path}
-       chown ${Clash_user_group} ${Clash_data_dir}/confs/*
+#       chown ${Clash_user_group} ${Clash_data_dir}/confs/*
        chmod ${Clash_permissions} ${Clash_bin_path}
        chown ${Clash_user_group} ${temporary_config_file}
        chmod 0644 ${temporary_config_file}
-       chmod 0644 ${Clash_data_dir}/confs/*
+#       chmod 0644 ${Clash_data_dir}/confs/*
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
        echo "info msg= Mengatur permissions file " >> ${CFM_logs_file}
        
@@ -61,13 +95,14 @@ start_clash() {
           ${busybox_path} crontab -c ${Clash_run_path} -r
           touch ${Clash_run_path}/root
           chmod 0600 ${Clash_run_path}/root
+
           # Set interval update
           echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
           && echo "info msg= Auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
           echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
           && echo "info msg= Dns dibuka." >> ${CFM_logs_file}
        else
-          echo "info msg= Auto update off" >> ${CFM_logs_file}
+          echo "info msg= auto update off" >> ${CFM_logs_file}
        fi
    else
       echo "error msg= Clash off." >> ${CFM_logs_file}
@@ -75,18 +110,11 @@ start_clash() {
       exit 1
    fi
 
-   if [ "${mode_iptables}" = "tun" ] ; then
-       mkdir -p /dev/net
-       if [ ! -L /dev/net/tun ] ; then
-           ln -s /dev/tun /dev/net/tun
-       fi
-   fi
-
    if [ -f ${temporary_config_file} ] ; then
        ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.logs
        if [ "$?" = 0 ] ; then
           ulimit -SHn 1000000
-          nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
+          nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_run_path}/config.yaml > /dev/null 2>&1 &
           echo -n $! > ${Clash_pid_file}
 
           grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
@@ -95,7 +123,7 @@ start_clash() {
        else
           grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
           if [ -f "${temporary_config_file}" ] ; then
-          mv -f ${temporary_config_file} ${Clash_config_file}
+          mv ${temporary_config_file} ${Clash_config_file}
           rm -rf ${temporary_config_file}
           fi
         echo "error msg= Clash off" >> ${CFM_logs_file}
@@ -112,7 +140,10 @@ start_clash() {
 stop_clash() {
     kill -15 `cat ${Clash_pid_file}`
     rm -rf ${Clash_pid_file}
-    rm -rf ${Clash_run_path}/appuid.list
+    if [ -f "${Clash_run_path}/appuid.list" ] ; then
+       rm -rf ${Clash_run_path}/appuid.list
+    fi
+
     if [ -f "${Clash_run_path}/root" ] ; then
        rm -rf ${Clash_run_path}/root
     fi
