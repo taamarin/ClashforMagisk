@@ -1,0 +1,88 @@
+tproxy-port: 9889
+redir-port: 7891
+mixed-port: 7892
+bind-address: "*"
+mode: rule
+allow-lan: true
+log-level: silent
+external-controller: 0.0.0.0:9090
+external-ui: yacd-gh-pages
+unified-delay: true
+geodata-mode: false
+ipv6: true
+dns:
+  enable: true
+  ipv6: true
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 28.0.0.0/8
+  use-hosts: false
+  default-nameserver:
+    - 8.8.8.8
+  nameserver:
+    - tls://1dot1dot1dot1.cloudflare-dns.com
+    - https://dns.cloudflare.com/dns-query
+
+# BAGIAN ATAS, JANGAN DI EDIT
+# INFO CEK GRUP GATCHA
+
+proxies:
+
+  - name: trojan SSL
+    server: sgovh-trojan.bonds.id
+    port: 443
+    type: trojan
+    password: f9e3cff0-ae52-11ec-ab01-1239d0255272
+    skip-cert-verify: true
+    sni: "shopee.co.id"
+    udp: true
+
+  - name: trojan Go
+    server: tamarin.mjee.me
+    port: 443
+    type: trojan
+    password: f9e3cff0-ae52-11ec-ab01-1239d0255272
+    skip-cert-verify: true
+    sni: sgovh-trojan.bonds.id
+    udp: true
+    network: ws
+    ws-opts:
+      path: /howdy
+      headers:
+        Host: sgovh-trojan.bonds.id
+
+proxy-groups:
+  - name: FASTSSH-SSHKIT-HOWDY
+    type: select
+    proxies:
+      - trojan SSL
+      - trojan Go
+      - balance
+      - best-ping
+
+  - name: balance
+    type: load-balance
+    strategy: consistent-hashing
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    proxies:
+      - trojan SSL
+      - trojan Go
+
+  - name: best-ping
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    proxies:
+      - trojan SSL
+      - trojan Go
+
+  - name: "all-ads"
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+rules:
+  - GEOSITE,category-ads-all,all-ads
+  - MATCH,FASTSSH-SSHKIT-HOWDY
