@@ -12,6 +12,24 @@ start_clash() {
         fi
     fi
 
+    if [ "${ipv6}" = "false" ] ; then
+        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
+            echo ${net} | grep -q wlan
+            if [ $? -eq 0 ] ; then
+                echo 0 > ${net}/accept_ra
+            fi
+            echo 1 > ${net}/disable_ipv6
+        done
+    else
+        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
+            echo ${net} | grep -q wlan
+            if [ $? -eq 0 ] ; then
+                echo 1 > ${net}/accept_ra
+            fi
+            echo 0 > ${net}/disable_ipv6
+        done
+    fi
+
     if [ ! -f "${Clash_run_path}" ] ; then
         mkdir -p ${Clash_run_path}
     fi
@@ -30,16 +48,16 @@ start_clash() {
         exit 1
     fi
 
-    if [ -f "${temporary_config_file}" ] ; then
-        rm -rf ${temporary_config_file}
+    if [ -f "${Temporary_config_file}" ] ; then
+        rm -rf ${Temporary_config_file}
     fi
 
 #    if [ -f "${Clash_dns}" ] ; then
 #       if [ -f "${Clash_config_file}" ] ; then
 #          sed -i '/^[  ]*$/d' ${Clash_dns}
-#          cp -f ${Clash_dns} ${temporary_config_file}.swp
-#          echo "" >> ${temporary_config_file}.swp
-#          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
+#          cp -f ${Clash_dns} ${Temporary_config_file}.swp
+#          echo "" >> ${Temporary_config_file}.swp
+#          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${Temporary_config_file}.swp
 #          else
 #       echo "error msg= File konfigurasi  ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
 #       exit 1
@@ -51,21 +69,21 @@ start_clash() {
 
     if [ -f "${Clash_dns}" ] ; then
        if [ -f "${Clash_config_file}" ] ; then
-          cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
+          cp -f ${Clash_dns} ${Temporary_config_file}.swp && echo "\n" >> ${Temporary_config_file}.swp
           if [ "${auto_write_interface}" = "true" ] ; then
              if [ -x "/system/bin/ss" ] ; then
-                echo "  inbound-interface: ${interface_name}" >> ${temporary_config_file}.swp
-                echo "interface-name: ${interface_name}" >> ${temporary_config_file}.swp
+                echo "  inbound-interface: ${interface_name}" >> ${Temporary_config_file}.swp
+                echo "interface-name: ${interface_name}" >> ${Temporary_config_file}.swp
                 else
              echo "error msg= detected interface-name: failed,write the manual in ${Clash_dns}" >> ${CFM_logs_file}
              fi
              else
           echo "info msg= auto write interface Off " >> ${CFM_logs_file}
           fi
-          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
-          sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
+          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${Temporary_config_file}.swp
+          sed -i '/^[  ]*$/d' ${Temporary_config_file}.swp
           else
-       echo "error msg= File konfigurasi  ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
+       echo "error msg= File konfigurasi ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
        exit 1
        fi
        else
@@ -73,20 +91,26 @@ start_clash() {
     exit 1
     fi
 
-    mv -f ${temporary_config_file}.swp ${temporary_config_file} \
+    mv -f ${Temporary_config_file}.swp ${Temporary_config_file} \
     && echo "info msg= Pengabungan file konfigurasi berhasil" >> ${CFM_logs_file} || echo "error msg= Penggabungan file konfigurasi Gagal" >> ${CFM_logs_file}
 
-    if [ ! -f "${temporary_config_file}" ] ; then
-       echo "error msg= ${temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
+    if [ ! -f "${Temporary_config_file}" ] ; then
+       echo "error msg= ${Temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
        exit 1
     fi
 
+    sed -i '/^[  ]*$/d' ${CFM_logs_file}
+    if [ "${filter_local}" = "true" ] ; then
+        com="${scripts_dir}/clash.tool -m ; sleep 10 ;${scripts_dir}/clash.tool -m ; sleep 10; ${scripts_dir}/clash.tool -m ;sleep 10; ${scripts_dir}/clash.tool -m;sleep 10;${scripts_dir}/clash.tool -m ; sleep 10;${scripts_dir}/clash.tool -m"
+        echo "*/1 * * * * ${com}" >> ${Clash_run_path}/root && echo "info msg= bypass otomatis ip lokal diaktifkan." >> ${CFM_logs_file}
+    fi
+ 
     if [ -f "${Clash_bin_path}" ] ; then
        chown ${Clash_user_group} ${Clash_bin_path}
        chown ${Clash_user_group} ${Clash_data_dir}/confs/*
        chmod ${Clash_permissions} ${Clash_bin_path}
-       chown ${Clash_user_group} ${temporary_config_file}
-       chmod 0644 ${temporary_config_file}
+       chown ${Clash_user_group} ${Temporary_config_file}
+       chmod 0644 ${Temporary_config_file}
        chmod 0644 ${Clash_data_dir}/confs/*
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
        echo "info msg= Mengatur permissions file " >> ${CFM_logs_file}
@@ -100,46 +124,61 @@ start_clash() {
           echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
           && echo "info msg= Auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
           echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-          && echo "info msg= Dns dibuka." >> ${CFM_logs_file}
+          && echo "info msg= dns dibuka." >> ${CFM_logs_file}
        else
-          echo "info msg= auto update off" >> ${CFM_logs_file}
+          echo "info msg= auto update Off" >> ${CFM_logs_file}
        fi
    else
-      echo "error msg= Clash off." >> ${CFM_logs_file}
+      echo "error msg= Clash Offline." >> ${CFM_logs_file}
       echo "error msg= Kernel Clash di ''${Clash_bin_path}'' tidak terdeteksi." >> ${CFM_logs_file}
       exit 1
    fi
 
-   if [ -f ${temporary_config_file} ] ; then
-       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.logs
+   if [ -f ${Temporary_config_file} ] ; then
+       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Temporary_config_file} > ${Clash_run_path}/clash.logs
+#       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Clash_data_dir}/confs/clash.yaml >> ${Clash_run_path}/clash.logs
        if [ "$?" = 0 ] ; then
           ulimit -SHn 1000000
           nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_run_path}/config.yaml > /dev/null 2>&1 &
           echo -n $! > ${Clash_pid_file}
-
           grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
           echo "info msg= `grep "file" ${Clash_run_path}/clash.logs`" >>  ${CFM_logs_file}
-          echo "info msg= Clash on." >> ${CFM_logs_file}
+          echo "info msg= Clash Online." >> ${CFM_logs_file}
        else
           grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
-          if [ -f "${temporary_config_file}" ] ; then
-          mv ${temporary_config_file} ${Clash_config_file}
-          rm -rf ${temporary_config_file}
+          if [ -f "${Temporary_config_file}" ] ; then
+          mv ${Temporary_config_file} ${Clash_config_file}
+          rm -rf ${Temporary_config_file}
           fi
-        echo "error msg= Clash off" >> ${CFM_logs_file}
+        echo "error msg= Clash Offline" >> ${CFM_logs_file}
         echo "error msg= Periksa kembali ''${Clash_config_file}''." >> ${CFM_logs_file}
         exit 1
        fi
    else
-    echo "error msg= Clash off." >> ${CFM_logs_file}
+    echo "error msg= Clash Offline." >> ${CFM_logs_file}
     echo "error msg= ''${Clash_config_file}'' tidak terdeteksi." >> ${CFM_logs_file}
     exit 1
+   fi
+
+   sleep 3
+
+   if [ "${skip_detect_port}" = "false" ] ; then
+      if ! (${scripts_dir}/clash.tool -p) ; then
+         kill -15 `cat ${Clash_pid_file}`
+         rm -rf ${Clash_pid_file}
+         echo "error msg= Can't detect port, Clash Offline" >> ${CFM_logs_file}
+         echo "error msg= aktifkan (skip_detect_port) di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
+         exit 1
+      fi
+   else
+    echo "info msg= Skip detected port On" >> ${CFM_logs_file}
    fi
 }
 
 stop_clash() {
     kill -15 `cat ${Clash_pid_file}`
     rm -rf ${Clash_pid_file}
+
     if [ -f "${Clash_run_path}/appuid.list" ] ; then
        rm -rf ${Clash_run_path}/appuid.list
     fi
@@ -147,7 +186,8 @@ stop_clash() {
     if [ -f "${Clash_run_path}/root" ] ; then
        rm -rf ${Clash_run_path}/root
     fi
-    echo "info msg= Clash dihentikan" >> ${CFM_logs_file}
+
+    echo "info msg= Clash Offline" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do

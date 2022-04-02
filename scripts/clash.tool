@@ -2,7 +2,7 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
-. ${scripts_dir}/clash.config
+. /${scripts_dir}/clash.config
 
 updateGeox() {
         file="$1"
@@ -26,25 +26,46 @@ updateGeox() {
 
 monitor_local_ipv4() {
     local_ipv4=$(ip a | awk '$1~/inet$/{print $2}')
-    local_ipv4_number=$(ip a | awk '$1~/inet$/{print $2}' | wc -l)
-    rules_ipv4=$(${iptables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | awk '{print $9}')
-    rules_number=$(${iptables_wait} -t mangle -L FILTER_LOCAL_IP | grep "ACCEPT" | wc -l)
+    local_ipv6=$(ip -6 a | awk '$1~/inet6$/{print $2}')
+    rules_ipv4=$(${iptables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | awk '{print $9}'  2>&1)
+    rules_ipv6=$(${ip6tables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | awk '{print $8}'  2>&1)
 
-    if [ ${local_ipv4_number} -ne ${rules_number} ] ; then
+    change=0
+
+    wifistatus=$(dumpsys connectivity | grep "WIFI" | grep "state:" | awk -F ", " '{print $2}' | awk -F "=" '{print $2}' 2>&1)
+
+    if test ! -z "${wifistatus}" ; then
+        if test ! "${wifistatus}" = "$(cat ${Clash_run_path}/lastwifi)" ; then
+            change=$((${change} + 1))
+            echo "${wifistatus}" > ${Clash_run_path}/lastwifi
+		elif [ "$(ip route get 1.2.3.4 | awk '{print $5}' 2>&1)" != "wlan0"  ] ; then
+			change=$((${change} + 1))
+			echo "${wifistatus}" >  ${Clash_run_path}/lastwifi
+        fi
+    else    
+        echo "" > ${Clash_run_path}/lastwifi
+    fi
+
+    if test "$(settings get global mobile_data 2>&1)" -eq 1 ; then
+        if test "$(settings get global mobile_data1 2>&1)" -eq 1 ; then
+            mobilestatus=1
+        else
+            mobilestatus=2
+        fi
+    else
+        mobilestatus=0
+    fi
+
+    if test "${mobilestatus}" -ne 0 ; then
+        if test ! "${mobilestatus}" = "$(cat ${Clash_run_path}/lastmobile)" ; then
+            change=$((${change} + 1))
+            echo "${mobilestatus}" > ${Clash_run_path}/lastmobile
+        fi
+    fi
+
+    if test "${change}" -ne 0 ; then
         for rules_subnet in ${rules_ipv4[*]} ; do
-            wait_count=0
-            a_subnet=$(ipcalc -n ${rules_subnet} | awk -F '=' '{print $2}')
-            for local_subnet in ${local_ipv4[*]} ; do
-                b_subnet=$(ipcalc -n ${local_subnet} | awk -F '=' '{print $2}')
-
-                if [ "${a_subnet}" != "${b_subnet}" ] ; then
-                    wait_count=$((${wait_count} + 1))
-                    
-                    if [ ${wait_count} -ge ${local_ipv4_number} ] ; then
-                        ${iptables_wait} -t mangle -D FILTER_LOCAL_IP -d ${rules_subnet} -j ACCEPT
-                    fi
-                fi
-            done
+            ${iptables_wait} -t mangle -D FILTER_LOCAL_IP -d ${rules_subnet} -j ACCEPT
         done
 
         for subnet in ${local_ipv4[*]} ; do
@@ -52,21 +73,34 @@ monitor_local_ipv4() {
                 ${iptables_wait} -t mangle -I FILTER_LOCAL_IP -d ${subnet} -j ACCEPT
             fi
         done
-
-        unset a_subnet
-        unset b_subnet
-
-        echo "info msg= Iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
+    echo "" # "info msg= aturan iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
     else
-        echo "info msg= Ip lokal tidak berubah dan tidak akan diproses." >> ${CFM_logs_file}
+    echo "" # "error msg= Tidak ada perubahan di ip lokal, tidak ada pemrosesan yang akan dilakukan" >> ${CFM_logs_file}
+    fi
+
+    if test "${change}" -ne 0 ; then
+        for rules_subnet6 in ${rules_ipv6[*]} ; do
+            ${ip6tables_wait} -t mangle -D FILTER_LOCAL_IP -d ${rules_subnet6} -j ACCEPT
+        done
+
+        for subnet6 in ${local_ipv6[*]} ; do
+            if ! (${ip6tables_wait} -t mangle -C FILTER_LOCAL_IP -d ${subnet6} -j ACCEPT > /dev/null 2>&1) ; then
+                ${ip6tables_wait} -t mangle -I FILTER_LOCAL_IP -d ${subnet6} -j ACCEPT
+            fi
+        done
+    echo "info msg= aturan iptables untuk melewati ipv4/ipv6 lokal telah diperbarui." >> ${CFM_logs_file}
+    else
+    echo "info msg= tidak ada perubahan di ipv4/ipv6 lokal, tidak ada pemrosesan yang akan dilakukan" >> ${CFM_logs_file}
         exit 0
     fi
 
     unset local_ipv4
-    unset local_ipv4_number
     unset rules_ipv4
-    unset rules_number
-    unset wait_count
+    unset local_ipv6
+    unset rules_ipv6
+    unset wifistatus
+    unset mobilestatus
+    unset change
 }
 
 keep_dns() {
@@ -98,8 +132,36 @@ find_packages_uid() {
     done
 }
 
+port_detection() {
+    clash_pid=`cat ${Clash_pid_file}`
+    match_count=0
 
-while getopts ":kfum" signal ; do
+    if ! (ss -h > /dev/null 2>&1) ; then
+        clash_port=$(netstat -anlp | grep -v p6 | grep "clash" | awk '$6~/'"${clash_pid}"*'/{print $4}' | awk -F ':' '{print $2}' | sort -u)
+    else
+        clash_port=$(ss -antup | grep "clash" | awk '$7~/'pid="${clash_pid}"*'/{print $5}' | awk -F ':' '{print $2}' | sort -u)
+    fi
+
+    echo "port detection:" >> ${CFM_logs_file}
+
+    for sub_port in ${clash_port[*]} ; do
+        sleep 0.5
+        echo "    • port: ${sub_port}" >> ${CFM_logs_file}
+        if [ "${sub_port}" = ${Clash_tproxy_port} ] || [ "${sub_port}" = ${Clash_dns_port} ] ; then
+            match_count=$((${match_count} + 1))
+        fi
+    done
+
+    if [ ${match_count} -ge 2 ] ; then
+        echo "info msg= port tproxy & dns terdeteksi" >> ${CFM_logs_file}
+        exit 0
+    else
+        echo "info msg= port tproxy & dns tidak terdeteksi" >> ${CFM_logs_file}
+        exit 1
+    fi
+}
+
+while getopts ":kfump" signal ; do
     case ${signal} in
         k)
             if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
@@ -126,6 +188,10 @@ while getopts ":kfum" signal ; do
             else
                 exit 0
             fi
+            ;;
+        p)
+            sleep 0.5
+            port_detection
             ;;
         ?)
             echo ""

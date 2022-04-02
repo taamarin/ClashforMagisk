@@ -5,7 +5,7 @@ bind-address: "*"
 mode: rule
 allow-lan: true
 log-level: info
-external-controller: 127.0.0.1:9090
+external-controller: 0.0.0.0:9090
 external-ui: yacd-gh-pages
 unified-delay: true
 geodata-mode: false
@@ -17,9 +17,11 @@ dns:
   enhanced-mode: fake-ip
   fake-ip-range: 28.0.0.0/8
   default-nameserver:
-    - 8.8.8.8
+    - 1.0.0.1
   nameserver:
-    - 8.8.8.8
+    - tls://1dot1dot1dot1.cloudflare-dns.com
+    - https://dns.cloudflare.com/dns-query
+    - quic://doh.tiar.app 
 tun:
   enable: false  # default false
   stack: gvisor
