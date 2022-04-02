@@ -14,7 +14,7 @@ monitor_file=$3
 
 service_control() {
     if [ "${monitor_file}" = "disable" ] ; then
-#        touch ${signal_file}
+         touch ${signal_file}
         if [ "${auto_iptables}" = "false" ] ; then
            if [ "${events}" = "d" ] ; then
             ${service_path} -s &> ${folder_run}/service.log && ${tproxy_path} -s &>> ${folder_run}/service.log &
@@ -28,8 +28,8 @@ service_control() {
             ${service_path} -k &>> ${folder_run}/service.log &
            fi
         fi
-#        sleep 5
-#        rm -rf ${signal_file}
+        sleep 0.5
+        rm -rf ${signal_file}
     fi
 }
 

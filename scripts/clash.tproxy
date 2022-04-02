@@ -231,8 +231,8 @@ apply_rules() {
 
     ${scripts_dir}/clash.tool -m
 
-    echo "info msg= Iptables clash tproxy diterapkan (CONNECTED)" >> ${CFM_logs_file}
-#    echo "info msg= " >> ${CFM_logs_file}
+    echo "info msg= Iptables clash tproxy diterapkan" >> ${CFM_logs_file}
+    echo "info msg= (CONNECTED)" >> ${CFM_logs_file}
 }
 
 flush_rules() {
@@ -313,8 +313,8 @@ flush_rules() {
         ${ip6tables_wait} -t mangle -X CLASH_PRE
     fi
 
-    echo "info msg= Iptables clash tproxy dihapus (DISCONTINUED)" >> ${CFM_logs_file}
-#    echo "info msg= Discontinued" >> ${CFM_logs_file}
+    echo "info msg= Iptables clash tproxy dihapus " >> ${CFM_logs_file}
+    echo "info msg= (DISCONTINUED)" >> ${CFM_logs_file}
 }
 
 ################## NEW IPTABLES IPTABLES ###############

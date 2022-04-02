@@ -122,11 +122,11 @@ start_clash() {
 
           # Set interval update
           echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
-          && echo "info msg= Auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
+          && echo "info msg= auto Update GeoX timer dihidupkan." >> ${CFM_logs_file}
           echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
           && echo "info msg= dns dibuka." >> ${CFM_logs_file}
        else
-          echo "info msg= auto update Off" >> ${CFM_logs_file}
+          echo "info msg= auto Update GeoX Off" >> ${CFM_logs_file}
        fi
    else
       echo "error msg= Clash Offline." >> ${CFM_logs_file}
