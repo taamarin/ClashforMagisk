@@ -161,7 +161,32 @@ port_detection() {
     fi
 }
 
-while getopts ":kfump" signal ; do
+ui_start() {
+    local pid=`cat ${Ui_pid} 2> /dev/null`
+    if (cat /proc/${pid}/cmdline | grep -q php) ; then
+        echo "info msg= mendeteksi bahwa PHP telah dimulai." > ${Clash_run_path}/ui.logs
+        exit 1
+    fi
+
+    if [ -f "${Ui}" ] ; then
+        chown 0:3005 ${Ui}
+        chmod 0755 ${Ui}
+        nohup ${busybox_path} setuidgid 0:3005 ${Ui} -S 127.0.0.1:9999 -t ${Clash_data_dir} > /dev/null 2>&1 &
+        echo -n $! > ${Ui_pid}
+        echo "info msg= Ui Online." > ${Clash_run_path}/ui.logs
+    else
+       echo "error msg= Ui Offline, PHP tidak terdeteksi" >> ${Clash_run_path}/ui.logs
+       exit 1
+    fi
+}
+
+ui_stop() {
+    kill -15 `cat ${Ui_pid}`
+    rm -rf ${Ui_pid}
+    echo "info msg= Ui dihentikan." >> ${Clash_run_path}/ui.logs
+}
+
+while getopts ":rskfump" signal ; do
     case ${signal} in
         k)
             if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
@@ -192,6 +217,12 @@ while getopts ":kfump" signal ; do
         p)
             sleep 0.5
             port_detection
+            ;;
+        r)
+            ui_start
+            ;;
+        s)
+            ui_stop
             ;;
         ?)
             echo ""

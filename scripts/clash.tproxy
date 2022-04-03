@@ -29,14 +29,18 @@ flush_rule_rules() {
 create_mangle_prerouting_chain() {
     ${iptables_wait} -t mangle -N CLASH_PRE
 
-    ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "Sistem Anda mungkin telah mengebiri tproxy-TCP" >> ${CFM_logs_file}
-    ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-TCP" >> ${CFM_logs_file}
+
+    ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-UDP" >> ${CFM_logs_file}
+
 #   ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY 
 
     if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -N CLASH_PRE
-        ${ip6tables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "Sistem Anda mungkin telah mengebiri tproxy-TCP" >> ${CFM_logs_file}
-        ${ip6tables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+        ${ip6tables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-TCP" >> ${CFM_logs_file}
+
+        ${ip6tables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-UDP" >> ${CFM_logs_file}
+
 #       ${ip6tables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY 
     fi
 }
@@ -493,26 +497,24 @@ start_tun() {
     ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 
-#   ${iptables_wait} -t nat -I OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-
 #   hotspot tun
-    ${iptables_wait} -t nat -N AP_PROXY
-    for subnet in ${reserved_ip[@]} ; do
-        ${iptables_wait} -t nat -A AP_PROXY -d ${subnet} -j RETURN
-    done
+    if [ "${hotspot_tun}" = "true" ] ; then
+        ${iptables_wait} -t nat -N AP_PROXY
+        for subnet in ${reserved_ip[@]} ; do
+            ${iptables_wait} -t nat -A AP_PROXY -d ${subnet} -j RETURN
+        done
 
-    ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
-    ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p udp -j REDIRECT --to-port ${Clash_tproxy_port}
-    ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
-
-# sesuai kan sama yg di hp kalian
+        ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
+        ${iptables_wait} -t nat -A AP_PROXY -i wlan1 -p udp -j REDIRECT --to-port ${Clash_tproxy_port}
+        ${iptables_wait} -t nat -I PREROUTING -j AP_PROXY
+   fi
 
     if [ -f "${Clash_run_path}/clash.logs" ] ; then
         rm -rf ${Clash_run_path}/clash.logs
     fi
 
     echo "info msg= Iptables clash tun diterapkan" >> ${CFM_logs_file}
-    echo "info msg= Connected" >> ${CFM_logs_file}
+    echo "info msg= CONNECTED" >> ${CFM_logs_file}
 }
 
 stop_tun() {
@@ -529,15 +531,17 @@ stop_tun() {
     ${iptables_wait} -t mangle -X CLASH
 
     # delete hotspot
-    ${iptables_wait} -t nat -D OUTPUT -j AP_PROXY
-    ${iptables_wait} -t nat -F AP_PROXY
-    ${iptables_wait} -t nat -X AP_PROXY
+    if [ "${hotspot_tun}" = "true" ] ; then
+        ${iptables_wait} -t nat -D OUTPUT -j AP_PROXY
+        ${iptables_wait} -t nat -F AP_PROXY
+        ${iptables_wait} -t nat -X AP_PROXY
     
-    ${iptables_wait} -t nat -D AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
-    ${iptables_wait} -t nat -D PREROUTING -j AP_PROXY
+        ${iptables_wait} -t nat -D AP_PROXY -i wlan1 -p tcp -j REDIRECT --to-port ${Clash_redir_port}
+        ${iptables_wait} -t nat -D PREROUTING -j AP_PROXY
+    fi
 
     echo "info msg= Iptables Clash tun dihapus" >> ${CFM_logs_file} 
-    echo "info msg= Discontinued" >> ${CFM_logs_file}
+    echo "info msg= DISCONTINUED" >> ${CFM_logs_file}
 }
 
 ############### IPTABLES NEW 2 ############
@@ -703,8 +707,8 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
             if [ "${new_iptables}" = "true" ] ; then
-                echo "info msg= Mengunakan new iptables" >> ${CFM_logs_file}
                if [ "${mode_iptables}" = "tproxy" ] ; then
+                   echo "info msg= Mengunakan new iptables" >> ${CFM_logs_file}
                    if [ "${mode_iptables_two}" = "false" ] ; then
                       start_tproxy
                    elif [ "${mode_iptables_two}" = "true" ] ; then
@@ -715,9 +719,9 @@ while getopts ":sk" signal ; do
                    start_tun
                fi
             elif [ "${new_iptables}" = "false" ] ; then
-                echo "info msg= Mengunakan old iptables v2" >> ${CFM_logs_file}
                 if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
                     if [ "${mode_iptables}" = "tproxy" ] ; then
+                        echo "info msg= Mengunakan old iptables v2" >> ${CFM_logs_file}
                         create_rule_rules && apply_rules
                     elif [ "${mode_iptables}" = "tun" ] ; then
                         sleep 3
