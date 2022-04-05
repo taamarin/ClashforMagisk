@@ -2,7 +2,7 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
-. /${scripts_dir}/clash.config
+. ${scripts_dir}/clash.config
 
 updateGeox() {
         file="$1"
@@ -142,11 +142,11 @@ port_detection() {
         clash_port=$(ss -antup | grep "clash" | awk '$7~/'pid="${clash_pid}"*'/{print $5}' | awk -F ':' '{print $2}' | sort -u)
     fi
 
-    echo "port detection:" >> ${CFM_logs_file}
+    echo "port: detection" >> ${CFM_logs_file}
 
     for sub_port in ${clash_port[*]} ; do
         sleep 0.5
-        echo "    • port: ${sub_port}" >> ${CFM_logs_file}
+        echo "   • port: ${sub_port}" >> ${CFM_logs_file}
         if [ "${sub_port}" = ${Clash_tproxy_port} ] || [ "${sub_port}" = ${Clash_dns_port} ] ; then
             match_count=$((${match_count} + 1))
         fi
@@ -186,7 +186,25 @@ ui_stop() {
     echo "info msg= Ui dihentikan." >> ${Clash_run_path}/ui.logs
 }
 
-while getopts ":rskfump" signal ; do
+limit_clash() {
+    if [ "${Cgroup_memory_limit}" == "" ]; then
+        return
+    fi
+
+    if [ "${Cgroup_memory_path}" == "" ]; then
+        Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
+    fi
+
+    if [ ! -d "${Cgroup_memory_path}/clash" ]; then
+        mkdir -p "${Cgroup_memory_path}/clash"
+    fi
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs"
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
+
+    echo "info msg= batasi Memori: ${Cgroup_memory_limit}." >> ${CFM_logs_file}
+}
+
+while getopts ":rskfumpl" signal ; do
     case ${signal} in
         k)
             if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
@@ -223,6 +241,9 @@ while getopts ":rskfump" signal ; do
             ;;
         s)
             ui_stop
+            ;;
+        l)
+            limit_clash
             ;;
         ?)
             echo ""

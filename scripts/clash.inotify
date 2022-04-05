@@ -12,6 +12,12 @@ events=$1
 monitor_dir=$2
 monitor_file=$3
 
+folder_run() {
+    if [ ! -d "${folder_run}" ] ; then
+        mkdir -p ${folder_run}
+    fi
+}
+
 service_control() {
     if [ "${monitor_file}" = "disable" ] ; then
         touch ${signal_file}
@@ -20,9 +26,9 @@ service_control() {
         elif [ "${events}" = "n" ] ; then
             ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &
         fi
-        sleep 3
         rm -rf ${signal_file}
     fi
 }
 
+folder_run
 service_control
