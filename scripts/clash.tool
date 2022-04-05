@@ -195,13 +195,17 @@ limit_clash() {
         Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
     fi
 
-    if [ ! -d "${Cgroup_memory_path}/clash" ]; then
-        mkdir -p "${Cgroup_memory_path}/clash"
-    fi
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs"
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
+    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= limit Memory: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "warn msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
 
-    echo "info msg= batasi Memori: ${Cgroup_memory_limit}." >> ${CFM_logs_file}
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "warn msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
+
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "warn msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
+
+    if [ -d "${Cgroup_memory_path}/clash" ]; then
+        echo "info msg= Cgroup aktif " >> ${CFM_logs_file}
+    elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
+        echo "warn msg= Cgroup failed " >> ${CFM_logs_file}
+    fi
 }
 
 while getopts ":rskfumpl" signal ; do

@@ -105,8 +105,13 @@ start_clash() {
           ulimit -SHn 1000000
           nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_run_path}/config.yaml > /dev/null 2>&1 &
           echo -n $! > ${Clash_pid_file}
-          ${scripts_dir}/clash.tool -l
-
+          if [ "${Cgroup_memory}" = "true" ] ; then
+              if ! (${scripts_dir}/clash.tool -l) ; then
+                 echo "" >> ${CFM_logs_file}
+              fi
+          else
+              echo "info msg= Cgroup Off"  >> ${CFM_logs_file}
+          fi
           grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
           echo "info msg= `grep "file" ${Clash_run_path}/clash.logs`" >>  ${CFM_logs_file}
           echo "info msg= Clash Online." >> ${CFM_logs_file}
@@ -136,10 +141,8 @@ start_clash() {
          echo "error msg= set 'true' skip_detect_port di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
          exit 1
       fi
-   elif [ "${skip_detect_port}" = "true" ] ; then
-       echo "error msg= Skip detected port On" >> ${CFM_logs_file}
    else
-      echo "info msg= Skip detected port Off" >> ${CFM_logs_file}
+      echo "info msg= Skip detected port On" >> ${CFM_logs_file}
    fi
 }
 
