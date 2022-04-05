@@ -119,15 +119,18 @@ keep_dns() {
     unset local_dns
 }
 
-
 find_packages_uid() {
-    echo -n "" > ${appuid_file}
+    echo "" > ${appuid_file}
     for package in `cat ${filter_packages_file} | sort -u` ; do
+        if [ "${Clash_enhanced_mode}" == "fake-ip" ]; then
+            echo "warn msg= fake-ip Nonaktifkan daftar hitam dan daftar putih." >> ${CFM_logs_file}
+            return
+        fi
         awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
         if [ "${mode}" = "blacklist" ] ; then
             echo "info msg= ${package} di filter." >> ${CFM_logs_file}
         elif [ "${mode}" = "whitelist" ] ; then
-            echo "info msg= ${package} proksi." >> ${CFM_logs_file}
+            echo "info msg= ${package} Proksi " >> ${CFM_logs_file}
         fi
     done
 }
@@ -208,7 +211,7 @@ limit_clash() {
     fi
 }
 
-while getopts ":rskfumpl" signal ; do
+while getopts ":rskfumpli" signal ; do
     case ${signal} in
         k)
             if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then

@@ -12,18 +12,21 @@ geodata-mode: false
 ipv6: false
 dns:
   enable: true
-  ipv6: false
+  ipv6: true
+  default-nameserver:
+    - 1.0.0.1
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
   fake-ip-range: 28.0.0.0/8
-  default-nameserver:
-    - 1.0.0.1
+  use-hosts: true
   nameserver:
-    - tls://1dot1dot1dot1.cloudflare-dns.com
-    - https://dns.cloudflare.com/dns-query
-    - quic://doh.tiar.app 
+    - 'tls://1dot1dot1dot1.cloudflare-dns.com'
+    - 'https://dns.cloudflare.com/dns-query'
+  fallback:
+    - 'https://dns.google/dns-query'
+    - 'tls://8.8.4.4:853#Clash'
 tun:
-  enable: false  # default false
+  enable: false  # default false 
   stack: gvisor
   dns-hijack:
     - 0.0.0.0:53

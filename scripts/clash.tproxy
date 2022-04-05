@@ -29,7 +29,7 @@ flush_rule_rules() {
 }
 
 create_mangle_prerouting_chain() {
-    ${iptables_wait} -t mangle -N CLASH_PRE
+    ${iptables_wait} -t mangle -N CLASH_PRE && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah iptables _wait="iptables -w 100" ke iptables _wait="iptables" di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-TCP" >> ${CFM_logs_file}
     ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-UDP" >> ${CFM_logs_file}
@@ -325,7 +325,7 @@ start_tproxy() {
         ip -6 route add local default dev lo table ${mark_id}
     fi
 
-    ${iptables_wait} -t mangle -N CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -N CLASH_EXTERNAL && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah (iptables _wait="iptables -w 100" ke iptables _wait="iptables") di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
@@ -476,7 +476,7 @@ start_tproxy2() {
         ip -6 route add local default dev lo table ${mark_id}
     fi
 
-    ${iptables_wait} -t mangle -N CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -N CLASH_EXTERNAL && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah (iptables _wait="iptables -w 100" ke iptables _wait="iptables") di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     # Bypass other if
     #  Notice: Some interface is named with r_ / oem / nm_ / qcom_
@@ -633,14 +633,15 @@ start_tun() {
         ip -6 route add default dev ${tun_device} table ${mark_id}
     fi
 
-    ${iptables_wait} -t mangle -N CLASH
+    ${iptables_wait} -t mangle -N CLASH && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah (iptables _wait="iptables -w 100" ke iptables _wait="iptables") di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
+
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH -d ${subnet} -j RETURN
     done
-
     for AID in ${AIDs[@]} ; do
         ${iptables_wait} -t mangle -A CLASH -m owner --gid-owner ${AID} -j RETURN
     done
+
     ${iptables_wait} -t mangle -A CLASH -j MARK --set-xmark ${mark_id}
 
     if [ "${ipv6}" = "true" ] ; then
@@ -658,13 +659,11 @@ start_tun() {
     fi
 
     ${iptables_wait} -t mangle -A OUTPUT -j CLASH
-
     ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
  
     if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -A OUTPUT -j CLASH
-
         if [ "${nat_kernel}" = "true" ] ; then
             ${ip6tables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
             ${ip6tables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
@@ -692,11 +691,13 @@ start_tun() {
 stop_tun() {
     ip rule del fwmark ${mark_id} lookup ${mark_id}
     ip route del default dev ${tun_device} table ${mark_id}
+
     if [ "${ipv6}" = "true" ] ; then
         ip -6 rule del fwmark ${mark_id} lookup ${mark_id}
         ip -6 route del default dev ${tun_device} table ${mark_id}
     fi
 
+#    ${iptables_wait} -t mangle -D OUTPUT -j CLASH
     ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 
@@ -707,11 +708,10 @@ stop_tun() {
         fi
     fi
 
-#   ${iptables_wait} -t nat -D OUTPUT -m owner ! --gid-owner 3005 -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-    
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH
     ${iptables_wait} -t mangle -F CLASH
     ${iptables_wait} -t mangle -X CLASH
+
     if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -D OUTPUT -j CLASH
         ${ip6tables_wait} -t mangle -F CLASH
@@ -736,23 +736,23 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
             if [ "${new_iptables}" = "true" ] ; then
-               if [ "${mode_iptables}" = "tproxy" ] ; then
+               if [ "${Clash_tun_status}" = "false" ] ; then
                    echo "info msg= Mengunakan new iptables" >> ${CFM_logs_file}
                    if [ "${mode_iptables_two}" = "false" ] ; then
                       start_tproxy
                    elif [ "${mode_iptables_two}" = "true" ] ; then
                       start_tproxy2
                    fi
-               elif [ "${mode_iptables}" = "tun" ] ; then
+               elif [ "${Clash_tun_status}" = "true" ] ; then
                    sleep 3
                    start_tun
                fi
             elif [ "${new_iptables}" = "false" ] ; then
                 if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
-                    if [ "${mode_iptables}" = "tproxy" ] ; then
+                    if [ "${Clash_tun_status}" = "false" ] ; then
                         echo "info msg= Mengunakan old iptables v2" >> ${CFM_logs_file}
                         create_rule_rules && apply_rules
-                    elif [ "${mode_iptables}" = "tun" ] ; then
+                    elif [ "${Clash_tun_status}" = "true" ] ; then
                         sleep 3
                         start_tun
                     fi
@@ -761,22 +761,20 @@ while getopts ":sk" signal ; do
             ;;
         k)
             if [ "${new_iptables}" = "true" ] ; then
-                if [ "${mode_iptables}" = "tproxy" ] ; then
+                if [ "${Clash_tun_status}" = "false" ] ; then
                     if [ "${mode_iptables_two}" = "false" ] ; then
                         stop_tproxy
                     elif [ "${mode_iptables_two}" = "true" ] ; then
                         stop_tproxy2
                     fi
-                elif [ "${mode_iptables}" = "tun" ] ; then
-                    sleep 3
+                elif [ "${Clash_tun_status}" = "true" ] ; then
                     stop_tun
                 fi
             elif [ "${new_iptables}" = "false" ] ; then
                 if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
-                    if [ "${mode_iptables}" = "tproxy" ] ; then
+                    if [ "${Clash_tun_status}" = "false" ] ; then
                         flush_rule_rules && flush_rules
-                    elif [ "${mode_iptables}" = "tun" ] ; then
-                        sleep 3
+                    elif [ "${Clash_tun_status}" = "true" ] ; then
                         stop_tun
                     fi
                 fi

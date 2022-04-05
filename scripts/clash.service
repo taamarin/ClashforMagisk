@@ -5,13 +5,6 @@ scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
 start_clash() {
-    if [ "${mode_iptables}" = "tun" ] ; then
-        mkdir -p /dev/net
-        if [ ! -L /dev/net/tun ] ; then
-            ln -s /dev/tun /dev/net/tun
-        fi
-    fi
-
     if [ "${ipv6}" = "false" ] ; then
         for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
             echo ${net} | grep -q wlan
@@ -38,6 +31,13 @@ start_clash() {
     if (cat /proc/${pid}/cmdline | grep -q clash) ; then
         echo "info msg= Mendeteksi bahwa Clash telah dimulai." >> ${CFM_logs_file}
         exit 1
+    fi
+
+    if [ "${Clash_tun_status}" = "true" ] ; then
+        mkdir -p /dev/net
+        if [ ! -L /dev/net/tun ] ; then
+            ln -s /dev/tun /dev/net/tun
+        fi
     fi
 
     if [ -f "${Temporary_config_file}" ] ; then
@@ -82,16 +82,21 @@ start_clash() {
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
        echo "info msg= Mengatur permissions file " >> ${CFM_logs_file}
        
-       if [ "${set_interval}" = "true" ] ; then
+       if [ "${auto_update_GeoX}" = "true" ] ; then
           ${busybox_path} crontab -c ${Clash_run_path} -r
           touch ${Clash_run_path}/root
           chmod 0600 ${Clash_run_path}/root
           echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
           && echo "info msg= Update GeoX timer dihidupkan." >> ${CFM_logs_file}
-          echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-          && echo "info msg= DNS dibuka." >> ${CFM_logs_file}
        else
-          echo "info msg= Update GeoX Off" >> ${CFM_logs_file}
+          echo "info msg= Update Geo Off" >> ${CFM_logs_file}
+       fi
+
+       if [ "${static_dns_interval}" = "true" ] ; then
+          echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
+          && echo "info msg= dns dibuka." >> ${CFM_logs_file}
+       else
+          echo "info msg= static dns Off" >> ${CFM_logs_file}
        fi
    else
       echo "error msg= Clash Offline." >> ${CFM_logs_file}
