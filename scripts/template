@@ -11,7 +11,7 @@ secret: ""
 ipv6: true
 dns:
   enable: true
-  ipv6: false
+  ipv6: true
   default-nameserver:
     - 1.0.0.1
   listen: 0.0.0.0:1053
@@ -28,7 +28,7 @@ tun:
   device: Meta
   stack: gvisor
   dns-hijack:
-    - 0.0.0.0:53
+    - '0.0.0.0:53'
   auto-route: true 
   auto-detect-interface: true
 iptables:
@@ -37,5 +37,3 @@ iptables:
 udp: true
 redir-port: 7893
 mixed-port: 7894
-
-# Jangan di edit, kecuali paham fungsi² nya
