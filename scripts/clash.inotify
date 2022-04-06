@@ -3,6 +3,7 @@
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 service_path="${scripts_dir}/clash.service"
+# tproxy_path="${scripts_dir}/clash.iptables"
 tproxy_path="${scripts_dir}/clash.tproxy"
 signal_file="${scripts_dir}/../run/cmdRunning"
 folder_run="${scripts_dir}/../run"
@@ -24,7 +25,11 @@ service_control() {
         if [ "${events}" = "d" ] ; then
             ${service_path} -s &> ${folder_run}/service.log && ${tproxy_path} -s &>> ${folder_run}/service.log &
         elif [ "${events}" = "n" ] ; then
-            ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &
+            if [ "${Clash_tun_status}" = "true" ] ; then
+                ${tproxy_path} -k &>> ${folder_run}/service.log && ${service_path} -k &>> ${folder_run}/service.log &
+            elif [ "${Clash_tun_status}" = "false" ] ; then
+                ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &
+            fi
         fi
         rm -rf ${signal_file}
     fi

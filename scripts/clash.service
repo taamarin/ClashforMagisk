@@ -24,7 +24,8 @@ start_clash() {
     fi
 
     if [ -f "${CFM_logs_file}" ] ; then
-        echo "info msg= ${date_day}" > ${CFM_logs_file}
+        echo "${date_day}" > ${CFM_logs_file}
+#        echo "time     output" >> ${CFM_logs_file}
     fi
  
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -105,7 +106,7 @@ start_clash() {
    fi
 
    if [ -f ${Temporary_config_file} ] ; then
-       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Temporary_config_file} > ${Clash_run_path}/clash.logs
+       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Temporary_config_file} > ${Clash_run_path}/clash.log #/dev/null 2>&1 & 
        if [ "$?" = 0 ] ; then
           ulimit -SHn 1000000
           nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_run_path}/config.yaml > /dev/null 2>&1 &
@@ -117,11 +118,11 @@ start_clash() {
           else
               echo "info msg= Cgroup Off"  >> ${CFM_logs_file}
           fi
-          grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
-          echo "info msg= `grep "file" ${Clash_run_path}/clash.logs`" >>  ${CFM_logs_file}
+          echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
+          echo "info msg= `grep "file" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
           echo "info msg= Clash Online." >> ${CFM_logs_file}
        else
-          grep "level=" ${Clash_run_path}/clash.logs | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
+          grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
           if [ -f "${Temporary_config_file}" ] ; then
              mv ${Temporary_config_file} ${Clash_config_file}
              rm -rf ${Temporary_config_file}
@@ -136,7 +137,13 @@ start_clash() {
     exit 1
    fi
 
-   sleep 3
+   sleep 2
+
+if [ "${iptables_w}" = "true" ]; then
+    echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
+elif [ "${iptables_w}" = "false" ]; then
+    echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
+fi
 
    if [ "${skip_detect_port}" = "false" ] ; then
       if ! (${scripts_dir}/clash.tool -p) ; then
@@ -164,7 +171,11 @@ stop_clash() {
        rm -rf ${Clash_run_path}/root
     fi
 
-    echo "info msg= Clash Offline" >> ${CFM_logs_file}
+    if [ "${Clash_tun_status}" = "false" ] ; then
+        echo "info msg= Clash Offline" >> ${CFM_logs_file}
+    elif [ "${Clash_tun_status}" = "false" ] ; then
+        echo -n "" >> ${CFM_logs_file}
+    fi
 }
 
 while getopts ":sk" signal ; do

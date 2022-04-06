@@ -17,10 +17,10 @@ updateGeox() {
 
         if [ -f "${file}" ] ; then
             rm -rf ${file_bak}
-            echo "info msg= ${file} Pembaruan selesai." >> ${Clash_run_path}/clash.logs
+            echo "info msg= ${file} Pembaruan selesai." >> ${Clash_run_path}/clash.log
         else
             mv ${file_bak} ${file}
-            echo "warning msg= ${file} Pembaruan gagal, file telah dipulihkan." >> ${Clash_run_path}/clash.logs
+            echo "war msg= ${file} Pembaruan gagal, file telah dipulihkan." >> ${Clash_run_path}/clash.log
           fi
 }
 
@@ -120,17 +120,13 @@ keep_dns() {
 }
 
 find_packages_uid() {
-    echo "" > ${appuid_file}
+    echo -n "" > ${appuid_file}
     for package in `cat ${filter_packages_file} | sort -u` ; do
-        if [ "${Clash_enhanced_mode}" == "fake-ip" ]; then
-            echo "warn msg= fake-ip Nonaktifkan daftar hitam dan daftar putih." >> ${CFM_logs_file}
-            return
-        fi
         awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
         if [ "${mode}" = "blacklist" ] ; then
-            echo "info msg= ${package} di filter." >> ${CFM_logs_file}
-        elif [ "${mode}" = "whitelist" ] ; then
-            echo "info msg= ${package} Proksi " >> ${CFM_logs_file}
+            echo "info msg= • ${package} di filter." >> ${CFM_logs_file}
+#        elif [ "${mode}" = "whitelist" ] ; then
+#            echo "info msg= ${package} Proksi " >> ${CFM_logs_file}
         fi
     done
 }
@@ -198,16 +194,16 @@ limit_clash() {
         Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
     fi
 
-    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= limit Memory: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "warn msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
+    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= limit Memory: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "war msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
 
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "warn msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
 
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "warn msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
 
     if [ -d "${Cgroup_memory_path}/clash" ]; then
         echo "info msg= Cgroup aktif " >> ${CFM_logs_file}
     elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
-        echo "warn msg= Cgroup failed " >> ${CFM_logs_file}
+        echo "war msg= Cgroup failed " >> ${CFM_logs_file}
     fi
 }
 
