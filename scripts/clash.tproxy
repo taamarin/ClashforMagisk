@@ -29,7 +29,7 @@ flush_rule_rules() {
 }
 
 create_mangle_prerouting_chain() {
-    ${iptables_wait} -t mangle -N CLASH_PRE && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah iptables _wait="iptables -w 100" ke iptables _wait="iptables" di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -N CLASH_PRE && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= iptables masih tertau / does not support  iptables -w, Ubah iptables_w="true" ke iptables_w="false" di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-TCP" >> ${CFM_logs_file}
     ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "sistem anda mungkin telah mengebiri tproxy-UDP" >> ${CFM_logs_file}
@@ -325,7 +325,7 @@ start_tproxy() {
         ip -6 route add local default dev lo table ${mark_id}
     fi
 
-    ${iptables_wait} -t mangle -N CLASH_EXTERNAL && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah (iptables _wait="iptables -w 100" ke iptables _wait="iptables") di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -N CLASH_EXTERNAL && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= iptables masih tertau / does not support  iptables -w, Ubah iptables_w="true" ke iptables_w="false" di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
@@ -476,7 +476,7 @@ start_tproxy2() {
         ip -6 route add local default dev lo table ${mark_id}
     fi
 
-    ${iptables_wait} -t mangle -N CLASH_EXTERNAL && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah (iptables _wait="iptables -w 100" ke iptables _wait="iptables") di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -N CLASH_EXTERNAL && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= iptables masih tertau / does not support  iptables -w, Ubah iptables_w="true" ke iptables_w="false" di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     # Bypass other if
     #  Notice: Some interface is named with r_ / oem / nm_ / qcom_
@@ -633,7 +633,7 @@ start_tun() {
         ip -6 route add default dev ${tun_device} table ${mark_id}
     fi
 
-    ${iptables_wait} -t mangle -N CLASH && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= does not support  iptables -w, Ubah (iptables _wait="iptables -w 100" ke iptables _wait="iptables") di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -N CLASH && echo "info msg= Support iptables -w 100" >> ${CFM_logs_file} || echo "warn msg= iptables masih tertau / does not support  iptables -w, Ubah iptables_w="true" ke iptables_w="false" di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
 
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH -d ${subnet} -j RETURN
@@ -684,7 +684,7 @@ start_tun() {
 
     rm_logs
 
-    echo "info msg= Iptables clash tun diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Iptables Clash Tun diterapkan" >> ${CFM_logs_file}
     echo "info msg= CONNECTED" >> ${CFM_logs_file}
 }
 
@@ -746,6 +746,8 @@ while getopts ":sk" signal ; do
                elif [ "${Clash_tun_status}" = "true" ] ; then
                    sleep 3
                    start_tun
+               else
+                   echo "warn msg= tun, enable: ${Clash_tun_status}, set only 'false' or 'true' di template" >> ${CFM_logs_file}
                fi
             elif [ "${new_iptables}" = "false" ] ; then
                 if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
@@ -755,6 +757,8 @@ while getopts ":sk" signal ; do
                     elif [ "${Clash_tun_status}" = "true" ] ; then
                         sleep 3
                         start_tun
+                    else
+                        echo "warn msg= tun, enable: ${Clash_tun_status}, set only 'false' or 'true' di template" >> ${CFM_logs_file}
                     fi
                 fi
             fi
@@ -769,6 +773,8 @@ while getopts ":sk" signal ; do
                     fi
                 elif [ "${Clash_tun_status}" = "true" ] ; then
                     stop_tun
+                else
+                    echo "warn msg= tun, enable: ${Clash_tun_status}, set only 'false' or 'true' di template" >> ${CFM_logs_file}
                 fi
             elif [ "${new_iptables}" = "false" ] ; then
                 if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
@@ -776,6 +782,8 @@ while getopts ":sk" signal ; do
                         flush_rule_rules && flush_rules
                     elif [ "${Clash_tun_status}" = "true" ] ; then
                         stop_tun
+                    else
+                        echo "warn msg= tun, enable: ${Clash_tun_status}, set only 'false' or 'true' di template" >> ${CFM_logs_file}
                     fi
                 fi
             fi

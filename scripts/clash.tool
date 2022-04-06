@@ -211,7 +211,7 @@ limit_clash() {
     fi
 }
 
-while getopts ":rskfumpli" signal ; do
+while getopts ":rskfumpl" signal ; do
     case ${signal} in
         k)
             if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
