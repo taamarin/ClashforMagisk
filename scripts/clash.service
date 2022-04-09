@@ -25,7 +25,6 @@ start_clash() {
 
     if [ -f "${CFM_logs_file}" ] ; then
         echo "${date_day}" > ${CFM_logs_file}
-#        echo "time     output" >> ${CFM_logs_file}
     fi
  
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -59,6 +58,7 @@ start_clash() {
     exit 1
     fi
 
+    echo "Module v1.9.3" >> ${CFM_logs_file}
     mv -f ${Temporary_config_file}.swp ${Temporary_config_file} \
     && echo "info msg= Pengabungan file konfigurasi berhasil" >> ${CFM_logs_file} || echo "error msg= Penggabungan file konfigurasi Gagal" >> ${CFM_logs_file}
 
@@ -120,7 +120,7 @@ start_clash() {
           fi
           echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
           echo "info msg= `grep "file" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
-          echo "info msg= Clash Online." >> ${CFM_logs_file}
+          echo "info msg= Clash run." >> ${CFM_logs_file}
        else
           grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
           if [ -f "${Temporary_config_file}" ] ; then
@@ -132,18 +132,18 @@ start_clash() {
         exit 1
        fi
    else
-    echo "error msg= Clash Offline." >> ${CFM_logs_file}
+    echo "error msg= Clash has stopped." >> ${CFM_logs_file}
     echo "error msg= ''${Clash_config_file}'' tidak terdeteksi." >> ${CFM_logs_file}
     exit 1
    fi
 
-   sleep 2
+   if [ "${iptables_w}" = "true" ]; then
+       echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
+   elif [ "${iptables_w}" = "false" ]; then
+       echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
+   fi
 
-if [ "${iptables_w}" = "true" ]; then
-    echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
-elif [ "${iptables_w}" = "false" ]; then
-    echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
-fi
+   sleep 0.5
 
    if [ "${skip_detect_port}" = "false" ] ; then
       if ! (${scripts_dir}/clash.tool -p) ; then

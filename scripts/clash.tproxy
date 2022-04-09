@@ -11,7 +11,7 @@ rm_logs() {
 }
 
 iptables_notif() {
-    echo "error msg= gagal menghubungkan iptables" >> ${CFM_logs_file}
+    echo "error msg= Gagal menghubungkan iptables" >> ${CFM_logs_file}
     echo "tun: " >> ${CFM_logs_file}
     echo "  enable: ${Clash_tun_status}" >> ${CFM_logs_file}
     echo "error msg= set only 'false' or 'true' di template" >> ${CFM_logs_file}
@@ -19,27 +19,27 @@ iptables_notif() {
 }
 
 tun_notif_off() {
-    echo "info msg= Clash Offline" >> ${CFM_logs_file}
-    echo "info msg= Iptables Clash TUN dihapus" >> ${CFM_logs_file}
-    echo "info msg= (DISCONTINUED)" >> ${CFM_logs_file}
+    echo "info msg= Clash has stopped" >> ${CFM_logs_file}
+    echo "info msg= Iptables Tun dihapus" >> ${CFM_logs_file}
+    echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
 tun_notif_on() {
-    echo "info msg= Iptables Clash TUN diterapkan" >> ${CFM_logs_file}
-    echo "info msg= (CONNECTED)" >> ${CFM_logs_file}
+    echo "info msg= Iptables Tun diterapkan," >> ${CFM_logs_file}
+    echo "info msg= connected" >> ${CFM_logs_file}
 }
 
 tproxy_notif_off() {
-    echo "info msg= Iptables Clash Tproxy dihapus" >> ${CFM_logs_file}
-    echo "info msg= (DISCONTINUED)" >> ${CFM_logs_file}
+    echo "info msg= Iptables Tproxy dihapus" >> ${CFM_logs_file}
+    echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
 tproxy_notif_on() {
-    echo "info msg= Iptables Clash Tproxy diterapkan" >> ${CFM_logs_file}
-    echo "info msg= (CONNECTED)" >> ${CFM_logs_file}
+    echo "info msg= Iptables Tproxy diterapkan" >> ${CFM_logs_file}
+    echo "info msg= connected" >> ${CFM_logs_file}
 }
 
-######### MODE TPROXY ########
+#########MODE TPROXY########
 start_tproxy() {
     ip rule add fwmark ${mark_id} lookup ${mark_id}
     ip route add local default dev lo table ${mark_id}
@@ -75,6 +75,7 @@ start_tproxy() {
 
     ${iptables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
     ${iptables_wait} -t mangle -I PREROUTING -p udp -m socket -j DIVERT
+
     if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -N DIVERT
         ${ip6tables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
@@ -85,18 +86,18 @@ start_tproxy() {
     fi
 
     ${iptables_wait} -t mangle -N CLASH_LOCAL
-#   ${iptables_wait} -t mangle -I CLASH_LOCAL -o lo -j RETURN
+
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
     done
 
     if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
         echo "info msg= filter aktif" >> ${CFM_logs_file}
         ${scripts_dir}/clash.tool -f
         AID=`cat ${appuid_file} | sort -u`
             for appuid in ${AID[@]} ; do
                 ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-                ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
             done
     else
         echo "war msg= filter aplikasi Off "  >> ${CFM_logs_file}
@@ -110,18 +111,18 @@ start_tproxy() {
     
     ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
     ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
     if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -N CLASH_LOCAL
-    #   ${iptables_wait} -t mangle -I CLASH_LOCAL -o lo -j RETURN
         for subnet in ${reserved_ip6[@]} ; do
             ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
         done
 
         if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-             AID=`cat ${appuid_file} | sort -u`
-                 for appuid in ${AID[@]} ; do
-                     ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${AID} -j RETURN
-                     ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+            AID=`cat ${appuid_file} | sort -u`
+                for appuid in ${AID[@]} ; do
+                    ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
                 done
         else
             ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
@@ -137,6 +138,16 @@ start_tproxy() {
         fi
     fi
 
+    ${iptables_wait} -t mangle -N FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -N FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
+    fi
+
+    ${scripts_dir}/clash.tool -m
     rm_logs
 
 }
@@ -191,11 +202,21 @@ stop_tproxy() {
 
         ${ip6tables_wait} -t mangle -F DIVERT
         ${ip6tables_wait} -t mangle -X DIVERT
-        
     fi
+        ${iptables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
+        ${iptables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
+        ${iptables_wait} -t mangle -F FILTER_LOCAL_IP
+        ${iptables_wait} -t mangle -X FILTER_LOCAL_IP
+        if [ "${ipv6}" = "true" ] ; then
+             ${ip6tables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
+             ${ip6tables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
+             ${ip6tables_wait} -t mangle -F FILTER_LOCAL_IP
+             ${ip6tables_wait} -t mangle -X FILTER_LOCAL_IP
+        fi
+
 }
 
-######### MODE TUN ######### 
+# IPTABLES TUN
 start_tun() {
     ip rule add fwmark ${mark_id} table ${mark_id}
     ip route add default dev ${tun_device} table ${mark_id}
@@ -215,14 +236,13 @@ start_tun() {
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
     done
 
-# filter aplikasi
     if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-#        echo "info msg= filter aktif" >> ${CFM_logs_file}
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+        echo "info msg= filter aktif" >> ${CFM_logs_file}
         ${scripts_dir}/clash.tool -f
         AID=`cat ${appuid_file} | sort -u`
             for appuid in ${AID[@]} ; do
                 ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-                ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
             done
     else
         echo "war msg= filter aplikasi Off "  >> ${CFM_logs_file}
@@ -244,17 +264,18 @@ start_tun() {
         done
 
         if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
             AID=`cat ${appuid_file} | sort -u`
                 for appuid in ${AID[@]} ; do
                     ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-                    ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
                 done
-            else
-                ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-            fi
+        else
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+        fi
+    fi
+
         ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
         ${ip6tables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
-    fi
 
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
@@ -262,7 +283,6 @@ start_tun() {
 
     ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
     ${iptables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
-
     ${iptables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
 
     if [ "${ipv6}" = "true" ] ; then
@@ -272,7 +292,6 @@ start_tun() {
 
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
-
         ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
     fi
 
@@ -320,6 +339,7 @@ while getopts ":sk" signal ; do
                start_tproxy
                tproxy_notif_on
            elif [ "${Clash_tun_status}" == "true" ]; then
+               sleep 0.5
                start_tun
                tun_notif_on
            else
