@@ -217,7 +217,7 @@ rm -rf ${MODPATH}/module.prop
 touch ${MODPATH}/module.prop
 echo "id=ClashforMagisk" > ${MODPATH}/module.prop
 echo "name=Clash for Magisk" >> ${MODPATH}/module.prop
-echo -n "version=Module v1.9.3-beta, Core " >> ${MODPATH}/module.prop
+echo -n "version=Module v1.9.3, Core " >> ${MODPATH}/module.prop
 echo ${latest_clash_version} >> ${MODPATH}/module.prop
 echo "versionCode=20220225" >> ${MODPATH}/module.prop
 echo "author=Taamarin" >> ${MODPATH}/module.prop

@@ -16,13 +16,18 @@ dns:
     - 1.0.0.1
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.0/15
+  fake-ip-range: 198.18.0.1/15
   use-hosts: true
   nameserver:
     - 'tls://1dot1dot1dot1.cloudflare-dns.com'
     - 'https://dns.cloudflare.com/dns-query'
   fallback:
     - 'https://dns.google/dns-query'
+sniffer:
+  enable: false
+  force: true
+  sniffing:
+    - tls
 tun:
   enable: false
   device: Meta
@@ -32,7 +37,7 @@ tun:
   auto-route: true 
   auto-detect-interface: true
 iptables:
-  enable: false # don't set "true"
+  enable: false
   inbound-interface: ""
 udp: true
 redir-port: 7893

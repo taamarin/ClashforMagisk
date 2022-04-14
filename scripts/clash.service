@@ -25,6 +25,7 @@ start_clash() {
 
     if [ -f "${CFM_logs_file}" ] ; then
         echo "${date_day}" > ${CFM_logs_file}
+        echo "Module v1.9.3" >> ${CFM_logs_file}
     fi
  
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -58,7 +59,6 @@ start_clash() {
     exit 1
     fi
 
-    echo "Module v1.9.3" >> ${CFM_logs_file}
     mv -f ${Temporary_config_file}.swp ${Temporary_config_file} \
     && echo "info msg= Pengabungan file konfigurasi berhasil" >> ${CFM_logs_file} || echo "error msg= Penggabungan file konfigurasi Gagal" >> ${CFM_logs_file}
 

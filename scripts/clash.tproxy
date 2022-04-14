@@ -272,10 +272,10 @@ start_tun() {
         else
             ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
         fi
-    fi
 
         ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
         ${ip6tables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
+    fi
 
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
@@ -339,7 +339,6 @@ while getopts ":sk" signal ; do
                start_tproxy
                tproxy_notif_on
            elif [ "${Clash_tun_status}" == "true" ]; then
-               sleep 0.5
                start_tun
                tun_notif_on
            else

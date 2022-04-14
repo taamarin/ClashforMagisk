@@ -1,33 +1,48 @@
-tproxy-port: 9889
-redir-port: 7891
-mixed-port: 7892
+tproxy-port: 6996
 bind-address: "*"
 mode: rule
 allow-lan: true
 log-level: silent
-external-controller: 0.0.0.0:9090
+external-controller: 0.0.0.0:9090 
 external-ui: yacd-gh-pages
 unified-delay: true
 geodata-mode: false
+secret: ""
 ipv6: true
 dns:
   enable: true
   ipv6: true
+  default-nameserver:
+    - 1.0.0.1
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
-  fake-ip-range: 28.0.0.0/8
-  use-hosts: false
-  default-nameserver:
-    - 8.8.8.8
+  fake-ip-range: 198.18.0.1/15
+  use-hosts: true
   nameserver:
-    - tls://1dot1dot1dot1.cloudflare-dns.com
-    - https://dns.cloudflare.com/dns-query
-
-# BAGIAN ATAS, JANGAN DI EDIT
-# INFO CEK GRUP GATCHA
-
+    - 'tls://1dot1dot1dot1.cloudflare-dns.com'
+    - 'https://dns.cloudflare.com/dns-query'
+  fallback:
+    - 'https://dns.google/dns-query'
+sniffer:
+  enable: false
+  force: true
+  sniffing:
+    - tls
+tun:
+  enable: false
+  device: Meta
+  stack: gvisor
+  dns-hijack:
+    - '0.0.0.0:53'
+  auto-route: true 
+  auto-detect-interface: true
+iptables:
+  enable: false
+  inbound-interface: ""
+udp: true
+redir-port: 7893
+mixed-port: 7894
 proxies:
-
   - name: trojan SSL
     server: sgovh-trojan.bonds.id
     port: 443
