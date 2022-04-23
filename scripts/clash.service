@@ -5,29 +5,18 @@ scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
 start_clash() {
-    if [ "${ipv6}" = "false" ] ; then
-        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
-            echo ${net} | grep -q wlan
-            if [ $? -eq 0 ] ; then
-                echo 0 > ${net}/accept_ra
-            fi
-            echo 1 > ${net}/disable_ipv6
-        done
-    else
-        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
-            echo ${net} | grep -q wlan
-            if [ $? -eq 0 ] ; then
-                echo 1 > ${net}/accept_ra
-            fi
-            echo 0 > ${net}/disable_ipv6
-        done
-    fi
 
     if [ -f "${CFM_logs_file}" ] ; then
         echo "${date_day}" > ${CFM_logs_file}
-        echo "Module v1.9.3" >> ${CFM_logs_file}
+        echo "Module v1.9.4" >> ${CFM_logs_file}
     fi
  
+    if [ "${use_premium}" == "true" ]; then
+        echo "info msg= Mengunakan kernel premium" >> ${CFM_logs_file}
+    else
+        echo "info msg= Mengunakan kernel Meta" >> ${CFM_logs_file}
+    fi
+
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${pid}/cmdline | grep -q clash) ; then
         echo "info msg= Mendeteksi bahwa Clash telah dimulai." >> ${CFM_logs_file}
@@ -36,9 +25,7 @@ start_clash() {
 
     if [ "${Clash_tun_status}" = "true" ] ; then
         mkdir -p /dev/net
-        if [ ! -L /dev/net/tun ] ; then
-            ln -s /dev/tun /dev/net/tun
-        fi
+        [ ! -L /dev/net/tun ] && ln -s /dev/tun /dev/net/tun
     fi
 
     if [ -f "${Temporary_config_file}" ] ; then
@@ -66,40 +53,18 @@ start_clash() {
        echo "error msg= ${Temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
        exit 1
     fi
-
-    sed -i '/^[  ]*$/d' ${CFM_logs_file}
-    if [ "${filter_local}" = "true" ] ; then
-        com="${scripts_dir}/clash.tool -m ; sleep 10 ;${scripts_dir}/clash.tool -m ; sleep 10; ${scripts_dir}/clash.tool -m ;sleep 10; ${scripts_dir}/clash.tool -m;sleep 10;${scripts_dir}/clash.tool -m ; sleep 10;${scripts_dir}/clash.tool -m"
-        echo "*/1 * * * * ${com}" >> ${Clash_run_path}/root && echo "info msg= bypass otomatis ip lokal diaktifkan." >> ${CFM_logs_file}
-    fi
  
     if [ -f "${Clash_bin_path}" ] ; then
        chown ${Clash_user_group} ${Clash_bin_path}
        chown ${Clash_user_group} ${Clash_data_dir}/confs/*
-       chmod ${Clash_permissions} ${Clash_bin_path}
+       chmod 0700 ${Clash_bin_path}
+#       chmod ${Clash_permissions} ${Clash_bin_path}
        chown ${Clash_user_group} ${Temporary_config_file}
        chmod 0644 ${Temporary_config_file}
        chmod 0644 ${Clash_data_dir}/confs/*
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
        echo "info msg= Mengatur permissions file " >> ${CFM_logs_file}
-       
-       if [ "${auto_update_GeoX}" = "true" ] ; then
-          ${busybox_path} crontab -c ${Clash_run_path} -r
-          touch ${Clash_run_path}/root
-          chmod 0600 ${Clash_run_path}/root
-          echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
-          && echo "info msg= Update GeoX timer dihidupkan." >> ${CFM_logs_file}
-       else
-          echo "info msg= Update Geo Off" >> ${CFM_logs_file}
-       fi
-
-       if [ "${static_dns_interval}" = "true" ] ; then
-          echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-          && echo "info msg= dns dibuka." >> ${CFM_logs_file}
-       else
-          echo "info msg= static dns Off" >> ${CFM_logs_file}
-       fi
-   else
+    else
       echo "error msg= Clash Offline." >> ${CFM_logs_file}
       echo "error msg= Kernel Clash di ''${Clash_bin_path}'' tidak terdeteksi." >> ${CFM_logs_file}
       exit 1
@@ -116,10 +81,10 @@ start_clash() {
                  echo "" 
               fi
           else
-              echo "info msg= Cgroup Off"  >> ${CFM_logs_file}
+              echo "info msg= Cgroup di Matikan"  >> ${CFM_logs_file}
           fi
           echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
-          echo "info msg= `grep "file" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
+          echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
           echo "info msg= Clash run." >> ${CFM_logs_file}
        else
           grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
@@ -137,25 +102,6 @@ start_clash() {
     exit 1
    fi
 
-   if [ "${iptables_w}" = "true" ]; then
-       echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
-   elif [ "${iptables_w}" = "false" ]; then
-       echo "info msg= mengunakan ${iptables_wait}" >> ${CFM_logs_file}
-   fi
-
-   sleep 0.5
-
-   if [ "${skip_detect_port}" = "false" ] ; then
-      if ! (${scripts_dir}/clash.tool -p) ; then
-         kill -15 `cat ${Clash_pid_file}`
-         rm -rf ${Clash_pid_file}
-         echo "error msg= Can't detect port, Clash Offline" >> ${CFM_logs_file}
-         echo "error msg= set 'true' skip_detect_port di ${scripts_dir}/clash.config" >> ${CFM_logs_file}
-         exit 1
-      fi
-   else
-      echo "info msg= Skip detected port On" >> ${CFM_logs_file}
-   fi
 }
 
 stop_clash() {

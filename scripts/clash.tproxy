@@ -9,7 +9,6 @@ rm_logs() {
         rm -rf ${Clash_run_path}/clash.log
     fi
 }
-
 iptables_notif() {
     echo "error msg= Gagal menghubungkan iptables" >> ${CFM_logs_file}
     echo "tun: " >> ${CFM_logs_file}
@@ -19,201 +18,273 @@ iptables_notif() {
 }
 
 tun_notif_off() {
-    echo "info msg= Clash has stopped" >> ${CFM_logs_file}
-    echo "info msg= Iptables Tun dihapus" >> ${CFM_logs_file}
+    echo "info msg= Clash stopped" >> ${CFM_logs_file}
+    if [ "${Clash_auto_route}" == "true" ]; then
+        echo "info msg= Clash Tun dihapus" >> ${CFM_logs_file}
+    else
+        echo "info msg= Clash Iptables Tun dihapus" >> ${CFM_logs_file}
+    fi
     echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
 tun_notif_on() {
-    echo "info msg= Iptables Tun diterapkan," >> ${CFM_logs_file}
+    if [ "${Clash_auto_route}" == "true" ]; then
+        echo "info msg= Clash Tun diterapkan," >> ${CFM_logs_file}
+    else
+        echo "info msg= Clash Iptables Tun diterapkan," >> ${CFM_logs_file}
+    fi
     echo "info msg= connected" >> ${CFM_logs_file}
 }
-
 tproxy_notif_off() {
-    echo "info msg= Iptables Tproxy dihapus" >> ${CFM_logs_file}
+    echo "info msg= Clash Iptables Tproxy dihapus" >> ${CFM_logs_file}
     echo "info msg= discontinued" >> ${CFM_logs_file}
 }
-
 tproxy_notif_on() {
-    echo "info msg= Iptables Tproxy diterapkan" >> ${CFM_logs_file}
+    echo "info msg= Clash Iptables Tproxy diterapkan" >> ${CFM_logs_file}
     echo "info msg= connected" >> ${CFM_logs_file}
 }
 
-#########MODE TPROXY########
 start_tproxy() {
+# ROUTE RULES
     ip rule add fwmark ${mark_id} lookup ${mark_id}
     ip route add local default dev lo table ${mark_id}
-    if [ "${ipv6}" = "true" ] ; then
+    if [ "${ipv6}" == "true" ]; then
         ip -6 rule add fwmark ${mark_id} lookup ${mark_id}
         ip -6 route add local default dev lo table ${mark_id}
     fi
 
+# CLASH_EXTERNAL Rantai bertanggung jawab untuk menangani lalu lintas penerusan
     ${iptables_wait} -t mangle -N CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -F CLASH_EXTERNAL
+    if [ "${ipv6}" == "true" ]; then
+        ${ip6tables_wait} -t mangle -N CLASH_EXTERNAL
+        ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
+    fi
+# Lewati lalu lintas Clash sendiri yang ditandai sebagai ${routing-mark} untuk mencegah loopback (tidak disarankan di lingkungan Android)
+# ${iptables_wait} -t mangle -A CLASH_EXTERNAL -j RETURN -m mark --mark ${routing-mark}
+
+# Lewati pemrosesan untuk lalu lintas yang alamat tujuannya adalah LAN atau alamat yang dicadangkan
 
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
     done
 
-    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    ${iptables_wait} -t mangle -A PREROUTING -j CLASH_EXTERNAL
-    if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -N CLASH_EXTERNAL
-
+    if [ "${ipv6}" == "true" ]; then
         for subnet in ${reserved_ip6[@]} ; do
             ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
         done
+    fi
 
-        ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+# Semua lalu lintas lainnya dialihkan ke port ${Clash_tproxy_port} dan ditandai
+    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -p tcp -j TPROXY --on-ip 127.0.0.1 --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -p udp -j TPROXY --on-ip 127.0.0.1 --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    if [ "${ipv6}" == "true" ]; then
+        ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -p tcp -j TPROXY --on-ip ::1 --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+        ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -p udp -j TPROXY --on-ip ::1 --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+    fi
+
+# Akhirnya biarkan semua lalu lintas melewati rantai CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -A PREROUTING -j CLASH_EXTERNAL
+    if [ "${ipv6}" == "true" ]; then
         ${ip6tables_wait} -t mangle -A PREROUTING -j CLASH_EXTERNAL
     fi
-    
-    ${iptables_wait} -t mangle -N DIVERT
-    ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
-    ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
-
-    ${iptables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
-    ${iptables_wait} -t mangle -I PREROUTING -p udp -m socket -j DIVERT
-
-    if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -N DIVERT
-        ${ip6tables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -A DIVERT -j ACCEPT
-
-        ${ip6tables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
-        ${ip6tables_wait} -t mangle -I PREROUTING -p udp -m socket -j DIVERT
+# Rantai CLASH_LOCAL bertanggung jawab untuk memproses lalu lintas yang dikirim oleh mesin ini
+    ${iptables_wait} -t mangle -N CLASH_LOCAL
+    ${iptables_wait} -t mangle -F CLASH_LOCAL
+    if [ "${ipv6}" == "true" ]; then
+        ${ip6tables_wait} -t mangle -N CLASH_LOCAL
+        ${ip6tables_wait} -t mangle -F CLASH_LOCAL
     fi
 
-    ${iptables_wait} -t mangle -N CLASH_LOCAL
+# Lewati lalu lintas yang dikirim oleh program Clash itu sendiri untuk mencegah loopback
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    if [ "${ipv6}" == "true" ]; then
+        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    fi
+# Lewati lalu lintas Clash sendiri yang ditandai sebagai ${routing-mark} untuk mencegah loopback (tidak disarankan di lingkungan Android)
+# ${iptables_wait} -t mangle -A CLASH_LOCAL -j RETURN -m mark --mark ${routing-mark}
 
+# Lewati pemrosesan untuk lalu lintas yang alamat tujuannya adalah LAN atau alamat yang dicadangkan    
     for subnet in ${reserved_ip[@]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
     done
+    if [ "${ipv6}" == "true" ]; then
+        for subnet in ${reserved_ip6[@]} ; do
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
+        done
+    fi
 
+# Lewati lalu lintas daftar hitam
     if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-        echo "info msg= filter aktif" >> ${CFM_logs_file}
+#        echo "info msg= filter aktif" >> ${CFM_logs_file}
         ${scripts_dir}/clash.tool -f
         AID=`cat ${appuid_file} | sort -u`
             for appuid in ${AID[@]} ; do
                 ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
             done
-    else
-        echo "war msg= filter aplikasi Off "  >> ${CFM_logs_file}
-        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
     fi
-
-    ${iptables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
-    ${iptables_wait} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${mark_id}
-
-    ${iptables_wait} -t mangle -A OUTPUT -j CLASH_LOCAL
-    
-    ${iptables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
-    ${iptables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-
-    if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -N CLASH_LOCAL
-        for subnet in ${reserved_ip6[@]} ; do
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
-        done
-
+    if [ "${ipv6}" == "true" ]; then
         if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+#        echo "info msg= filter aktif" >> ${CFM_logs_file}
+            ${scripts_dir}/clash.tool -f
             AID=`cat ${appuid_file} | sort -u`
                 for appuid in ${AID[@]} ; do
                     ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
                 done
-        else
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
         fi
+    fi
 
+# Tandai lalu lintas yang dikirim oleh mesin
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${mark_id}
+    if [ "${ipv6}" == "true" ]; then
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${mark_id}
+    fi
 
+# Biarkan lalu lintas yang dikirim oleh mesin ini melompat ke CLASH_LOCAL
+# Rantai CLASH_LOCAL akan menandai lalu lintas lokal, dan lalu lintas yang telah ditandai akan kembali ke rantai PREROUTING
+    ${iptables_wait} -t mangle -A OUTPUT -j CLASH_LOCAL
+    if [ "${ipv6}" == "true" ]; then
         ${ip6tables_wait} -t mangle -A OUTPUT -j CLASH_LOCAL
-        if [ "${nat_kernel}" = "true" ] ; then
-            ${ip6tables_wait} -t nat -A OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
-            ${ip6tables_wait} -t nat -A OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+    fi
+
+# Buat aturan DIVERT baru untuk mencegah paket terhubung yang ada melewati TPROXY dua kali Secara teori, ada peningkatan kinerja tertentu
+    ${iptables_wait} -t mangle -N DIVERT
+    ${iptables_wait} -t mangle -F DIVERT
+
+    ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
+
+    ${iptables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+    if [ "${ipv6}" == "true" ]; then
+        ${ip6tables_wait} -t mangle -N DIVERT
+        ${ip6tables_wait} -t mangle -F DIVERT
+
+        ${ip6tables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
+        ${ip6tables_wait} -t mangle -A DIVERT -j ACCEPT
+
+        ${ip6tables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+    fi
+
+# Rantai CLASH_DNS_EXTERNAL menangani penerusan lalu lintas DNS
+    ${iptables_wait} -t nat -N CLASH_DNS_EXTERNAL
+    ${iptables_wait} -t nat -F CLASH_DNS_EXTERNAL
+    if [ "${ipv6}" == "true" ]; then
+        if [ "${nat_kernel}" == "true" ]; then
+            ${ip6tables_wait} -t nat -N CLASH_DNS_EXTERNAL
+            ${ip6tables_wait} -t nat -F CLASH_DNS_EXTERNAL
         fi
     fi
+# Teruskan port sistem 53 ke Clash ${Clash_dns_port}
+    ${iptables_wait} -t nat -A CLASH_DNS_EXTERNAL -p tcp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+    ${iptables_wait} -t nat -A CLASH_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 
-    ${iptables_wait} -t mangle -N FILTER_LOCAL_IP
-    ${iptables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
-    ${iptables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
-    if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -N FILTER_LOCAL_IP
-        ${ip6tables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
-        ${ip6tables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
+    ${iptables_wait} -t nat -A PREROUTING -j CLASH_DNS_EXTERNAL
+    if [ "${ipv6}" == "true" ]; then
+        if [ "${nat_kernel}" == "true" ]; then
+            ${ip6tables_wait} -t nat -A CLASH_DNS_EXTERNAL -p tcp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+            ${ip6tables_wait} -t nat -A CLASH_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+            ${ip6tables_wait} -t nat -A PREROUTING -j CLASH_DNS_EXTERNAL
+        fi
     fi
+# Rantai CLASH_DNS_LOCAL menangani penerusan lalu lintas DNS asli
+    ${iptables_wait} -t nat -N CLASH_DNS_LOCAL
+    ${iptables_wait} -t nat -F CLASH_DNS_LOCAL
+    if [ "${ipv6}" == "true" ]; then
+        if [ "${nat_kernel}" == "true" ]; then
+            ${ip6tables_wait} -t nat -N CLASH_DNS_LOCAL
+            ${ip6tables_wait} -t nat -F CLASH_DNS_LOCAL
+        fi
+    fi
+# Lewati DNS 53 lalu lintas permintaan Clash itu sendiri untuk mencegah loopback
+    ${iptables_wait} -t nat -A CLASH_DNS_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    if [ "${ipv6}" == "true" ]; then
+        if [ "${nat_kernel}" == "true" ]; then
+            ${ip6tables_wait} -t nat -A CLASH_DNS_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+        fi
+    fi
+# Lewati lalu lintas Clash sendiri yang ditandai sebagai ${routing-mark} untuk mencegah loopback (tidak disarankan di lingkungan Android)
+# ${iptables_wait} -t nat -A CLASH_DNS_LOCAL -j RETURN -m mark --mark ${routing-mark}
 
-    ${scripts_dir}/clash.tool -m
-    rm_logs
+# Teruskan port sistem 53 ke Clash ${Clash_dns_port}
+    ${iptables_wait} -t nat -A CLASH_DNS_LOCAL -p tcp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+    ${iptables_wait} -t nat -A CLASH_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
 
+    ${iptables_wait} -t nat -A OUTPUT -j CLASH_DNS_LOCAL
+    if [ "${ipv6}" == "true" ]; then
+        if [ "${nat_kernel}" == "true" ]; then
+            ${ip6tables_wait} -t nat -A CLASH_DNS_LOCAL -p tcp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+            ${ip6tables_wait} -t nat -A CLASH_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+
+            ${ip6tables_wait} -t nat -A OUTPUT -j CLASH_DNS_LOCAL
+        fi
+    fi
 }
 
 stop_tproxy() {
     ip rule del fwmark ${mark_id} table ${mark_id}
-    ip route flush table ${mark_id}
-    if [ "${ipv6}" = "true" ] ; then
+    ip route del local default dev lo table ${mark_id}
+    if [ "${ipv6}" == "true" ]; then
         ip -6 rule del fwmark ${mark_id} table ${mark_id}
-        ip -6 route flush table ${mark_id}
+        ip -6 route del local default dev lo table ${mark_id}
     fi
 
-    ${iptables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
-    ${iptables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-    if [ "${ipv6}" = "true" ] ; then
-        if [ "${nat_kernel}" = "true" ] ; then
-            ${ip6tables_wait} -t nat -D OUTPUT -m owner --uid-owner 0 --gid-owner 3005 -p udp --dport 53 -j RETURN
-            ${ip6tables_wait} -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
+    ${iptables_wait} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
+    
+    ${iptables_wait} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
+
+    ${iptables_wait} -t nat -F CLASH_DNS_EXTERNAL
+    ${iptables_wait} -t nat -X CLASH_DNS_EXTERNAL
+    
+    ${iptables_wait} -t nat -F CLASH_DNS_LOCAL
+    ${iptables_wait} -t nat -X CLASH_DNS_LOCAL
+    if [ "${ipv6}" == "true" ]; then
+        if [ "${nat_kernel}" == "true" ]; then
+            ${ip6tables_wait} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
+
+            ${ip6tables_wait} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
+
+            ${ip6tables_wait} -t nat -F CLASH_DNS_EXTERNAL
+            ${ip6tables_wait} -t nat -X CLASH_DNS_EXTERNAL
+
+            ${ip6tables_wait} -t nat -F CLASH_DNS_LOCAL
+            ${ip6tables_wait} -t nat -X CLASH_DNS_LOCAL
         fi
     fi
 
-    ${iptables_wait} -t mangle -D CLASH_EXTERNAL -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    ${iptables_wait} -t mangle -D CLASH_EXTERNAL -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -D CLASH_EXTERNAL -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -D CLASH_EXTERNAL -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    fi
-
-    ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
-    ${iptables_wait} -t mangle -D PREROUTING -p udp -m socket -j DIVERT
     ${iptables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
+    
+    ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
-    if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
-        ${ip6tables_wait} -t mangle -D PREROUTING -p udp -m socket -j DIVERT
-        ${ip6tables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
-        ${ip6tables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
-    fi
 
     ${iptables_wait} -t mangle -F CLASH_EXTERNAL
     ${iptables_wait} -t mangle -X CLASH_EXTERNAL
+    
     ${iptables_wait} -t mangle -F CLASH_LOCAL
     ${iptables_wait} -t mangle -X CLASH_LOCAL
-
+    
     ${iptables_wait} -t mangle -F DIVERT
     ${iptables_wait} -t mangle -X DIVERT
-    if [ "${ipv6}" = "true" ] ; then
+    if [ "${ipv6}" == "true" ]; then
+        ${ip6tables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
+    
+        ${ip6tables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+
+        ${ip6tables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
+
         ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
         ${ip6tables_wait} -t mangle -X CLASH_EXTERNAL
+    
         ${ip6tables_wait} -t mangle -F CLASH_LOCAL
         ${ip6tables_wait} -t mangle -X CLASH_LOCAL
-
+    
         ${ip6tables_wait} -t mangle -F DIVERT
         ${ip6tables_wait} -t mangle -X DIVERT
     fi
-        ${iptables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
-        ${iptables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
-        ${iptables_wait} -t mangle -F FILTER_LOCAL_IP
-        ${iptables_wait} -t mangle -X FILTER_LOCAL_IP
-        if [ "${ipv6}" = "true" ] ; then
-             ${ip6tables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
-             ${ip6tables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
-             ${ip6tables_wait} -t mangle -F FILTER_LOCAL_IP
-             ${ip6tables_wait} -t mangle -X FILTER_LOCAL_IP
-        fi
-
+#    ${iptables_wait} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
 }
 
 # IPTABLES TUN
@@ -238,14 +309,14 @@ start_tun() {
 
     if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
         ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-        echo "info msg= filter aktif" >> ${CFM_logs_file}
+#        echo "info msg= filter aktif" >> ${CFM_logs_file}
         ${scripts_dir}/clash.tool -f
         AID=`cat ${appuid_file} | sort -u`
             for appuid in ${AID[@]} ; do
                 ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
             done
     else
-        echo "war msg= filter aplikasi Off "  >> ${CFM_logs_file}
+#        echo "war msg= filter aplikasi Off "  >> ${CFM_logs_file}
         ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
     fi
 
@@ -294,8 +365,6 @@ start_tun() {
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
         ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
     fi
-
-    rm_logs
 }
 
 stop_tun() {
@@ -306,10 +375,10 @@ stop_tun() {
         ip -6 route del default dev ${tun_device} table ${mark_id}
     fi
 
-	${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT	
-	${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
     if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT	
+        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
         ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
     fi
 
@@ -336,22 +405,40 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               start_tproxy
-               tproxy_notif_on
+               start_tproxy && tproxy_notif_on
+               rm_logs
            elif [ "${Clash_tun_status}" == "true" ]; then
-               start_tun
+               if [ "${Clash_auto_route}" == "true" ]; then
+                   ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+                   ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+                       if [ "${ipv6}" = "true" ] ; then
+                           ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+                           ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+                       fi
+               else
+                  sleep 1
+                  start_tun
+               fi
                tun_notif_on
+               rm_logs
            else
                iptables_notif
-               stop_tun
            fi
             ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                stop_tproxy
-                tproxy_notif_off
+                stop_tproxy && tproxy_notif_off
             elif [ "${Clash_tun_status}" == "true" ]; then
-                stop_tun
+                if [ "${Clash_auto_route}" == "true" ]; then
+                    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                    if [ "${ipv6}" = "true" ] ; then
+                        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                    fi
+                else
+                    stop_tun
+                fi
                 tun_notif_off
             fi
             ;;

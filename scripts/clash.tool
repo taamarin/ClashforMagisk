@@ -4,26 +4,6 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
-updateGeox() {
-        file="$1"
-        file_bak="${file}.bak"
-        update_url="$2"
-
-        mv -f ${file} ${file_bak}
-        echo "curl -L -A 'clash' ${update_url} -o ${file} "
-        curl -L -A 'clash' ${update_url} -o ${file} 2>&1 # >> /dev/null 2>&1
-
-        sleep 1
-
-        if [ -f "${file}" ] ; then
-            rm -rf ${file_bak}
-            echo "info msg= ${file} Pembaruan selesai." >> ${Clash_run_path}/clash.log
-        else
-            mv ${file_bak} ${file}
-            echo "war msg= ${file} Pembaruan gagal, file telah dipulihkan." >> ${Clash_run_path}/clash.log
-          fi
-}
-
 monitor_local_ipv4() {
     local_ipv4=$(ip a | awk '$1~/inet$/{print $2}')
     local_ipv6=$(ip -6 a | awk '$1~/inet6$/{print $2}')
@@ -103,22 +83,6 @@ monitor_local_ipv4() {
     unset change
 }
 
-keep_dns() {
-    local_dns=`getprop net.dns1`
-
-    if [ "${local_dns}" != "${static_dns}" ] ; then
-        for count in $(seq 1 $(getprop | grep dns | wc -l)); do
-            setprop net.dns${count} ${static_dns}
-        done
-    fi
-
-    if [ $(sysctl net.ipv4.ip_forward) != "1" ] ; then
-        sysctl -w net.ipv4.ip_forward=1
-    fi
-
-    unset local_dns
-}
-
 find_packages_uid() {
     echo -n "" > ${appuid_file}
     for package in `cat ${filter_packages_file} | sort -u` ; do
@@ -129,35 +93,6 @@ find_packages_uid() {
 #            echo "info msg= ${package} Proksi " >> ${CFM_logs_file}
         fi
     done
-}
-
-port_detection() {
-    clash_pid=`cat ${Clash_pid_file}`
-    match_count=0
-
-    if ! (ss -h > /dev/null 2>&1) ; then
-        clash_port=$(netstat -anlp | grep -v p6 | grep "clash" | awk '$6~/'"${clash_pid}"*'/{print $4}' | awk -F ':' '{print $2}' | sort -u)
-    else
-        clash_port=$(ss -antup | grep "clash" | awk '$7~/'pid="${clash_pid}"*'/{print $5}' | awk -F ':' '{print $2}' | sort -u)
-    fi
-
-    echo "port: detection" >> ${CFM_logs_file}
-
-    for sub_port in ${clash_port[*]} ; do
-        sleep 0.5
-        echo "   • port: ${sub_port}" >> ${CFM_logs_file}
-        if [ "${sub_port}" = ${Clash_tproxy_port} ] || [ "${sub_port}" = ${Clash_dns_port} ] ; then
-            match_count=$((${match_count} + 1))
-        fi
-    done
-
-    if [ ${match_count} -ge 2 ] ; then
-        echo "info msg= port tproxy & dns terdeteksi" >> ${CFM_logs_file}
-        exit 0
-    else
-        echo "info msg= port tproxy & dns tidak terdeteksi" >> ${CFM_logs_file}
-        exit 1
-    fi
 }
 
 ui_start() {
@@ -207,26 +142,10 @@ limit_clash() {
     fi
 }
 
-while getopts ":rskfumpl" signal ; do
+while getopts ":fmrsl" signal ; do
     case ${signal} in
-        k)
-            if [ "${mode}" = "blacklist" ] || [ "${mode}" = "whitelist" ] ; then
-                keep_dns
-            else
-                exit 0
-            fi
-            ;;
         f)
             find_packages_uid
-            ;;
-        u)
-            if [ "${auto_updateGeoIP}" = "true" ] ; then
-                updateGeox ${Clash_GeoIP_file} ${GeoIP_url}
-            fi
-
-            if [ "${auto_updateGeoSide}" = "true" ] ; then
-                updateGeox ${Clash_GeoSite_file} ${GeoSide_url}
-            fi
             ;;
         m)
             if [ "${mode}" = "blacklist" ] && [ -f "${Clash_pid_file}" ] ; then
@@ -234,10 +153,6 @@ while getopts ":rskfumpl" signal ; do
             else
                 exit 0
             fi
-            ;;
-        p)
-            sleep 0.5
-            port_detection
             ;;
         r)
             ui_start

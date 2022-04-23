@@ -1,44 +1,59 @@
-tproxy-port: 6996
+tproxy-port: 8689
 bind-address: "*"
 mode: rule
 allow-lan: true
 log-level: silent
 external-controller: 0.0.0.0:9090 
-external-ui: yacd-gh-pages
+external-ui: Dashboard/yacd
 unified-delay: true
 geodata-mode: false
 secret: ""
 ipv6: true
+udp: true
 dns:
   enable: true
   ipv6: true
   default-nameserver:
-    - 1.0.0.1
+    - 1.1.1.1
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/15
   use-hosts: true
+  fake-ip-filter:
+    - 'connect.rom.miui.com'
   nameserver:
     - 'tls://1dot1dot1dot1.cloudflare-dns.com'
     - 'https://dns.cloudflare.com/dns-query'
   fallback:
-    - 'https://dns.google/dns-query'
+    - 'tls://8.8.4.4:853'
+  fallback-filter:
+    geoip: false
+    geoip-code: ID
 sniffer:
-  enable: false
+  enable: true
   force: true
+  Reverse:
+    - +.google.com
+  force-domain:
+    - "google.com"
+  skip-sni:
+    - www.baidu.com
   sniffing:
     - tls
 tun:
   enable: false
-  device: Meta
-  stack: gvisor
+  device: utun
+  # biarkan default "utun"
+  stack: gvisor # or gvisor
   dns-hijack:
-    - '0.0.0.0:53'
-  auto-route: true 
-  auto-detect-interface: true
+    - 'any:53'
+  auto-route: false
+  # auto route "true" Tun Non scripts Iptables
+  # auto route "false" Tun scripts Iptables (recommend)
+  auto-detect-interface: false
+  # if auto route "false", set auto detect interface: "false"
+redir-port: 7893
+mixed-port: 7894
 iptables:
   enable: false
   inbound-interface: ""
-udp: true
-redir-port: 7893
-mixed-port: 7894

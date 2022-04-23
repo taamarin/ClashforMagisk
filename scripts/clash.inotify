@@ -24,11 +24,7 @@ service_control() {
         if [ "${events}" = "d" ] ; then
             ${service_path} -s &> ${folder_run}/service.log && ${tproxy_path} -s &>> ${folder_run}/service.log &
         elif [ "${events}" = "n" ] ; then
-            if [ "${Clash_tun_status}" = "true" ] ; then
-                ${tproxy_path} -k &>> ${folder_run}/service.log && ${service_path} -k &>> ${folder_run}/service.log &
-            elif [ "${Clash_tun_status}" = "false" ] ; then
-                ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &
-            fi
+            ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &
         fi
         rm -rf ${signal_file}
     fi
