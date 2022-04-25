@@ -25,7 +25,14 @@ if [ $BOOTMODE ! = true ] ; then
   abort "Error: silahkan install di magisk manager"
 fi
 
-unzip -o "${ZIPFILE}" -x 'META-INF/*' -d ${MODPATH} >&2
+if [ -d "${clash_data_dir}" ] ; then
+    ui_print "- folder Clash di temukan, Membuat Backup"
+    if [ -d "${clash_data_dir}" ] ; then
+        rm -rf ${clash_data_dir}/clash.old
+    fi
+    mkdir -p ${clash_data_dir}/clash.old
+    mv ${clash_data_dir}/* ${clash_data_dir}/clash.old
+fi
 
 ui_print "- Prepare clash execute environment"
 ui_print "- Membuat folder Clash."
@@ -37,176 +44,86 @@ mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
 
-download_clash_zip="${clash_data_dir}/run/clash-core.zip"
-download_yacd_zip="${clash_data_dir}/yacd-gh-pages.zip"
-download_scripts_zip="${clash_data_dir}/beta.zip"
-download_cert="${clash_data_dir}/cacert.pem"
-download_GeoIP="${clash_data_dir}/GeoIP.dat"
-download_GeoSite="${clash_data_dir}/GeoSite.dat"
-download_mmdb="${clash_data_dir}/Country.mmdb"
-official_yacd_link="https://github.com/taamarin/yacd/releases/download/v0.3.4/yacd-gh-pages.zip"
-official_scripts_link="https://github.com/taamarin/ClashforMagisk/archive/refs/heads/beta.zip"
-official_cert_link="http://curl.haxx.se/ca/cacert.pem"
-official_GeoIP_link="https://github.com/v2fly/geoip/releases/latest/download/geoip-only-cn-private.dat"
-official_GeoSite_link="https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"
-official_mmdb_link="https://github.com/Loyalsoldier/geoip/releases/latest/download/Country-only-cn-private.mmdb"
-custom="${sdcard_dir}/clash-core.zip"
-
-if [ -f "${custom}" ]; then
-  cp "${custom}" "${download_clash_zip}"
-  ui_print "- Info: clash-core khusus ditemukan, memulai penginstal"
-  latest_clash_version=custom
-else
-  case "${ARCH}" in
+case "${ARCH}" in
     arm)
-      version="clash-linux-arm32-v7a.zip"
-      ;;
+        architecture="armv7"
+        ;;
     arm64)
-      version="clash-linux-arm64-v8a.zip"
-      ;;
+        architecture="armv8"
+        ;;
     x86)
-      version="clash-linux-32.zip"
-      ;;
+        architecture="386"
+        ;;
     x64)
-      version="clash-linux-64.zip"
-      ;;
-  esac
-  ui_print "- Menggunakan versi: ${version}"
-  if [ -f ${sdcard_dir}/"${version}" ]; then
-    cp ${sdcard_dir}/"${version}" "${download_clash_zip}"
-    ui_print "- Info: clash-core sudah diunduh, mulai penginstal"
-    latest_clash_version=custom
-  else
-    ui_print "- Download latest clash core from forks link"
-    ui_print "- Hubungkan tautan unduhan forks-clash."
-    
-    forks_clash_link="https://github.com/taamarin/MetaforCfm/releases"
+        architecture="amd64"
+        ;;
+esac
 
-    if [ -x "$(which wget)" ] ; then
-      latest_clash_version=`wget -qO- https://api.github.com/repos/taamarin/MetaforCfm/releases | grep -m 1 "tag_name" | grep -o "v[0-9.]*"`
-    elif [ -x "$(which curl)" ]; then
-      latest_clash_version=`curl -ks https://api.github.com/repos/taamarin/MetaforCfm/releases | grep -m 1 "tag_name" | grep -o "v[0-9.]*"`
-    elif [ -x "/data/adb/magisk/busybox" ] ; then
-      latest_clash_version=`${busybox_data_dir} wget -qO- https://api.github.com/repos/taamarin/MetaforCfm/releases | grep -m 1 "tag_name" | grep -o "v[0-9.]*"`
-    else
-      ui_print "- Error: Tidak dapat menemukan curl atau wget, silakan instal."
-      abort
-    fi
+unzip -o "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH >&2
 
-    if [ "${latest_clash_version}" = "" ] ; then
-      ui_print "- Error: Unduh Core clash Gagal"
-      ui_print " "
-      ui_print "- Tips: Download CORE ${version} Manual"
-      ui_print "- Step"
-      ui_print "        Download Disini https://github.com/taamarin/MetaforCfm/releases"
-      ui_print "        Simpan di folder Download, Memori Internal"
-      ui_print "        Selesai Download CORE, flash Ulang Module CFM"
-      abort
-    fi
-    ui_print "- Unduh inti clash terbaru ${latest_clash_version}-${ARCH}"
-
-    if [ -x "$(which wget)" ] ; then
-      wget "${forks_clash_link}/download/${latest_clash_version}/${version}" -O "${download_clash_zip}" >&2
-    elif [ -x "$(which curl)" ]; then
-      curl "${forks_clash_link}/download/${latest_clash_version}/${version}" -kLo "${download_clash_zip}" >&2
-    elif [ -x "/data/adb/magisk/busybox" ] ; then
-      ${busybox_data_dir} wget "${forks_clash_link}/download/${latest_clash_version}/${version}" -O "${download_clash_zip}" >&2
-    else
-      ui_print "- Error: tidak dapat menemukan curl atau wget, silakan instal."
-      abort
-    fi
-
-    if [ "$?" != "0" ] ; then
-      ui_print "- Error: Unduh Core clash Gagal"
-      ui_print " "
-      ui_print "- Tips: Download CORE ${version} Manual"
-      ui_print "- Step"
-      ui_print "        Download Disini https://github.com/taamarin/MetaforCfm/releases"
-      ui_print "        Simpan di folder Download, Memori Internal"
-      ui_print "        Selesai Download CORE, flash Ulang Module CFM"
-      abort
-    fi
-  fi
-fi
-
-ui_print "- Unduh Yet Another Clash Dashboard"
+ui_print "- Unzip Yacd"
 ${busybox_data_dir} wget ${official_yacd_link} -O ${download_yacd_zip}
-rm -rf "${clash_data_dir}/yacd-gh-pages/*"
-unzip -o "${download_yacd_zip}" -d ${clash_data_dir}/yacd-gh-pages/ >&2
+if [ ! -d /data/adb/yacd-gh-pages ] ; then
+    rm -rf "${clash_data_dir}/yacd-gh-pages/*"
+fi
+unzip -o ${MODPATH}/yacd-gh-pages.zip -d ${clash_data_dir}/yacd-gh-pages/ >&2
 
-ui_print "- Unduh Scripts Clash"
-${busybox_data_dir} wget ${official_scripts_link} -O ${download_scripts_zip}
+ui_print "- Move Scripts Clash"
 rm -rf "${clash_data_dir}/scripts/*"
-unzip -j -o "${download_scripts_zip}" "ClashforMagisk-beta/scripts/*" -d ${clash_data_dir}/scripts/ >&2
-mv -f ${clash_data_dir}/scripts/template ${clash_data_dir}/
+mv ${MODPATH}/scripts/* ${clash_data_dir}/scripts/
+mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
 
-ui_print "- Unduh Cert"
-${busybox_data_dir} wget ${official_cert_link} -O ${download_cert}
-mv -f ${download_cert} ${MODPATH}${ca_path}
+ui_print "- Move Cert"
+mv ${clash_data_dir}/scripts/cacert.pem ${MODPATH}${ca_path}
 
-ui_print "- Unduh GeoX"
-${busybox_data_dir} wget ${official_GeoIP_link} -O ${download_GeoIP}
-${busybox_data_dir} wget ${official_GeoSite_link} -O ${download_GeoSite}
-${busybox_data_dir} wget ${official_mmdb_link} -O ${download_mmdb}
+ui_print "- Move GeoX"
+mv ${MODPATH}/GeoX/* ${clash_data_dir}/
 
-ui_print "- Unduh Selesai"
-ui_print "- Konfigurasi Clash dan file"
+ui_print "- Konfigurasi folder service"
 if [ ! -d /data/adb/service.d ] ; then
-  mkdir -p /data/adb/service.d
-fi
-
-if [ -f "${clash_data_dir_core}/clash" ] ; then
-  mv -f ${clash_data_dir_core}/clash ${clash_data_dir_core}/clash.bak
-fi
-
-if [ -f "${clash_data_dir}/config.yaml" ] ; then
-  mv -f ${clash_data_dir}/config.yaml ${clash_data_dir}/config.yaml.bak
+    mkdir -p /data/adb/service.d
 fi
 
 if [ ! -f "${dns_path}/resolv.conf" ] ; then
-  touch ${MODPATH}${dns_path}/resolv.conf
-  echo nameserver 8.8.8.8 > ${MODPATH}${dns_path}/resolv.conf
-  echo nameserver 1.1.1.1 >> ${MODPATH}${dns_path}/resolv.conf
+    touch ${MODPATH}${dns_path}/resolv.conf
+    echo nameserver 8.8.8.8 > ${MODPATH}${dns_path}/resolv.conf
+    echo nameserver 1.1.1.1 >> ${MODPATH}${dns_path}/resolv.conf
 fi
 
 if [ ! -f "${clash_data_dir}/packages.list" ] ; then
     touch ${clash_data_dir}/packages.list
 fi
 
-# hapus service lama
-rm -rf ${MODPATH}/service.sh
-rm -rf ${MODPATH}/uninstall.sh
-rm -rf ${clash_service_dir}/cfm_service.sh
-mv -f ${clash_data_dir}/scripts/config.yaml ${clash_data_dir}/
-
 ui_print "- Execute ZipFile"
 if [ ! -f "${MODPATH}/service.sh" ] ; then
-  unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
+    unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 fi
 
 if [ ! -f "${MODPATH}/uninstall.sh" ] ; then
-  unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
+    unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
 fi
 
 if [ ! -f "${clash_service_dir}/cfm_service.sh" ] ; then
-  unzip -j -o "${ZIPFILE}" 'cfm_service.sh' -d ${clash_service_dir} >&2
+    unzip -j -o "${ZIPFILE}" 'cfm_service.sh' -d ${clash_service_dir} >&2
 fi
 
-ui_print "- Install clash execute file"
 ui_print "- Proses Core $ARCH execute files"
+tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${clash_data_dir_core}/&& echo "- extar Core Succes" || echo "- extar Core gagal"
+mv ${clash_data_dir_core}/setcap ${MODPATH}${bin_path}/
+mv ${clash_data_dir_core}/getpcaps ${MODPATH}${bin_path}/
+mv ${clash_data_dir_core}/getcap ${MODPATH}${bin_path}/
+mv ${clash_data_dir}/scripts/config.yaml ${clash_data_dir}/
 if [ ! -f "${bin_path}/ss" ] ; then
-  unzip -j -o "${download_clash_zip}" "ss" -d ${MODPATH}${bin_path} >&2
+    mv ${clash_data_dir_core}/ss ${MODPATH}${bin_path}/
+else
+    rm -rf ${clash_data_dir_core}/ss
 fi
 
-unzip -j -o "${download_clash_zip}" "clash" -d ${clash_data_dir_core} >&2
-unzip -j -o "${download_clash_zip}" "setcap" -d ${MODPATH}${bin_path} >&2
-unzip -j -o "${download_clash_zip}" "getcap" -d ${MODPATH}${bin_path} >&2
-unzip -j -o "${download_clash_zip}" "getpcaps" -d ${MODPATH}${bin_path} >&2
-MODPATH
-rm "${download_clash_zip}"
-rm "${download_yacd_zip}"
-rm "${download_scripts_zip}"
+# hapus file
+rm -rf ${MODPATH}/yacd-gh-pages.zip
 rm -rf ${MODPATH}/scripts
+rm -rf ${MODPATH}/GeoX
+rm -rf ${MODPATH}/binary
 rm -rf ${MODPATH}/cfm_service.sh
 rm -rf ${clash_data_dir}/scripts/config.yaml
 sleep 1

@@ -77,8 +77,7 @@ start_clash() {
     if [ -f "${Clash_bin_path}" ] ; then
        chown ${Clash_user_group} ${Clash_bin_path}
        chown ${Clash_user_group} ${Clash_data_dir}/confs/*
-       chmod 0700 ${Clash_bin_path}
-#       chmod ${Clash_permissions} ${Clash_bin_path}
+       chmod ${Clash_permissions} ${Clash_bin_path}
        chown ${Clash_user_group} ${Temporary_config_file}
        chmod 0644 ${Temporary_config_file}
        chmod 0644 ${Clash_data_dir}/confs/*
