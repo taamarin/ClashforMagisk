@@ -8,5 +8,3 @@ done
 chmod 755 /data/adb/clash/scripts/start.sh
 /data/adb/clash/scripts/start.sh
 )&
-
-#1
