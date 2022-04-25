@@ -18,13 +18,12 @@ iptables_notif() {
 }
 
 tun_notif_off() {
-    echo "info msg= Clash stopped" >> ${CFM_logs_file}
     if [ "${Clash_auto_route}" == "true" ]; then
         echo "info msg= Clash Tun dihapus" >> ${CFM_logs_file}
     else
         echo "info msg= Clash Iptables Tun dihapus" >> ${CFM_logs_file}
     fi
-    echo "info msg= discontinued" >> ${CFM_logs_file}
+    echo "info msg= ${date} | discontinued" >> ${CFM_logs_file}
 }
 
 tun_notif_on() {
@@ -33,15 +32,15 @@ tun_notif_on() {
     else
         echo "info msg= Clash Iptables Tun diterapkan," >> ${CFM_logs_file}
     fi
-    echo "info msg= connected" >> ${CFM_logs_file}
+    echo "info msg= ${date} | connected" >> ${CFM_logs_file}
 }
 tproxy_notif_off() {
     echo "info msg= Clash Iptables Tproxy dihapus" >> ${CFM_logs_file}
-    echo "info msg= discontinued" >> ${CFM_logs_file}
+    echo "info msg= ${date} | discontinued" >> ${CFM_logs_file}
 }
 tproxy_notif_on() {
     echo "info msg= Clash Iptables Tproxy diterapkan" >> ${CFM_logs_file}
-    echo "info msg= connected" >> ${CFM_logs_file}
+    echo "info msg= ${date} | connected" >> ${CFM_logs_file}
 }
 
 start_tproxy() {

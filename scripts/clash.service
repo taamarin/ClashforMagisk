@@ -5,10 +5,30 @@ scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
 start_clash() {
+    if [ "${ipv6}" = "false" ] ; then
+        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
+            echo ${net} | grep -q wlan
+            if [ $? -eq 0 ] ; then
+                echo 0 > ${net}/accept_ra
+            fi
+            echo 1 > ${net}/disable_ipv6
+        done
+    else
+        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
+            echo ${net} | grep -q wlan
+            if [ $? -eq 0 ] ; then
+                echo 1 > ${net}/accept_ra
+            fi
+            echo 0 > ${net}/disable_ipv6
+        done
+    fi
 
     if [ -f "${CFM_logs_file}" ] ; then
-        echo "${date_day}" > ${CFM_logs_file}
-        echo "Module v1.9.4" >> ${CFM_logs_file}
+        echo -n "" > ${CFM_logs_file}
+        if [ "${info_core}" == "true" ] ; then
+            ${Clash_bin_path} -v > ${CFM_logs_file}
+        fi
+        echo "${date_day}, Module v1.9.4" >> ${CFM_logs_file}
     fi
  
     if [ "${use_premium}" == "true" ]; then
@@ -110,18 +130,8 @@ stop_clash() {
     else
         kill -15 `cat ${Clash_pid_file}`
     fi
-
     rm -rf ${Clash_pid_file}
-
-    if [ -f "${Clash_run_path}/root" ] ; then
-       rm -rf ${Clash_run_path}/root
-    fi
-
-    if [ "${Clash_tun_status}" = "false" ] ; then
-        echo "info msg= Clash Offline" >> ${CFM_logs_file}
-    elif [ "${Clash_tun_status}" = "false" ] ; then
-        echo -n "" >> ${CFM_logs_file}
-    fi
+    echo "info msg= Clash stopped" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do

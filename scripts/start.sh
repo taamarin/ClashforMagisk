@@ -11,10 +11,9 @@ CLASH_RUN_PATH="/data/adb/clash/run"
 CLASH_PID_FILE="${CLASH_RUN_PATH}/clash.pid"
 
 if [ -f ${CLASH_PID_FILE} ] ; then
+    kill -15 `cat ${CLASH_PID_FILE}`
     rm -rf ${CLASH_PID_FILE}
 fi
-
-nohup ${BUSYBOX_PATH} crond -c ${CLASH_RUN_PATH} > /dev/null 2>&1 &
 
 start_tproxy () {
   ${SCRIPTS_DIR}/clash.service -s
