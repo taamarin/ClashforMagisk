@@ -43,6 +43,7 @@ mkdir -p ${clash_data_dir}/yacd-gh-pages
 mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
+mkdir -p ${clash_data_dir}/config
 
 case "${ARCH}" in
     arm)

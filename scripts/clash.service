@@ -6,35 +6,41 @@ scripts_dir=`dirname ${scripts}`
 
 start_clash() {
     if [ "${ipv6}" = "false" ] ; then
-        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
-            echo ${net} | grep -q wlan
-            if [ $? -eq 0 ] ; then
-                echo 0 > ${net}/accept_ra
-            fi
-            echo 1 > ${net}/disable_ipv6
-        done
-    else
-        for net in /proc/sys/net/ipv6/conf/{wlan*,*data*} ; do
-            echo ${net} | grep -q wlan
-            if [ $? -eq 0 ] ; then
-                echo 1 > ${net}/accept_ra
-            fi
-            echo 0 > ${net}/disable_ipv6
-        done
+        echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+        echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+        echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+        echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
+    elif [ "${ipv6}" = "true" ] ; then
+        echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+        echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+        echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+        echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
     fi
 
-    if [ -f "${CFM_logs_file}" ] ; then
-        echo -n "" > ${CFM_logs_file}
-        if [ "${info_core}" == "true" ] ; then
-            ${Clash_bin_path} -v > ${CFM_logs_file}
-        fi
-        echo "${date_day}, Module v1.9.4" >> ${CFM_logs_file}
-    fi
- 
+    echo -n "" > ${CFM_logs_file}
+    ${Clash_bin_path} -v >> ${CFM_logs_file}
+    echo "${date_day}" >> ${CFM_logs_file}
+    echo "v1.9.5" >> ${CFM_logs_file}
+
     if [ "${use_premium}" == "true" ]; then
-        echo "info msg= Mengunakan kernel premium" >> ${CFM_logs_file}
+        echo "info msg= Mengunakan Clash Premium" >> ${CFM_logs_file}
+#        cp -F ${Clash_data_dir}/config/config2.yaml ${Clash_data_dir}/config.yaml
     else
-        echo "info msg= Mengunakan kernel Meta" >> ${CFM_logs_file}
+        echo "info msg= Mengunakan Clash Meta" >> ${CFM_logs_file}
+#        cp -F ${Clash_data_dir}/config/config1.yaml ${Clash_data_dir}/config.yaml
+    fi
+
+    if [ "${use_config}" == "config1.yaml" ]; then
+        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
+        cp -F ${Clash_data_dir}/config/config1.yaml ${Clash_data_dir}/config.yaml
+    elif [ "${use_config}" == "config2.yaml" ]; then
+        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
+        cp -F ${Clash_data_dir}/config/config2.yaml ${Clash_data_dir}/config.yaml
+    elif [ "${use_config}" == "config3.yaml" ]; then
+        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
+        cp -F ${Clash_data_dir}/config/config3.yaml ${Clash_data_dir}/config.yaml
+    else
+        echo "info msg= switch config.yaml Off" >> ${CFM_logs_file}
     fi
 
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -48,83 +54,86 @@ start_clash() {
         [ ! -L /dev/net/tun ] && ln -s /dev/tun /dev/net/tun
     fi
 
-    if [ -f "${Temporary_config_file}" ] ; then
-        rm -rf ${Temporary_config_file}
+    if [ -f "${temporary_config_file}" ] ; then
+        rm -rf ${temporary_config_file}
+        echo "info msg= refresh ${temporary_config_file}" >> ${CFM_logs_file}
     fi
 
     if [ -f "${Clash_dns}" ] ; then
        if [ -f "${Clash_config_file}" ] ; then
-          cp -f ${Clash_dns} ${Temporary_config_file}.swp && echo "\n" >> ${Temporary_config_file}.swp
-          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${Temporary_config_file}.swp
-          sed -i '/^[  ]*$/d' ${Temporary_config_file}.swp
-          else
-       echo "error msg= file konfigurasi ''${Clash_config_file}'' tidak ditemukan !!!" >> ${CFM_logs_file}
-       exit 1
-       fi
+          cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
+          sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
+          sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
        else
-    echo "error msg= file konfigurasi  ''${Clash_dns}'' tidak ditemukan !!!" >> ${CFM_logs_file}
-    exit 1
+          echo "error msg= file ${Clash_config_file} tidak ditemukan !!!" >> ${CFM_logs_file}
+          exit 1
+       fi
+    else
+       echo "error msg= file ${Clash_dns} tidak ditemukan !!!" >> ${CFM_logs_file}
+       exit 1
     fi
 
-    mv -f ${Temporary_config_file}.swp ${Temporary_config_file} \
-    && echo "info msg= Pengabungan file konfigurasi berhasil" >> ${CFM_logs_file} || echo "error msg= Penggabungan file konfigurasi Gagal" >> ${CFM_logs_file}
+    mv -f ${temporary_config_file}.swp ${temporary_config_file} \
+    && echo "info msg= Pengabungan ( ${Clash_config_file} & ${Clash_dns} ) Succes" >> ${CFM_logs_file} || echo "error msg= Pengabungan ( ${Clash_config_file} & ${Clash_dns} ) Failed" >> ${CFM_logs_file}
 
-    if [ ! -f "${Temporary_config_file}" ] ; then
-       echo "error msg= ${Temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
+    if [ ! -f "${temporary_config_file}" ] ; then
+       echo "error msg= ${temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
        exit 1
     fi
  
     if [ -f "${Clash_bin_path}" ] ; then
+       echo "info msg= Mengatur permissions" >> ${CFM_logs_file}
        chown ${Clash_user_group} ${Clash_bin_path}
-       chown ${Clash_user_group} ${Clash_data_dir}/confs/*
+       if [ -d "${Clash_data_dir}/confs" ] ; then
+           chown ${Clash_user_group} ${Clash_data_dir}/confs/*.yaml
+           chmod 0644 ${Clash_data_dir}/confs/*.yaml
+       fi
        chmod ${Clash_permissions} ${Clash_bin_path}
-       chown ${Clash_user_group} ${Temporary_config_file}
-       chmod 0644 ${Temporary_config_file}
-       chmod 0644 ${Clash_data_dir}/confs/*
+       chown ${Clash_user_group} ${temporary_config_file}
+       chmod 0644 ${temporary_config_file}
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-       echo "info msg= Mengatur permissions file " >> ${CFM_logs_file}
     else
-      echo "error msg= Clash Offline." >> ${CFM_logs_file}
-      echo "error msg= Kernel Clash di ''${Clash_bin_path}'' tidak terdeteksi." >> ${CFM_logs_file}
-      exit 1
-   fi
+       echo "error msg= Clash Offline." >> ${CFM_logs_file}
+       echo "error msg= Kernel Clash ${Clash_bin_path} tidak terdeteksi." >> ${CFM_logs_file}
+       exit 1
+    fi
 
-   if [ -f ${Temporary_config_file} ] ; then
-       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${Temporary_config_file} > ${Clash_run_path}/clash.log #/dev/null 2>&1 & 
+   if [ -f ${temporary_config_file} ] ; then
+       ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.log
        if [ "$?" = 0 ] ; then
-          ulimit -SHn 1000000
-          nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${Clash_run_path}/config.yaml > /dev/null 2>&1 &
-          echo -n $! > ${Clash_pid_file}
-          if [ "${Cgroup_memory}" = "true" ] ; then
-              if ! (${scripts_dir}/clash.tool -l) ; then
-                 echo "" 
-              fi
-          else
-              echo "info msg= Cgroup di Matikan"  >> ${CFM_logs_file}
-          fi
-          echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
-          echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
-          echo "info msg= Clash run." >> ${CFM_logs_file}
+           ulimit -SHn 1000000
+           nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
+           echo -n $! > ${Clash_pid_file}
+           if [ "${Cgroup_memory}" = "true" ] ; then
+               if ! (${scripts_dir}/clash.tool -l) ; then
+                  echo ""
+               fi
+           else
+               echo "info msg= Cgroup di Matikan"  >> ${CFM_logs_file}
+           fi
+           echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
+           echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
+           echo "info msg= Clash run." >> ${CFM_logs_file}
        else
-          grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
-          if [ -f "${Temporary_config_file}" ] ; then
-             mv ${Temporary_config_file} ${Clash_config_file}
-             rm -rf ${Temporary_config_file}
-          fi
-        echo "error msg= Clash Offline" >> ${CFM_logs_file}
-        echo "error msg= Periksa kembali ''${Clash_config_file}''." >> ${CFM_logs_file}
-        exit 1
+           grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
+           if [ -f "${temporary_config_file}" ] ; then
+               mv ${temporary_config_file} ${Clash_config_file}
+               rm -rf ${temporary_config_file}
+           fi
+           echo "error msg= Clash Offline" >> ${CFM_logs_file}
+           echo "error msg= Periksa kembali ${Clash_config_file} " >> ${CFM_logs_file}
+           exit 1
        fi
    else
-    echo "error msg= Clash has stopped." >> ${CFM_logs_file}
-    echo "error msg= ''${Clash_config_file}'' tidak terdeteksi." >> ${CFM_logs_file}
-    exit 1
+       echo "error msg= Clash has stopped." >> ${CFM_logs_file}
+       echo "error msg= ${Clash_config_file} tidak terdeteksi." >> ${CFM_logs_file}
+       exit 1
    fi
 
 }
 
 stop_clash() {
-    if [ "${Clash_tun_status}" = "true" ] || [ ! "${Clash_tun_status}" = "false" ] ; then
+    if [ "${Clash_tun_status}" = "true" ] ; then
         kill -9 `cat ${Clash_pid_file}`
     else
         kill -15 `cat ${Clash_pid_file}`

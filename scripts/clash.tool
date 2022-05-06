@@ -124,7 +124,6 @@ limit_clash() {
     if [ "${Cgroup_memory_limit}" == "" ]; then
         return
     fi
-
     if [ "${Cgroup_memory_path}" == "" ]; then
         Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
     fi

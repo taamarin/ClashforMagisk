@@ -194,6 +194,8 @@ start_tproxy() {
 
             ${ip6tables_wait} -t nat -A OUTPUT -j CLASH_DNS_LOCAL
         fi
+    else
+        ${ip6tables_wait} -I OUTPUT -p udp --dport 53 -j DROP
     fi
 }
 
