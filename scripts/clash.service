@@ -4,11 +4,6 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
-echo -n "" > ${CFM_logs_file}
-${Clash_bin_path} -v >> ${CFM_logs_file}
-echo "${date_day}" >> ${CFM_logs_file}
-echo "Clash for Magisk v1.9.5" >> ${CFM_logs_file}
-
 start_clash() {
     if [ "${ipv6}" = "false" ] ; then
         echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
@@ -21,6 +16,11 @@ start_clash() {
         echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
         echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
     fi
+
+    echo -n "" > ${CFM_logs_file}
+    ${Clash_bin_path} -v >> ${CFM_logs_file}
+    echo "${date_day}" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.9.5" >> ${CFM_logs_file}
 
     if [ "${use_premium}" == "true" ]; then
         echo "info msg= Mengunakan Clash Premium" >> ${CFM_logs_file}

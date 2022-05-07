@@ -1,19 +1,28 @@
 tproxy-port: 9898
 bind-address: "*"
 mode: rule
+ipv6: true
 allow-lan: true
 log-level: silent
-external-controller: 0.0.0.0:9090 
+external-controller: 127.0.0.1:9090
 external-ui: yacd-gh-pages
 unified-delay: true
 geodata-mode: false
 tcp-concurrent: false
 secret: ""
-ipv6: false
 udp: true
+tun:
+  enable: false
+  device: utun
+  stack: system
+  dns-hijack:
+    - 'any:53'
+    - 'tcp://any:53'
+  auto-route: true
+  auto-detect-interface: true
 dns:
   enable: true
-  ipv6: false
+  ipv6: true
   default-nameserver:
     - 1.1.1.1
     - 8.8.8.8
@@ -22,34 +31,40 @@ dns:
   fake-ip-range: 198.18.0.1/15
   use-hosts: true
   fake-ip-filter:
-    - 'connect.rom.miui.com'
+    - '*.lan'
   nameserver:
     - 'tls://1dot1dot1dot1.cloudflare-dns.com'
     - 'https://dns.cloudflare.com/dns-query'
-#  fallback:
-#    - 'tls://8.8.4.4:853'
+  fallback:
+    - 'https://1.0.0.1/dns-query#GLOBAL'  
+    - 'tls://8.8.4.4:853#GLOBAL'
   fallback-filter:
     geoip: false
-    geoip-code: CN
+    geoip-code: ID
+    geosite:
+    #  - gfw
+    domain:
+    #  - +.example.com
+    ipcidr:
+    #  - 0.0.0.0/32
 sniffer:
   enable: false
   force: true
   Reverse:
-    - +.google.com
+    - '+.google.com'
   force-domain:
-    - "google.com"
+    - '+'
+    - 'google.com'
   skip-sni:
-    - www.baidu.com
+    - '+.apple.com'
   sniffing:
     - tls
-tun:
-  enable: false
-  device: utun
-  stack: system
-  dns-hijack:
-    - 'any:53'
-  auto-route: false
-  auto-detect-interface: false
+    - http
+  port-whitelist:
+    - 443
+    - 8000-9000
 iptables:
   enable: false
-  inbound-interface: ""
+  inbound-interface: "lo"
+  bypass:
+interface-name: ""

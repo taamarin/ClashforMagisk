@@ -33,11 +33,19 @@ tun_notif_on() {
     echo "info msg= connected" >> ${CFM_logs_file}
 }
 tproxy_notif_off() {
-    echo "info msg= Iptables Tproxy dihapus" >> ${CFM_logs_file}
+    if [ "${auto_iptables}" == "false" ]; then
+        echo "info msg= Iptables Tproxy dihapus" >> ${CFM_logs_file}
+    else
+        echo "info msg= auto Iptables Tproxy dihapus" >> ${CFM_logs_file}
+    fi
     echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 tproxy_notif_on() {
-    echo "info msg= Iptables Tproxy diterapkan" >> ${CFM_logs_file}
+    if [ "${auto_iptables}" == "false" ]; then
+        echo "info msg= Iptables Tproxy diterapkan" >> ${CFM_logs_file}
+    else
+        echo "info msg= auto Iptables Tproxy diterapkan" >> ${CFM_logs_file}
+    fi
     echo "info msg= connected" >> ${CFM_logs_file}
 }
 
@@ -377,8 +385,12 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               start_tproxy && tproxy_notif_on
-               rm_logs
+               if [ "${auto_iptables}" == "false" ]; then
+                   start_tproxy && tproxy_notif_on
+                   rm_logs
+               else
+                   tproxy_notif_on
+               fi
            elif [ "${Clash_tun_status}" == "true" ]; then
                if [ "${Clash_auto_route}" == "true" ]; then
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
@@ -399,7 +411,11 @@ while getopts ":sk" signal ; do
             ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                stop_tproxy && tproxy_notif_off
+                if [ "${auto_iptables}" == "false" ]; then
+                    stop_tproxy && tproxy_notif_off
+                else
+                    tproxy_notif_off
+                fi
             elif [ "${Clash_tun_status}" == "true" ]; then
                 if [ "${Clash_auto_route}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
