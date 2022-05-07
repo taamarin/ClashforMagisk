@@ -4,6 +4,11 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
+echo -n "" > ${CFM_logs_file}
+${Clash_bin_path} -v >> ${CFM_logs_file}
+echo "${date_day}" >> ${CFM_logs_file}
+echo "Clash for Magisk v1.9.5" >> ${CFM_logs_file}
+
 start_clash() {
     if [ "${ipv6}" = "false" ] ; then
         echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
@@ -17,35 +22,47 @@ start_clash() {
         echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
     fi
 
-    echo -n "" > ${CFM_logs_file}
-    ${Clash_bin_path} -v >> ${CFM_logs_file}
-    echo "${date_day}" >> ${CFM_logs_file}
-    echo "v1.9.5" >> ${CFM_logs_file}
-
     if [ "${use_premium}" == "true" ]; then
         echo "info msg= Mengunakan Clash Premium" >> ${CFM_logs_file}
-#        cp -F ${Clash_data_dir}/config/config2.yaml ${Clash_data_dir}/config.yaml
     else
         echo "info msg= Mengunakan Clash Meta" >> ${CFM_logs_file}
-#        cp -F ${Clash_data_dir}/config/config1.yaml ${Clash_data_dir}/config.yaml
     fi
 
-    if [ "${use_config}" == "config1.yaml" ]; then
+    if [ "${use_config}" == "config-0.yaml" ]; then
         echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
-        cp -F ${Clash_data_dir}/config/config1.yaml ${Clash_data_dir}/config.yaml
-    elif [ "${use_config}" == "config2.yaml" ]; then
+        if [ -f ${Clash_data_dir}/switch/config-0.yaml ] ; then
+            cp -F ${Clash_data_dir}/switch/config-0.yaml ${Clash_data_dir}/config.yaml && echo "" || echo "error msg= copy ${use_config} failed " >> ${CFM_logs_file}
+        else
+            echo "info msg= ${use_config} tidak terdeteksi" >> ${CFM_logs_file}
+            exit 1
+        fi
+    elif [ "${use_config}" == "config-1.yaml" ]; then
         echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
-        cp -F ${Clash_data_dir}/config/config2.yaml ${Clash_data_dir}/config.yaml
-    elif [ "${use_config}" == "config3.yaml" ]; then
+        if [ -f ${Clash_data_dir}/switch/config-1.yaml ] ; then
+            cp -F ${Clash_data_dir}/switch/config-1.yaml ${Clash_data_dir}/config.yaml && echo "" || echo "error msg= copy ${use_config} failed " >> ${CFM_logs_file}
+        else
+            echo "info msg= ${use_config} tidak terdeteksi" >> ${CFM_logs_file}
+            exit 1
+        fi
+    elif [ "${use_config}" == "config-2.yaml" ]; then
         echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
-        cp -F ${Clash_data_dir}/config/config3.yaml ${Clash_data_dir}/config.yaml
-    else
+        if [ -f ${Clash_data_dir}/switch/config-2.yaml ] ; then
+            cp -F ${Clash_data_dir}/switch/config-2.yaml ${Clash_data_dir}/config.yaml && echo "" || echo "error msg= copy ${use_config} failed " >> ${CFM_logs_file}
+        else
+            echo "info msg= ${use_config} tidak terdeteksi" >> ${CFM_logs_file}
+            exit 1
+        fi
+    elif [ "${use_config}" == "false" ]; then
         echo "info msg= switch config.yaml Off" >> ${CFM_logs_file}
+    else
+        echo "info msg= tidak ada satupun config.yaml yang terdeteksi di folder switch" >> ${CFM_logs_file}
+        exit 1
     fi
 
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${pid}/cmdline | grep -q clash) ; then
-        echo "info msg= Mendeteksi bahwa Clash telah dimulai." >> ${CFM_logs_file}
+        echo "info msg= tidak ada proses Yang dilakukan" >> ${CFM_logs_file}
+        echo "info msg= Clash running" >> ${CFM_logs_file}
         exit 1
     fi
 
@@ -74,7 +91,7 @@ start_clash() {
     fi
 
     mv -f ${temporary_config_file}.swp ${temporary_config_file} \
-    && echo "info msg= Pengabungan ( ${Clash_config_file} & ${Clash_dns} ) Succes" >> ${CFM_logs_file} || echo "error msg= Pengabungan ( ${Clash_config_file} & ${Clash_dns} ) Failed" >> ${CFM_logs_file}
+    && echo "info msg= Pengabungan { ${Clash_config_file} & ${Clash_dns} } Succes" >> ${CFM_logs_file} || echo "error msg= Pengabungan { ${Clash_config_file} & ${Clash_dns} } Failed" >> ${CFM_logs_file}
 
     if [ ! -f "${temporary_config_file}" ] ; then
        echo "error msg= ${temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
