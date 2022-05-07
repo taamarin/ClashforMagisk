@@ -17,7 +17,7 @@ iptables_notif() {
     ${scripts_dir}/clash.service -k
 }
 tun_notif_off() {
-    if [ "${Clash_auto_route}" == "true" ]; then
+    if [ "${Clash_auto_detect_interface}" == "true" ]; then
         echo "info msg= Tun dihapus" >> ${CFM_logs_file}
     else
         echo "info msg= Iptables Tun dihapus" >> ${CFM_logs_file}
@@ -25,7 +25,7 @@ tun_notif_off() {
     echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 tun_notif_on() {
-    if [ "${Clash_auto_route}" == "true" ]; then
+    if [ "${Clash_auto_detect_interface}" == "true" ]; then
         echo "info msg= Tun diterapkan," >> ${CFM_logs_file}
     else
         echo "info msg= Iptables Tun diterapkan," >> ${CFM_logs_file}
@@ -380,7 +380,7 @@ while getopts ":sk" signal ; do
                start_tproxy && tproxy_notif_on
                rm_logs
            elif [ "${Clash_tun_status}" == "true" ]; then
-               if [ "${Clash_auto_route}" == "true" ]; then
+               if [ "${Clash_auto_detect_interface}" == "true" ]; then
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
                        if [ "${ipv6}" = "true" ] ; then
@@ -399,9 +399,10 @@ while getopts ":sk" signal ; do
             ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                stop_tproxy && tproxy_notif_off
+                stop_tproxy
+                tproxy_notif_off
             elif [ "${Clash_tun_status}" == "true" ]; then
-                if [ "${Clash_auto_route}" == "true" ]; then
+                if [ "${Clash_auto_detect_interface}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                     ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                     if [ "${ipv6}" = "true" ] ; then
