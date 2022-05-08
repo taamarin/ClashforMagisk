@@ -30,46 +30,16 @@ start_clash() {
         fi
     fi
 
-    if [ ! -f ${Clash_data_dir}/switch/config.yaml ] ; then
-        cp -F ${Clash_data_dir}/config.yaml ${Clash_data_dir}/switch/config.yaml
+    if [ ! "${use_config}" == "false" ]; then
+        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
+    else
+        echo "info msg= switch default" >> ${CFM_logs_file}
     fi
 
     if [ "${use_premium}" == "true" ]; then
         echo "info msg= Mengunakan Clash Premium" >> ${CFM_logs_file}
     else
         echo "info msg= Mengunakan Clash Meta" >> ${CFM_logs_file}
-    fi
-
-    if [ "${use_config}" == "false" ]; then            
-        cp -F ${Clash_data_dir}/switch/config.yaml ${Clash_data_dir}/config.yaml
-        echo "info msg= switch config.yaml Off" >> ${CFM_logs_file}
-    elif [ "${use_config}" == "config-0.yaml" ]; then
-        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
-        if [ -f ${Clash_data_dir}/switch/config-0.yaml ] ; then
-            cp -F ${Clash_data_dir}/switch/config-0.yaml ${Clash_data_dir}/config.yaml && echo "" || echo "error msg= copy ${use_config} failed " >> ${CFM_logs_file}
-        else
-            echo "info msg= ${use_config} tidak terdeteksi" >> ${CFM_logs_file}
-            exit 1
-        fi
-    elif [ "${use_config}" == "config-1.yaml" ]; then
-        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
-        if [ -f ${Clash_data_dir}/switch/config-1.yaml ] ; then
-            cp -F ${Clash_data_dir}/switch/config-1.yaml ${Clash_data_dir}/config.yaml && echo "" || echo "error msg= copy ${use_config} failed " >> ${CFM_logs_file}
-        else
-            echo "info msg= ${use_config} tidak terdeteksi" >> ${CFM_logs_file}
-            exit 1
-        fi
-    elif [ "${use_config}" == "config-2.yaml" ]; then
-        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
-        if [ -f ${Clash_data_dir}/switch/config-2.yaml ] ; then
-            cp -F ${Clash_data_dir}/switch/config-2.yaml ${Clash_data_dir}/config.yaml && echo "" || echo "error msg= copy ${use_config} failed " >> ${CFM_logs_file}
-        else
-            echo "info msg= ${use_config} tidak terdeteksi" >> ${CFM_logs_file}
-            exit 1
-        fi
-    else
-        echo "info msg= ${use_config} tidak terdeteksi di folder switch" >> ${CFM_logs_file}
-        exit 1
     fi
 
     local pid=`cat ${Clash_pid_file} 2> /dev/null`
@@ -149,7 +119,7 @@ start_clash() {
            if [ ! "${use_config}" == "false" ]; then
                mv ${temporary_config_file} ${Clash_data_dir}/switch/${use_config}
            elif [ "${use_config}" == "false" ]; then
-               mv ${temporary_config_file} ${Clash_data_dir}/switch/config.yaml
+               mv ${temporary_config_file} ${Clash_data_dir}/config.yaml
            fi
            echo "error msg= Clash Offline" >> ${CFM_logs_file}
            echo "error msg= Periksa kembali ${Clash_config_file} " >> ${CFM_logs_file}
