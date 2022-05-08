@@ -4,7 +4,7 @@ mode: rule
 ipv6: true
 allow-lan: true
 log-level: silent
-external-controller: 127.0.0.1:9090
+external-controller: 0.0.0.0:9090
 external-ui: yacd-gh-pages
 unified-delay: true
 geodata-mode: false
@@ -18,8 +18,8 @@ tun:
   dns-hijack:
     - 'any:53'
     - 'tcp://any:53'
-  auto-route: true
-  auto-detect-interface: true
+  auto-route: false
+  auto-detect-interface: false
 dns:
   enable: true
   ipv6: true
@@ -30,23 +30,11 @@ dns:
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/15
   use-hosts: true
-  fake-ip-filter:
-    - '*.lan'
   nameserver:
     - 'tls://1dot1dot1dot1.cloudflare-dns.com'
     - 'https://dns.cloudflare.com/dns-query'
   fallback:
-    - 'https://1.0.0.1/dns-query#claSh'  
-    - 'tls://8.8.4.4:853#claSh'
-  fallback-filter:
-    geoip: false
-    geoip-code: CN
-    geosite:
-#      - gfw
-    domain:
-#      - +.example.com
-    ipcidr:
-#      - 0.0.0.0/32
+    - '1.0.0.1'
 sniffer:
   enable: false
   force: true
@@ -60,9 +48,6 @@ sniffer:
   sniffing:
     - tls
     - http
-  port-whitelist:
-#    - 443
-#    - 8000-9000
 iptables:
   enable: false
   inbound-interface: "lo"
