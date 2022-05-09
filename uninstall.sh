@@ -1,9 +1,12 @@
-Clash_data_dir="/data/adb/clash"
-Clash_sc_dir="/data/adb/service.d"
+##########################################################################################
+#
+# Calsh Magisk Module Uninstaller Script
+#
+##########################################################################################
 
-rm_data() {
-    rm -rf ${Clash_data_dir}
-    rm -rf ${Clash_sc_dir}/cfm_service.sh
+remove_clash_data_dir() {
+  rm -rf /data/adb/clash
 }
 
-rm_data
+remove_clash_data_dir
+rm -rf /data/adb/service.d/cfm_service.sh

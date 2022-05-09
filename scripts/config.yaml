@@ -1,47 +1,3 @@
-tproxy-port: 6996
-bind-address: "*"
-mode: rule
-allow-lan: true
-log-level: silent
-external-controller: 0.0.0.0:9090 
-external-ui: yacd-gh-pages
-unified-delay: true
-geodata-mode: false
-secret: ""
-ipv6: true
-dns:
-  enable: true
-  ipv6: true
-  default-nameserver:
-    - 1.0.0.1
-  listen: 0.0.0.0:1053
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/15
-  use-hosts: true
-  nameserver:
-    - 'tls://1dot1dot1dot1.cloudflare-dns.com'
-    - 'https://dns.cloudflare.com/dns-query'
-  fallback:
-    - 'https://dns.google/dns-query'
-sniffer:
-  enable: false
-  force: true
-  sniffing:
-    - tls
-tun:
-  enable: false
-  device: Meta
-  stack: gvisor
-  dns-hijack:
-    - '0.0.0.0:53'
-  auto-route: true 
-  auto-detect-interface: true
-iptables:
-  enable: false
-  inbound-interface: ""
-udp: true
-redir-port: 7893
-mixed-port: 7894
 proxies:
   - name: trojan SSL
     server: sgovh-trojan.bonds.id
@@ -51,7 +7,6 @@ proxies:
     skip-cert-verify: true
     sni: "shopee.co.id"
     udp: true
-
   - name: trojan Go
     server: tamarin.mjee.me
     port: 443
@@ -65,7 +20,6 @@ proxies:
       path: /howdy
       headers:
         Host: sgovh-trojan.bonds.id
-
 proxy-groups:
   - name: FASTSSH-SSHKIT-HOWDY
     type: select
@@ -74,7 +28,6 @@ proxy-groups:
       - trojan Go
       - balance
       - best-ping
-
   - name: balance
     type: load-balance
     strategy: consistent-hashing
@@ -83,7 +36,6 @@ proxy-groups:
     proxies:
       - trojan SSL
       - trojan Go
-
   - name: best-ping
     type: url-test
     url: http://www.gstatic.com/generate_204
@@ -91,13 +43,5 @@ proxy-groups:
     proxies:
       - trojan SSL
       - trojan Go
-
-  - name: "all-ads"
-    type: select
-    proxies:
-      - REJECT
-      - DIRECT
-
 rules:
-  - GEOSITE,category-ads-all,all-ads
   - MATCH,FASTSSH-SSHKIT-HOWDY

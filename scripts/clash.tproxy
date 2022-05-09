@@ -1,45 +1,8 @@
-#!/system/bin/sh
+#!/bin/sh
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
-
-rm_logs() {
-    if [ "${Clash_run_path}/clash.log" ] ; then
-        rm -rf ${Clash_run_path}/clash.log
-    fi
-}
-iptables_notif() {
-    echo "error msg= Gagal menghubungkan iptables" >> ${CFM_logs_file}
-    echo "tun: " >> ${CFM_logs_file}
-    echo "  enable: ${Clash_tun_status}" >> ${CFM_logs_file}
-    echo "error msg= set only 'false' or 'true' di template" >> ${CFM_logs_file}
-    ${scripts_dir}/clash.service -k
-}
-tun_notif_off() {
-    if [ "${Clash_auto_detect_interface}" == "true" ]; then
-        echo "info msg= Tun dihapus" >> ${CFM_logs_file}
-    else
-        echo "info msg= Iptables Tun dihapus" >> ${CFM_logs_file}
-    fi
-    echo "info msg= discontinued" >> ${CFM_logs_file}
-}
-tun_notif_on() {
-    if [ "${Clash_auto_detect_interface}" == "true" ]; then
-        echo "info msg= Tun diterapkan," >> ${CFM_logs_file}
-    else
-        echo "info msg= Iptables Tun diterapkan," >> ${CFM_logs_file}
-    fi
-    echo "info msg= connected" >> ${CFM_logs_file}
-}
-tproxy_notif_off() {
-    echo "info msg= Iptables Tproxy dihapus" >> ${CFM_logs_file}
-    echo "info msg= discontinued" >> ${CFM_logs_file}
-}
-tproxy_notif_on() {
-    echo "info msg= Iptables Tproxy diterapkan" >> ${CFM_logs_file}
-    echo "info msg= connected" >> ${CFM_logs_file}
-}
 
 start_tproxy() {
     ip rule add fwmark ${mark_id} lookup ${mark_id}
@@ -197,6 +160,13 @@ start_tproxy() {
     else
         ${ip6tables_wait} -I OUTPUT -p udp --dport 53 -j DROP
     fi
+
+    echo "info msg= Iptables TPROXY diterapkan" >> ${CFM_logs_file}
+    echo "info msg= connected" >> ${CFM_logs_file}
+
+    if [ -f ${Clash_run_path}/clash.log ] ; then
+        rm -rf ${Clash_run_path}/clash.log
+    fi
 }
 
 stop_tproxy() {
@@ -260,6 +230,9 @@ stop_tproxy() {
         ${ip6tables_wait} -t mangle -F DIVERT
         ${ip6tables_wait} -t mangle -X DIVERT
     fi
+
+    echo "info msg= Iptables TPROXY dihapus" >> ${CFM_logs_file}
+    echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
 start_tun() {
@@ -337,6 +310,17 @@ start_tun() {
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
         ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
     fi
+
+    if [ "${Clash_auto_detect_interface}" == "true" ]; then
+        echo "info msg= TUN diterapkan," >> ${CFM_logs_file}
+    else
+        echo "info msg= Iptables TUN diterapkan," >> ${CFM_logs_file}
+    fi
+    echo "info msg= connected" >> ${CFM_logs_file}
+
+    if [ -f ${Clash_run_path}/clash.log ] ; then
+        rm -rf ${Clash_run_path}/clash.log
+    fi
 }
 
 stop_tun() {
@@ -371,14 +355,28 @@ stop_tun() {
         ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
         ${ip6tables_wait} -t mangle -X CLASH_EXTERNAL
     fi
+
+    if [ "${Clash_auto_detect_interface}" == "true" ]; then
+        echo "info msg= TUN dihapus," >> ${CFM_logs_file}
+    else
+        echo "info msg= Iptables TUN dihapus," >> ${CFM_logs_file}
+    fi
+    echo "info msg= discontinued" >> ${CFM_logs_file}
+}
+
+typo_notif() {
+    echo "error msg= Gagal menghubungkan iptables" >> ${CFM_logs_file}
+    echo "tun: " >> ${CFM_logs_file}
+    echo "  enable: ${Clash_tun_status} (set only false or true di template)">> ${CFM_logs_file}
+    ${scripts_dir}/clash.service -k
+    exit 1
 }
 
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               start_tproxy && tproxy_notif_on
-               rm_logs
+               start_tproxy
            elif [ "${Clash_tun_status}" == "true" ]; then
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
@@ -391,16 +389,13 @@ while getopts ":sk" signal ; do
                   sleep 1
                   start_tun
                fi
-               tun_notif_on
-               rm_logs
            else
-               iptables_notif
+               typo_notif
            fi
-            ;;
+           ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
                 stop_tproxy
-                tproxy_notif_off
             elif [ "${Clash_tun_status}" == "true" ]; then
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -412,7 +407,6 @@ while getopts ":sk" signal ; do
                 else
                     stop_tun
                 fi
-                tun_notif_off
             fi
             ;;
         ?)

@@ -1,40 +1,60 @@
+# Proxy Transparan
 tproxy-port: 9898
-bind-address: "*"
-mode: rule
-ipv6: true
+# rule: rule-based packet routing
+# global: all packets will be forwarded to a single endpoint
+# direct: directly forward the packets to the Internet
+mode: 'rule'
 allow-lan: true
-log-level: silent
-external-controller: 0.0.0.0:9090
-external-ui: yacd-gh-pages
+bind-address: "*"
+# info / warning / error / debug / silent
+log-level: 'silent'
+ipv6: false
+external-controller: '127.0.0.1:9090'
+external-ui: 'dashboard/yacd'
+# [Meta eksklusif] unified-delay: true
 unified-delay: true
+# [Meta eksklusif] Gunakan geodata-mode: false
+# default geodata-mode: false
 geodata-mode: false
+# [Meta eksklusif] Koneksi TCP bersamaan,
+# Serentak semua IP, pilih IP dengan jabat tangan tercepat untuk terhubung
 tcp-concurrent: false
 secret: ""
-udp: true
+# Outbound interface name
+interface-name: ""
+dns:
+  enable: true
+  ipv6: false
+  # These nameservers are used to resolve the DNS nameserver hostnames below.
+  # Specify IP addresses only
+  default-nameserver:
+    - '1.1.1.1'
+    - '8.8.8.8'
+  listen: 0.0.0.0:1053
+  enhanced-mode: fake-ip
+  fake-ip-range: 192.168.0.1/16
+  # lookup hosts and return IP record
+  use-hosts: true
+  nameserver:
+    - '1.1.1.1'
+  fallback:
+    - '1.0.0.1'
+  # This is a countermeasure against DNS pollution attacks.
+  fallback-filter:
+    geoip: false
+    geoip-code: 'ID'
+    ipcidr:
+      # - 240.0.0.0/4
 tun:
   enable: false
+  # default utun
   device: utun
+  # gvisor or system
   stack: system
   dns-hijack:
     - 'any:53'
-    - 'tcp://any:53'
   auto-route: false
   auto-detect-interface: false
-dns:
-  enable: true
-  ipv6: true
-  default-nameserver:
-    - 1.1.1.1
-    - 8.8.8.8
-  listen: 0.0.0.0:1053
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/15
-  use-hosts: true
-  nameserver:
-    - 'tls://1dot1dot1dot1.cloudflare-dns.com'
-    - 'https://dns.cloudflare.com/dns-query'
-  fallback:
-    - '1.0.0.1'
 sniffer:
   enable: false
   force: true
@@ -42,13 +62,14 @@ sniffer:
     - '+.google.com'
   force-domain:
     - '+'
-    - 'google.com'
   skip-sni:
     - '+.apple.com'
   sniffing:
     - tls
     - http
 iptables:
+  # default false, don't set true
   enable: false
   inbound-interface: "lo"
   bypass:
+  # - ***

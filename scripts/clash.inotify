@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/bin/sh
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
@@ -6,7 +6,6 @@ service_path="${scripts_dir}/clash.service"
 tproxy_path="${scripts_dir}/clash.tproxy"
 signal_file="${scripts_dir}/../run/cmdRunning"
 folder_run="${scripts_dir}/../run"
-. ${scripts_dir}/clash.config
 
 events=$1
 monitor_dir=$2

@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/bin/sh
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
@@ -10,7 +10,7 @@ start_clash() {
         echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
         echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
         echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
-    elif [ "${ipv6}" = "true" ] ; then
+    else
         echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
         echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
         echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
@@ -73,7 +73,7 @@ start_clash() {
        exit 1
     fi
 
-    mv -f ${temporary_config_file}.swp ${temporary_config_file} \
+    mv ${temporary_config_file}.swp ${temporary_config_file} \
     && echo "info msg= penggabungan { ${Clash_config_file} & ${Clash_dns} } Succes" >> ${CFM_logs_file} || echo "error msg= penggabungan { ${Clash_config_file} & ${Clash_dns} } Failed" >> ${CFM_logs_file}
 
     if [ ! -f "${temporary_config_file}" ] ; then
@@ -93,7 +93,7 @@ start_clash() {
        chmod 0644 ${temporary_config_file}
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
     else
-       echo "error msg= Clash Offline." >> ${CFM_logs_file}
+       echo "error msg= Clash has stopped." >> ${CFM_logs_file}
        echo "error msg= Kernel Clash ${Clash_bin_path} tidak terdeteksi." >> ${CFM_logs_file}
        exit 1
     fi
@@ -109,20 +109,20 @@ start_clash() {
                   echo ""
                fi
            else
-               echo "info msg= Cgroup di Matikan"  >> ${CFM_logs_file}
+               echo "info msg= Cgroup tidak aktif"  >> ${CFM_logs_file}
            fi
            echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
            echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
            echo "info msg= Clash run." >> ${CFM_logs_file}
        else
            grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
-           if [ ! "${use_config}" == "false" ]; then
-               mv ${temporary_config_file} ${Clash_data_dir}/switch/${use_config}
-           elif [ "${use_config}" == "false" ]; then
+           if [ "${use_config}" == "false" ]; then
                mv ${temporary_config_file} ${Clash_data_dir}/config.yaml
+           else
+               mv ${temporary_config_file} ${Clash_data_dir}/switch/${use_config}
            fi
-           echo "error msg= Clash Offline" >> ${CFM_logs_file}
            echo "error msg= Periksa kembali ${Clash_config_file} " >> ${CFM_logs_file}
+           echo "error msg= Clash has stopped." >> ${CFM_logs_file}
            exit 1
        fi
    else
@@ -138,8 +138,11 @@ stop_clash() {
     else
         kill -15 `cat ${Clash_pid_file}`
     fi
+
+    if [ -f ${Clash_pid_file} ] ; then
+        echo "info msg= Clash has stopped." >> ${CFM_logs_file}
+    fi
     rm -rf ${Clash_pid_file}
-    echo "info msg= Clash stopped" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do

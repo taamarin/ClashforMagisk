@@ -63,7 +63,6 @@ esac
 unzip -o "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH >&2
 
 ui_print "- Unzip Yacd"
-${busybox_data_dir} wget ${official_yacd_link} -O ${download_yacd_zip}
 if [ ! -d /data/adb/yacd-gh-pages ] ; then
     rm -rf "${clash_data_dir}/yacd-gh-pages/*"
 fi
@@ -73,7 +72,11 @@ ui_print "- Move Scripts Clash"
 rm -rf "${clash_data_dir}/scripts/*"
 mv ${MODPATH}/scripts/* ${clash_data_dir}/scripts/
 mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
+
+ui_print "- Move Cert"
 mv ${clash_data_dir}/scripts/cacert.pem ${MODPATH}${ca_path}
+
+ui_print "- Move GeoX"
 mv ${MODPATH}/GeoX/* ${clash_data_dir}/
 
 ui_print "- Konfigurasi folder service"
@@ -81,23 +84,25 @@ if [ ! -d /data/adb/service.d ] ; then
     mkdir -p /data/adb/service.d
 fi
 
-ui_print "- Membuat DNS resolv.conf"
 if [ ! -f "${dns_path}/resolv.conf" ] ; then
     touch ${MODPATH}${dns_path}/resolv.conf
     echo nameserver 8.8.8.8 > ${MODPATH}${dns_path}/resolv.conf
     echo nameserver 1.1.1.1 >> ${MODPATH}${dns_path}/resolv.conf
 fi
 
-ui_print "- Execute Scripts Service"
 if [ ! -f "${clash_data_dir}/packages.list" ] ; then
     touch ${clash_data_dir}/packages.list
 fi
+
+ui_print "- Execute ZipFile"
 if [ ! -f "${MODPATH}/service.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 fi
+
 if [ ! -f "${MODPATH}/uninstall.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
 fi
+
 if [ ! -f "${clash_service_dir}/cfm_service.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'cfm_service.sh' -d ${clash_service_dir} >&2
 fi
@@ -114,6 +119,7 @@ else
     rm -rf ${clash_data_dir_core}/ss
 fi
 
+# hapus file
 rm -rf ${MODPATH}/yacd-gh-pages.zip
 rm -rf ${MODPATH}/scripts
 rm -rf ${MODPATH}/GeoX
@@ -122,13 +128,13 @@ rm -rf ${MODPATH}/cfm_service.sh
 rm -rf ${clash_data_dir}/scripts/config.yaml
 sleep 1
 
+# generate module.prop
 ui_print "- Create module.prop"
 rm -rf ${MODPATH}/module.prop
 touch ${MODPATH}/module.prop
 echo "id=ClashforMagisk" > ${MODPATH}/module.prop
 echo "name=Clash for Magisk" >> ${MODPATH}/module.prop
-echo -n "version=Module v1.9.5 " >> ${MODPATH}/module.prop
-# echo ${latest_clash_version} >> ${MODPATH}/module.prop
+echo "version=v1.9.5 " >> ${MODPATH}/module.prop
 echo "versionCode=20220225" >> ${MODPATH}/module.prop
 echo "author=Taamarin" >> ${MODPATH}/module.prop
 echo "description=Clash core with service scripts for Android" >> ${MODPATH}/module.prop

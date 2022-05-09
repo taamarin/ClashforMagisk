@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/bin/sh
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
@@ -95,6 +95,27 @@ find_packages_uid() {
     done
 }
 
+limit_clash() {
+    if [ "${Cgroup_memory_limit}" == "" ]; then
+        return
+    fi
+    if [ "${Cgroup_memory_path}" == "" ]; then
+        Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
+    fi
+
+    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= limit Memory: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "war msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
+
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
+
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
+
+    if [ -d "${Cgroup_memory_path}/clash" ]; then
+        echo "info msg= Cgroup aktif " >> ${CFM_logs_file}
+    elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
+        echo "war msg= Cgroup failed " >> ${CFM_logs_file}
+    fi
+}
+
 ui_start() {
     local pid=`cat ${Ui_pid} 2> /dev/null`
     if (cat /proc/${pid}/cmdline | grep -q php) ; then
@@ -118,27 +139,6 @@ ui_stop() {
     kill -15 `cat ${Ui_pid}`
     rm -rf ${Ui_pid}
     echo "info msg= Ui dihentikan." >> ${Clash_run_path}/ui.logs
-}
-
-limit_clash() {
-    if [ "${Cgroup_memory_limit}" == "" ]; then
-        return
-    fi
-    if [ "${Cgroup_memory_path}" == "" ]; then
-        Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
-    fi
-
-    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= limit Memory: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "war msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
-
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
-
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
-
-    if [ -d "${Cgroup_memory_path}/clash" ]; then
-        echo "info msg= Cgroup aktif " >> ${CFM_logs_file}
-    elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
-        echo "war msg= Cgroup failed " >> ${CFM_logs_file}
-    fi
 }
 
 while getopts ":fmrsl" signal ; do
