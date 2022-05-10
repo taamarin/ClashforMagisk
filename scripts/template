@@ -8,10 +8,9 @@ allow-lan: true
 bind-address: "*"
 # info / warning / error / debug / silent
 log-level: 'silent'
-ipv6: false
+ipv6: true
 external-controller: '127.0.0.1:9090'
-external-ui: 'dashboard/yacd'
-# [Meta eksklusif] unified-delay: true
+external-ui: yacd-gh-pages
 unified-delay: true
 # [Meta eksklusif] Gunakan geodata-mode: false
 # default geodata-mode: false
@@ -24,7 +23,7 @@ secret: ""
 interface-name: ""
 dns:
   enable: true
-  ipv6: false
+  ipv6: true
   # These nameservers are used to resolve the DNS nameserver hostnames below.
   # Specify IP addresses only
   default-nameserver:
@@ -32,7 +31,7 @@ dns:
     - '8.8.8.8'
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
-  fake-ip-range: 192.168.0.1/16
+  fake-ip-range: 198.18.0.1/15
   # lookup hosts and return IP record
   use-hosts: true
   nameserver:
@@ -53,17 +52,12 @@ tun:
   stack: system
   dns-hijack:
     - 'any:53'
+    - 'tcp://any:53'
   auto-route: false
   auto-detect-interface: false
 sniffer:
   enable: false
-  force: true
-  Reverse:
-    - '+.google.com'
-  force-domain:
-    - '+'
-  skip-sni:
-    - '+.apple.com'
+  force: false
   sniffing:
     - tls
     - http
@@ -71,5 +65,3 @@ iptables:
   # default false, don't set true
   enable: false
   inbound-interface: "lo"
-  bypass:
-  # - ***

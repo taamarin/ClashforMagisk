@@ -311,11 +311,7 @@ start_tun() {
         ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
     fi
 
-    if [ "${Clash_auto_detect_interface}" == "true" ]; then
-        echo "info msg= TUN diterapkan," >> ${CFM_logs_file}
-    else
-        echo "info msg= Iptables TUN diterapkan," >> ${CFM_logs_file}
-    fi
+    echo "info msg= Iptables TUN diterapkan," >> ${CFM_logs_file}
     echo "info msg= connected" >> ${CFM_logs_file}
 
     if [ -f ${Clash_run_path}/clash.log ] ; then
@@ -356,11 +352,7 @@ stop_tun() {
         ${ip6tables_wait} -t mangle -X CLASH_EXTERNAL
     fi
 
-    if [ "${Clash_auto_detect_interface}" == "true" ]; then
-        echo "info msg= TUN dihapus," >> ${CFM_logs_file}
-    else
-        echo "info msg= Iptables TUN dihapus," >> ${CFM_logs_file}
-    fi
+    echo "info msg= Iptables TUN dihapus," >> ${CFM_logs_file}
     echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
@@ -381,10 +373,11 @@ while getopts ":sk" signal ; do
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-                       if [ "${ipv6}" = "true" ] ; then
-                           ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
-                           ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-                       fi
+                   if [ "${ipv6}" = "true" ] ; then
+                       ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+                       ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+                   fi
+                   echo "info msg= TUN diterapkan," >> ${CFM_logs_file}
                else
                   sleep 1
                   start_tun
@@ -404,6 +397,7 @@ while getopts ":sk" signal ; do
                         ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                         ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                     fi
+                    echo "info msg= TUN dihapus," >> ${CFM_logs_file}
                 else
                     stop_tun
                 fi
