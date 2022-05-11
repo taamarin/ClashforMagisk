@@ -6,20 +6,26 @@ scripts_dir=`dirname ${scripts}`
 
 start_clash() {
     if [ "${ipv6}" = "false" ] ; then
-        echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
-        echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
-        echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
         echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
+        echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+
+        echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
+        echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+        echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+        echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
     else
-        echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
-        echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
-        echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
         echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
+        echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+
+        echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
+        echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+        echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+        echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
     fi
 
     echo -n "" > ${CFM_logs_file}
-    ${Clash_bin_path} -v >> ${CFM_logs_file}
-    echo "${date_day}" >> ${CFM_logs_file}
+    echo "${date_day}" > ${CFM_logs_file}
+    ${Clash_bin_path} -v >> ${CFM_logs_file} 
     echo "Clash for Magisk v1.9.5" >> ${CFM_logs_file}
 
     if [ ! -d ${Clash_data_dir}/switch ] ; then
@@ -31,22 +37,26 @@ start_clash() {
     fi
 
     if [ ! "${use_config}" == "false" ]; then
-        echo "info msg= switch ${use_config}" >> ${CFM_logs_file}
+        echo "info msg= Config ${use_config}" >> ${CFM_logs_file}
     else
-        echo "info msg= switch default" >> ${CFM_logs_file}
+        echo "info msg= Config default" >> ${CFM_logs_file}
     fi
 
     if [ "${use_premium}" == "true" ]; then
-        echo "info msg= Mengunakan Clash Premium" >> ${CFM_logs_file}
+        echo "info msg= Using Clash Premium" >> ${CFM_logs_file}
     else
-        echo "info msg= Mengunakan Clash Meta" >> ${CFM_logs_file}
+        echo "info msg= Using Clash Meta" >> ${CFM_logs_file}
     fi
-
-    local pid=`cat ${Clash_pid_file} 2> /dev/null`
-    if (cat /proc/${pid}/cmdline | grep -q clash) ; then
-        echo "info msg= tidak ada proses Yang dilakukan" >> ${CFM_logs_file}
-        echo "info msg= Clash running" >> ${CFM_logs_file}
+ 
+    local PID=`cat ${Clash_pid_file} 2> /dev/null`
+    if (cat /proc/${PID}/cmdline | grep -q clash) ; then
+        echo "war msg= PID: `grep "" ${Clash_pid_file}`" >> ${CFM_logs_file}
+#        ${scripts_dir}/clash.tproxy -s
+        echo "war msg= no process performed" >> ${CFM_logs_file}
+        echo "war msg= Clash service is running" >> ${CFM_logs_file}
         exit 1
+    else
+        echo "info msg= Executed Clash service" >> ${CFM_logs_file}
     fi
 
     if [ "${Clash_tun_status}" = "true" ] ; then
@@ -65,36 +75,39 @@ start_clash() {
           sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
           sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
        else
-          echo "error msg= file ${Clash_config_file} tidak ditemukan !!!" >> ${CFM_logs_file}
+          echo "error msg= files ${Clash_config_file} tidak ditemukan !!!" >> ${CFM_logs_file}
           exit 1
        fi
     else
-       echo "error msg= file ${Clash_dns} tidak ditemukan !!!" >> ${CFM_logs_file}
+       echo "error msg= files ${Clash_dns} tidak ditemukan !!!" >> ${CFM_logs_file}
        exit 1
     fi
 
     mv ${temporary_config_file}.swp ${temporary_config_file} \
-    && echo "info msg= penggabungan { ${Clash_config_file} & ${Clash_dns} } Succes" >> ${CFM_logs_file} || echo "error msg= penggabungan { ${Clash_config_file} & ${Clash_dns} } Failed" >> ${CFM_logs_file}
+    && echo "info msg= merge files { ${Clash_config_file} & ${Clash_dns} } Succes" >> ${CFM_logs_file} || echo "error msg= merge files { ${Clash_config_file} & ${Clash_dns} } failed !!!" >> ${CFM_logs_file}
 
     if [ ! -f "${temporary_config_file}" ] ; then
-       echo "error msg= ${temporary_config_file} tidak di temukan !!!" >> ${CFM_logs_file}
+       echo "error msg= ${temporary_config_file} tidak terdeteksi !!!." >> ${CFM_logs_file}
        exit 1
     fi
- 
+
     if [ -f "${Clash_bin_path}" ] ; then
-       echo "info msg= Mengatur permissions" >> ${CFM_logs_file}
-       chown ${Clash_user_group} ${Clash_bin_path}
-       if [ -d "${Clash_data_dir}/confs" ] ; then
-           chown ${Clash_user_group} ${Clash_data_dir}/confs/*.yaml
-           chmod 0644 ${Clash_data_dir}/confs/*.yaml
-       fi
-       chmod ${Clash_permissions} ${Clash_bin_path}
+       echo "info msg= Set permissions" >> ${CFM_logs_file}
+       chown 0:0 ${Clash_bin_path}
+       chmod 0700 ${Clash_bin_path}
+#       chmod ${Clash_permissions} ${Clash_bin_path}
+#       chown ${Clash_user_group} ${Clash_bin_path}
        chown ${Clash_user_group} ${temporary_config_file}
        chmod 0644 ${temporary_config_file}
+       if [ -d "${Clash_data_dir}/confs" ] ; then
+           chown 0:3005 /data/adb/clash
+           chown 0:3005 /data/adb/clash/*
+           chmod 0644 ${Clash_data_dir}/confs/*.yaml
+       fi
        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
     else
        echo "error msg= Clash has stopped." >> ${CFM_logs_file}
-       echo "error msg= Kernel Clash ${Clash_bin_path} tidak terdeteksi." >> ${CFM_logs_file}
+       echo "error msg= Kernel Clash ${Clash_bin_path} tidak terdeteksi !!!." >> ${CFM_logs_file}
        exit 1
     fi
 
@@ -106,14 +119,14 @@ start_clash() {
            echo -n $! > ${Clash_pid_file}
            if [ "${Cgroup_memory}" = "true" ] ; then
                if ! (${scripts_dir}/clash.tool -l) ; then
-                  echo ""
+                  echo -n ""
                fi
            else
-               echo "info msg= Cgroup tidak aktif"  >> ${CFM_logs_file}
+               echo "info msg= Cgroup is not active" >> ${CFM_logs_file}
            fi
            echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
            echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
-           echo "info msg= Clash run." >> ${CFM_logs_file}
+           echo "info msg= Clash service is running." >> ${CFM_logs_file}
        else
            grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
            if [ "${use_config}" == "false" ]; then
@@ -121,7 +134,7 @@ start_clash() {
            else
                mv ${temporary_config_file} ${Clash_data_dir}/switch/${use_config}
            fi
-           echo "error msg= Periksa kembali ${Clash_config_file} " >> ${CFM_logs_file}
+           echo "error msg= Check again ${Clash_config_file} " >> ${CFM_logs_file}
            echo "error msg= Clash has stopped." >> ${CFM_logs_file}
            exit 1
        fi
@@ -130,6 +143,7 @@ start_clash() {
        echo "error msg= ${Clash_config_file} tidak terdeteksi." >> ${CFM_logs_file}
        exit 1
    fi
+
 }
 
 stop_clash() {

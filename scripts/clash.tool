@@ -47,15 +47,14 @@ monitor_local_ipv4() {
         for rules_subnet in ${rules_ipv4[*]} ; do
             ${iptables_wait} -t mangle -D FILTER_LOCAL_IP -d ${rules_subnet} -j ACCEPT
         done
-
         for subnet in ${local_ipv4[*]} ; do
             if ! (${iptables_wait} -t mangle -C FILTER_LOCAL_IP -d ${subnet} -j ACCEPT > /dev/null 2>&1) ; then
                 ${iptables_wait} -t mangle -I FILTER_LOCAL_IP -d ${subnet} -j ACCEPT
             fi
         done
-    echo "" # "info msg= aturan iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
+        echo "info msg= iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
     else
-    echo "" # "error msg= Tidak ada perubahan di ip lokal, tidak ada pemrosesan yang akan dilakukan" >> ${CFM_logs_file}
+        echo "warn msg= tidak ada perubahan di ip lokal, tidak ada pemrosesan yang akan dilakukan" >> ${CFM_logs_file}
     fi
 
     if test "${change}" -ne 0 ; then
@@ -110,35 +109,35 @@ limit_clash() {
     echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
 
     if [ -d "${Cgroup_memory_path}/clash" ]; then
-        echo "info msg= Cgroup aktif " >> ${CFM_logs_file}
+        echo "info msg= Cgroup enable " >> ${CFM_logs_file}
     elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
         echo "war msg= Cgroup failed " >> ${CFM_logs_file}
     fi
 }
 
 ui_start() {
-    local pid=`cat ${Ui_pid} 2> /dev/null`
+    local pid=`cat ${ui_pid} 2> /dev/null`
     if (cat /proc/${pid}/cmdline | grep -q php) ; then
-        echo "info msg= mendeteksi bahwa PHP telah dimulai." > ${Clash_run_path}/ui.logs
+        echo "info msg= php(ui) service is running." > ${Clash_run_path}/ui.logs
         exit 1
     fi
 
-    if [ -f "${Ui}" ] ; then
-        chown 0:3005 ${Ui}
-        chmod 0755 ${Ui}
-        nohup ${busybox_path} setuidgid 0:3005 ${Ui} -S 127.0.0.1:9999 -t ${Clash_data_dir} > /dev/null 2>&1 &
-        echo -n $! > ${Ui_pid}
-        echo "info msg= Ui Online." > ${Clash_run_path}/ui.logs
+    if [ -f "${ui}" ] ; then
+        chown 0:3005 ${ui}
+        chmod 0755 ${ui}
+        nohup ${busybox_path} setuidgid 0:3005 ${ui} -S 127.0.0.1:9999 -t ${Clash_data_dir} > /dev/null 2>&1 &
+        echo -n $! > ${ui_pid}
+        echo "info msg= php(ui) service is running." > ${Clash_run_path}/ui.logs
     else
-       echo "error msg= Ui Offline, PHP tidak terdeteksi" >> ${Clash_run_path}/ui.logs
+       echo "error msg= php binary not detected." >> ${Clash_run_path}/ui.logs
        exit 1
     fi
 }
 
 ui_stop() {
-    kill -15 `cat ${Ui_pid}`
-    rm -rf ${Ui_pid}
-    echo "info msg= Ui dihentikan." >> ${Clash_run_path}/ui.logs
+    kill -15 `cat ${ui_pid}`
+    rm -rf ${ui_pid}
+    echo "info msg= php(ui) stopped." >> ${Clash_run_path}/ui.logs
 }
 
 while getopts ":fmrsl" signal ; do

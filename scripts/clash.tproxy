@@ -62,6 +62,11 @@ start_tproxy() {
         done
     fi
 
+   # Lewati lalu lintas daftar hitam
+   #    for AID in ${AIDs[@]} ; do
+   #        ${iptables} -t mangle -A CLASH_LOCAL -m owner --uid-owner ${AID} -j RETURN
+   #    done
+
     if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
         ${scripts_dir}/clash.tool -f
         AID=`cat ${appuid_file} | sort -u`
@@ -161,9 +166,6 @@ start_tproxy() {
         ${ip6tables_wait} -I OUTPUT -p udp --dport 53 -j DROP
     fi
 
-    echo "info msg= Iptables TPROXY diterapkan" >> ${CFM_logs_file}
-    echo "info msg= connected" >> ${CFM_logs_file}
-
     if [ -f ${Clash_run_path}/clash.log ] ; then
         rm -rf ${Clash_run_path}/clash.log
     fi
@@ -230,9 +232,6 @@ stop_tproxy() {
         ${ip6tables_wait} -t mangle -F DIVERT
         ${ip6tables_wait} -t mangle -X DIVERT
     fi
-
-    echo "info msg= Iptables TPROXY dihapus" >> ${CFM_logs_file}
-    echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
 start_tun() {
@@ -311,9 +310,6 @@ start_tun() {
         ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
     fi
 
-    echo "info msg= Iptables TUN diterapkan," >> ${CFM_logs_file}
-    echo "info msg= connected" >> ${CFM_logs_file}
-
     if [ -f ${Clash_run_path}/clash.log ] ; then
         rm -rf ${Clash_run_path}/clash.log
     fi
@@ -351,9 +347,6 @@ stop_tun() {
         ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
         ${ip6tables_wait} -t mangle -X CLASH_EXTERNAL
     fi
-
-    echo "info msg= Iptables TUN dihapus," >> ${CFM_logs_file}
-    echo "info msg= discontinued" >> ${CFM_logs_file}
 }
 
 typo_notif() {
@@ -364,31 +357,57 @@ typo_notif() {
     exit 1
 }
 
+pid_notif() {
+    pid=`cat ${Clash_pid_file} 2> /dev/null`
+    if (cat /proc/${pid}/cmdline | grep -q clash) ; then
+        echo "info msg= PID: `grep "" ${Clash_pid_file}`" >> ${CFM_logs_file}
+    else
+        echo "error msg= PID tidak di temukan, maybe Clash is not running yet" >> ${CFM_logs_file}
+    fi
+}
+
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
+               stop_tproxy
+               echo "info msg= refresh Iptables tproxy" >> ${CFM_logs_file}
+#               echo -n "" > /data/adb/clash/run/iptables.log
                start_tproxy
+               echo "info msg= Iptables tproxy diterapkan" >> ${CFM_logs_file}
            elif [ "${Clash_tun_status}" == "true" ]; then
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
+                   ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                   ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                   if [ "${ipv6}" = "true" ] ; then
+                       ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                       ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                   fi
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
                    if [ "${ipv6}" = "true" ] ; then
                        ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                        ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
                    fi
-                   echo "info msg= TUN diterapkan," >> ${CFM_logs_file}
+                   echo "info msg= tun diterapkan," >> ${CFM_logs_file}
                else
-                  sleep 1
+                  sleep 0.5
+                  stop_tun
+#                  echo -n "" > /data/adb/clash/run/iptables.log
+                  echo "info msg= refresh Iptables tun," >> ${CFM_logs_file}
                   start_tun
+                  echo "info msg= Iptables tun diterapkan," >> ${CFM_logs_file}
                fi
            else
                typo_notif
            fi
+           pid_notif
+           echo "info msg= connected" >> ${CFM_logs_file}
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
                 stop_tproxy
+                echo "info msg= Iptables tproxy dihapus" >> ${CFM_logs_file}
             elif [ "${Clash_tun_status}" == "true" ]; then
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -397,11 +416,13 @@ while getopts ":sk" signal ; do
                         ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                         ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                     fi
-                    echo "info msg= TUN dihapus," >> ${CFM_logs_file}
+                    echo "info msg= tun dihapus," >> ${CFM_logs_file}
                 else
                     stop_tun
+                    echo "info msg= Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi
+            echo "info msg= discontinued" >> ${CFM_logs_file}
             ;;
         ?)
             echo ""
