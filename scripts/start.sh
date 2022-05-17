@@ -1,31 +1,36 @@
 #!/bin/sh
 
-MODDIR="/data/adb/modules/ClashforMagisk"
+moddir="/data/adb/modules/ClashforMagisk"
 if [ -n "$(magisk -v | grep lite)" ]; then
-  MODDIR=/data/adb/lite_modules/ClashforMagisk
+  moddir=/data/adb/lite_modules/ClashforMagisk
 fi
 
-SCRIPTS_DIR="/data/adb/clash/scripts"
-BUSYBOX_PATH="/data/adb/magisk/busybox"
-CLASH_RUN_PATH="/data/adb/clash/run"
-CLASH_PID_FILE="${CLASH_RUN_PATH}/clash.pid"
+scripts_dir="/data/adb/clash/scripts"
+busybox_path="/data/adb/magisk/busybox"
+Clash_run_path="/data/adb/clash/run"
+Clash_pid_file="${clash_run_path}/clash.pid"
 
-if [ -f ${CLASH_PID_FILE} ] ; then
-    kill -15 `cat ${CLASH_PID_FILE}`
-    rm -rf ${CLASH_PID_FILE}
+if [ -f ${Clash_pid_file} ] ; then
+    kill -15 `cat ${Clash_pid_file}`
+    rm -rf ${Clash_pid_file}
 fi
 
-start_tproxy () {
-  ${SCRIPTS_DIR}/clash.service -s
+start_tproxy() {
+  ${scripts_dir}/clash.service -s
   if [ -f /data/adb/clash/run/clash.pid ] ; then
-    ${SCRIPTS_DIR}/clash.tproxy -s
+    ${scripts_dir}/clash.tproxy -s
   fi
 }
 
 if [ ! -f /data/adb/clash/manual ] ; then
   echo -n "" > /data/adb/clash/run/service.log
-  if [ ! -f ${MODDIR}/disable ] ; then
+  if [ ! -f ${moddir}/disable ] ; then
       start_tproxy
   fi
-  inotifyd ${SCRIPTS_DIR}/clash.inotify ${MODDIR} &>> /dev/null &
+  if [ "$?" = 0 ] ; then
+     ulimit -SHn 1000000
+     inotifyd ${scripts_dir}/clash.inotify ${moddir} &>> /dev/null &
+     echo -n $! > /data/adb/clash/run/inotifyd.pid
+  fi
+  nohup /data/adb/magisk/busybox crond -c /data/adb/clash/run > /dev/null 2>&1 &
 fi

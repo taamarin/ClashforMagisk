@@ -1,0 +1,509 @@
+#!/bin/sh
+
+scripts=`realpath $0`
+scripts_dir=`dirname ${scripts}`
+. ${scripts_dir}/clash.config
+
+################ OLD IPTABLES ###########
+create_rule_rules() {
+    ip -4 rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
+    ip -4 route add local default dev lo table ${table_id}
+    if [ "${ipv6}" = "true" ] ; then
+        ip -6 rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
+        ip -6 route add local default dev lo table ${table_id}
+    fi
+}
+
+flush_rule_rules() {
+    ip rule del fwmark ${mark_id} table ${table_id}
+    ip route flush table ${table_id}
+    if [ "${ipv6}" = "true" ] ; then
+        ip -6 rule del fwmark ${mark_id} table ${table_id}
+        ip -6 route flush table ${table_id}
+    fi
+}
+
+create_mangle_prerouting_chain() {
+    ${iptables_wait} -t mangle -N CLASH_PRE
+
+    ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "你的系统可能阉割了Tproxy-TCP" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "你的系统可能阉割了Tproxy-UDP" >> ${CFM_logs_file}
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -N CLASH_PRE
+
+        ${ip6tables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "你的系统可能阉割了Tproxy-TCP6" >> ${CFM_logs_file}
+        ${ip6tables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "你的系统可能阉割了Tproxy-UDP6" >> ${CFM_logs_file} 
+    fi
+}
+
+create_mangle_output_chain() {
+    ${iptables_wait} -t mangle -N CLASH_OUT
+
+    ${iptables_wait} -t mangle -A CLASH_OUT -p tcp -j MARK --set-mark ${mark_id}
+    ${iptables_wait} -t mangle -A CLASH_OUT -p udp -j MARK --set-mark ${mark_id}
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -N CLASH_OUT
+
+        ${ip6tables_wait} -t mangle -A CLASH_OUT -p tcp -j MARK --set-mark ${mark_id}
+        ${ip6tables_wait} -t mangle -A CLASH_OUT -p udp -j MARK --set-mark ${mark_id}
+    fi
+}
+
+create_mangle_prerouting_filter() {
+    ${iptables_wait} -t mangle -N FILTER_PRE_CLASH
+
+    for subnet in ${reserved_ip[*]} ; do
+        ${iptables_wait} -t mangle -A FILTER_PRE_CLASH -d ${subnet} -j ACCEPT
+    done
+
+    ${iptables_wait} -t mangle -A FILTER_PRE_CLASH -j CLASH_PRE
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -N FILTER_PRE_CLASH
+
+        for subnet6 in ${reserved_ip6[*]} ; do
+          ${ip6tables_wait} -t mangle -A FILTER_PRE_CLASH -d ${subnet6} -j ACCEPT
+        done
+
+        ${ip6tables_wait} -t mangle -A FILTER_PRE_CLASH -j CLASH_PRE
+    fi
+}
+
+create_mangle_output_filter() {
+    ${scripts_dir}/clash.tool -f
+
+    ${iptables_wait} -t mangle -N FILTER_OUT_CLASH
+
+    for subnet in ${reserved_ip[*]} ; do
+        ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -d ${subnet} -j ACCEPT
+    done
+
+    if [ "${Clash_enhanced_mode}" == "fake-ip" ]; then
+        mode="blacklist"
+    fi
+    apps=`cat ${appuid_file} | sort -u`
+    if [ "${mode}" = "blacklist" ] ; then
+        for appuid in  ${apps} ; do
+            ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j ACCEPT
+        done
+
+        ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner ! --gid-owner ${Clash_group} -j CLASH_OUT
+    elif [ "${mode}" = "whitelist" ] ; then
+        for appuid in  ${apps} ; do
+            ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j CLASH_OUT
+         done
+    fi
+
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -N FILTER_OUT_CLASH
+
+        for subnet6 in ${reserved_ip6[*]} ; do
+            ${ip6tables_wait} -t mangle -A FILTER_OUT_CLASH -d ${subnet6} -j ACCEPT
+        done
+
+        if [ "${mode}" = "blacklist" ] ; then
+           for appuid in  ${apps} ; do
+                ${ip6tables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j ACCEPT
+            done
+
+           ${ip6tables_wait} -t mangle -A FILTER_OUT_CLASH -m owner ! --gid-owner ${Clash_group} -j CLASH_OUT
+        elif [ "${mode}" = "whitelist" ] ; then
+            for appuid in  ${apps} ; do
+                ${ip6tables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j CLASH_OUT
+            done
+        fi
+    fi
+}
+
+create_nat_prerouting_dns() {
+    ${iptables_wait} -t nat -N DNS_PRE
+
+    ${iptables_wait} -t nat -A DNS_PRE -p udp -j REDIRECT --to-ports ${Clash_dns_port}
+    if [ "${ipv6}" = "true" ] ; then
+        if [ "${nat_kernel}" = "true" ] ; then
+            ${ip6tables_wait} -t nat -N DNS_PRE
+
+            ${ip6tables_wait} -t nat -A DNS_PRE -p udp -j REDIRECT --to-ports ${Clash_dns_port}
+        fi
+    fi
+}
+
+create_nat_output_dns() {
+    ${iptables_wait} -t nat -N DNS_OUT
+
+    ${iptables_wait} -t nat -A DNS_OUT -p udp -j REDIRECT --to-ports ${Clash_dns_port}
+    if [ "${ipv6}" = "true" ] ; then
+        if [ "${nat_kernel}" = "true" ] ; then
+            ${ip6tables_wait} -t nat -N DNS_OUT
+
+            ${ip6tables_wait} -t nat -A DNS_OUT -p udp -j REDIRECT --to-ports ${Clash_dns_port}
+            fi
+    fi
+}
+
+create_nat_output_filter() {
+    ${iptables_wait} -t nat -N FILTER_OUT_DNS
+
+    ${iptables_wait} -t nat -A FILTER_OUT_DNS -m owner --gid-owner ${Clash_group} -j ACCEPT
+    ${iptables_wait} -t nat -A FILTER_OUT_DNS -p udp --dport 53 -j DNS_OUT
+    if [ "${ipv6}" = "true" ] ; then
+        if [ "${nat_kernel}" = "true" ] ; then
+            ${ip6tables_wait} -t nat -N FILTER_OUT_DNS
+
+            ${ip6tables_wait} -t nat -A FILTER_OUT_DNS -m owner --gid-owner ${Clash_group} -j ACCEPT
+            ${ip6tables_wait} -t nat -A FILTER_OUT_DNS -p udp --dport 53 -j DNS_OUT
+        fi
+    fi
+}
+
+create_nat_prerouting_filter() {
+    ${iptables_wait} -t nat -N FILTER_PRE_DNS
+
+    ${iptables_wait} -t nat -A FILTER_PRE_DNS -p udp --dport 53 -j DNS_PRE
+    if [ "${ipv6}" = "true" ] ; then
+        if [ "${nat_kernel}" = "true" ] ; then
+            ${ip6tables_wait} -t nat -N FILTER_PRE_DNS
+
+            ${ip6tables_wait} -t nat -A FILTER_PRE_DNS -p udp --dport 53 -j DNS_PRE
+        fi
+    fi
+}
+
+creat_pre_divert() {
+    ${iptables_wait} -t mangle -N DIVERT
+
+    ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
+
+    ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -N DIVERT
+
+        ${ip6tables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
+
+        ${ip6tables_wait} -t mangle -A DIVERT -j ACCEPT
+    fi
+}
+
+apply_rules() {
+    create_mangle_prerouting_chain
+    create_mangle_prerouting_filter
+
+    create_mangle_output_chain
+    create_mangle_output_filter
+
+    create_nat_prerouting_dns
+    create_nat_prerouting_filter
+
+    create_nat_output_dns
+    create_nat_output_filter
+
+    creat_pre_divert
+    ${iptables_wait} -t mangle -A PREROUTING -p tcp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -A PREROUTING -p udp -m socket -j DIVERT
+
+    ${iptables_wait} -t mangle -N FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
+
+    ${iptables_wait} -t mangle -A PREROUTING -j FILTER_PRE_CLASH
+    ${iptables_wait} -t mangle -A OUTPUT -j FILTER_OUT_CLASH
+
+    ${iptables_wait} -t nat -A PREROUTING -j FILTER_PRE_DNS
+    ${iptables_wait} -t nat -A OUTPUT -j FILTER_OUT_DNS
+
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -A PREROUTING -p tcp -m socket -j DIVERT
+        ${ip6tables_wait} -t mangle -A PREROUTING -p udp -m socket -j DIVERT
+
+        ${ip6tables_wait} -t mangle -N FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -A PREROUTING -j FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -A OUTPUT -j FILTER_LOCAL_IP
+
+        ${ip6tables_wait} -t mangle -A PREROUTING -j FILTER_PRE_CLASH
+        ${ip6tables_wait} -t mangle -A OUTPUT -j FILTER_OUT_CLASH
+
+        if [ "${nat_kernel}" = "true" ] ; then
+            ${ip6tables_wait} -t nat -A PREROUTING -j FILTER_PRE_DNS
+            ${ip6tables_wait} -t nat -A OUTPUT -j FILTER_OUT_DNS
+        else
+            ${ip6tables_wait} -I OUTPUT -p udp --dport 53 -j DROP
+        fi
+    fi
+
+    ${scripts_dir}/clash.tool -m
+
+    if [ -f ${Clash_run_path}/clash.log ] ; then
+        rm -rf ${Clash_run_path}/clash.log
+    fi
+}
+
+flush_rules() {
+    ${iptables_wait} -t nat -D OUTPUT -j FILTER_OUT_DNS
+    ${iptables_wait} -t nat -D PREROUTING -j FILTER_PRE_DNS
+
+    ${iptables_wait} -t mangle -D OUTPUT -j FILTER_OUT_CLASH
+    ${iptables_wait} -t mangle -D PREROUTING -j FILTER_PRE_CLASH
+
+    ${iptables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -F FILTER_LOCAL_IP
+    ${iptables_wait} -t mangle -X FILTER_LOCAL_IP
+
+    ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -D PREROUTING -p udp -m socket -j DIVERT
+    ${iptables_wait} -t mangle -F DIVERT
+    ${iptables_wait} -t mangle -X DIVERT
+
+    ${iptables_wait} -t nat -F FILTER_OUT_DNS
+    ${iptables_wait} -t nat -X FILTER_OUT_DNS
+    ${iptables_wait} -t nat -F DNS_OUT
+    ${iptables_wait} -t nat -X DNS_OUT
+
+    ${iptables_wait} -t nat -F FILTER_PRE_DNS
+    ${iptables_wait} -t nat -X FILTER_PRE_DNS
+    ${iptables_wait} -t nat -F DNS_PRE
+    ${iptables_wait} -t nat -X DNS_PRE
+
+    ${iptables_wait} -t mangle -F FILTER_OUT_CLASH
+    ${iptables_wait} -t mangle -X FILTER_OUT_CLASH
+    ${iptables_wait} -t mangle -F CLASH_OUT
+    ${iptables_wait} -t mangle -X CLASH_OUT
+
+    ${iptables_wait} -t mangle -F FILTER_PRE_CLASH
+    ${iptables_wait} -t mangle -X FILTER_PRE_CLASH
+    ${iptables_wait} -t mangle -F CLASH_PRE
+    ${iptables_wait} -t mangle -X CLASH_PRE
+    
+    if [ "${ipv6}" = "true" ] ; then
+		
+        if [ "${nat_kernel}" = "true" ] ; then
+            ${ip6tables_wait} -t nat -D OUTPUT -j FILTER_OUT_DNS
+            ${ip6tables_wait} -t nat -D PREROUTING -j FILTER_PRE_DNS
+            ${ip6tables_wait} -t nat -F FILTER_OUT_DNS
+            ${ip6tables_wait} -t nat -X FILTER_OUT_DNS
+            ${ip6tables_wait} -t nat -F DNS_OUT
+            ${ip6tables_wait} -t nat -X DNS_OUT
+            ${ip6tables_wait} -t nat -F FILTER_PRE_DNS
+            ${ip6tables_wait} -t nat -X FILTER_PRE_DNS
+            ${ip6tables_wait} -t nat -F DNS_PRE
+            ${ip6tables_wait} -t nat -X DNS_PRE
+        else
+            ${ip6tables_wait} -D OUTPUT -p udp --dport 53 -j DROP
+        fi
+
+        ${ip6tables_wait} -t mangle -D OUTPUT -j FILTER_OUT_CLASH
+        ${ip6tables_wait} -t mangle -D PREROUTING -j FILTER_PRE_CLASH
+
+        ${ip6tables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -F FILTER_LOCAL_IP
+        ${ip6tables_wait} -t mangle -X FILTER_LOCAL_IP
+
+        ${ip6tables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+        ${ip6tables_wait} -t mangle -D PREROUTING -p udp -m socket -j DIVERT
+        ${ip6tables_wait} -t mangle -F DIVERT
+        ${ip6tables_wait} -t mangle -X DIVERT
+
+        ${ip6tables_wait} -t mangle -F FILTER_OUT_CLASH
+        ${ip6tables_wait} -t mangle -X FILTER_OUT_CLASH
+        ${ip6tables_wait} -t mangle -F CLASH_OUT
+        ${ip6tables_wait} -t mangle -X CLASH_OUT
+
+        ${ip6tables_wait} -t mangle -F FILTER_PRE_CLASH
+        ${ip6tables_wait} -t mangle -X FILTER_PRE_CLASH
+        ${ip6tables_wait} -t mangle -F CLASH_PRE
+        ${ip6tables_wait} -t mangle -X CLASH_PRE
+    fi
+
+}
+start_tun() {
+    ip rule add fwmark ${mark_id} table ${mark_id}
+    ip route add default dev ${tun_device} table ${mark_id}
+
+    if [ "${ipv6}" = "true" ] ; then
+        ip -6 rule add fwmark ${mark_id} table ${mark_id}
+        ip -6 route add default dev ${tun_device} table ${mark_id}
+    fi
+
+    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+
+    ${iptables_wait} -t mangle -N CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -N CLASH_LOCAL
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
+    done
+
+    if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+        ${scripts_dir}/clash.tool -f
+        AID=`cat ${appuid_file} | sort -u`
+            for appuid in ${AID[@]} ; do
+                ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
+            done
+    else
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+    fi
+
+    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
+    ${iptables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
+
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT	
+        ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+
+        ${ip6tables_wait} -t mangle -N CLASH_EXTERNAL
+        ${ip6tables_wait} -t mangle -N CLASH_LOCAL
+
+        for subnet in ${reserved_ip6[@]} ; do
+            ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
+        done
+
+        if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+            AID=`cat ${appuid_file} | sort -u`
+                for appuid in ${AID[@]} ; do
+                    ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
+                done
+        else
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+        fi
+
+        ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
+        ${ip6tables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
+    fi
+
+    for subnet in ${reserved_ip[@]} ; do
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
+    done
+
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
+    ${iptables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
+
+    if [ "${ipv6}" = "true" ] ; then
+        for subnet in ${reserved_ip6[@]} ; do
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
+        done
+
+        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
+        ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
+    fi
+
+    if [ -f ${Clash_run_path}/clash.log ] ; then
+        rm -rf ${Clash_run_path}/clash.log
+    fi
+}
+
+stop_tun() {
+    ip rule del fwmark ${mark_id} lookup ${mark_id}
+    ip route del default dev ${tun_device} table ${mark_id}
+    if [ "${ipv6}" = "true" ] ; then
+        ip -6 rule del fwmark ${mark_id} lookup ${mark_id}
+        ip -6 route del default dev ${tun_device} table ${mark_id}
+    fi
+
+    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+    fi
+
+    ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
+    ${iptables_wait} -t mangle -F CLASH_LOCAL
+    ${iptables_wait} -t mangle -X CLASH_LOCAL
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
+        ${ip6tables_wait} -t mangle -F CLASH_LOCAL
+        ${ip6tables_wait} -t mangle -X CLASH_LOCAL
+    fi
+    
+    ${iptables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -F CLASH_EXTERNAL
+    ${iptables_wait} -t mangle -X CLASH_EXTERNAL
+    if [ "${ipv6}" = "true" ] ; then
+        ${ip6tables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
+        ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
+        ${ip6tables_wait} -t mangle -X CLASH_EXTERNAL
+    fi
+}
+
+typo_notif() {
+    echo "error msg= Gagal menghubungkan iptables" >> ${CFM_logs_file}
+    echo "tun: " >> ${CFM_logs_file}
+    echo "  enable: ${Clash_tun_status} (set only false or true di template)">> ${CFM_logs_file}
+    ${scripts_dir}/clash.service -k
+    exit 1
+}
+
+pid_notif() {
+    pid=`cat ${Clash_pid_file} 2> /dev/null`
+    if (cat /proc/${pid}/cmdline | grep -q clash) ; then
+        echo "info msg= PID: (`grep "" ${Clash_pid_file}`)" >> ${CFM_logs_file}
+    else
+        echo "error msg= PID tidak di temukan, maybe Clash is not running yet" >> ${CFM_logs_file}
+    fi
+}
+
+while getopts ":sk" signal ; do
+    case ${signal} in
+        s)
+           if [ "${Clash_tun_status}" == "false" ]; then
+               flush_rule_rules && flush_rules
+               echo "info msg= refresh Iptables tproxy" >> ${CFM_logs_file}
+               create_rule_rules && apply_rules
+               echo "info msg= Iptables tproxy diterapkan" >> ${CFM_logs_file}
+           elif [ "${Clash_tun_status}" == "true" ]; then
+               if [ "${Clash_auto_detect_interface}" == "true" ]; then
+                   ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                   ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                   if [ "${ipv6}" = "true" ] ; then
+                       ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                       ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                   fi
+                   ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+                   ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+                   if [ "${ipv6}" = "true" ] ; then
+                       ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+                       ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+                   fi
+                   echo "info msg= tun diterapkan," >> ${CFM_logs_file}
+               else
+                  sleep 0.5
+                  stop_tun
+                  echo "info msg= refresh Iptables tun," >> ${CFM_logs_file}
+                  start_tun
+                  echo "info msg= Iptables tun diterapkan," >> ${CFM_logs_file}
+               fi
+           else
+               typo_notif
+           fi
+           echo "info msg= connected" >> ${CFM_logs_file}
+           ;;
+        k)
+            if [ "${Clash_tun_status}" == "false" ]; then
+                flush_rule_rules && flush_rules
+                echo "info msg= Iptables tproxy dihapus" >> ${CFM_logs_file}
+            elif [ "${Clash_tun_status}" == "true" ]; then
+                if [ "${Clash_auto_detect_interface}" == "true" ]; then
+                    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                    if [ "${ipv6}" = "true" ] ; then
+                        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+                        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+                    fi
+                    echo "info msg= tun dihapus," >> ${CFM_logs_file}
+                else
+                    stop_tun
+                    echo "info msg= Iptables tun dihapus," >> ${CFM_logs_file}
+                fi
+            fi
+            echo "info msg= discontinued" >> ${CFM_logs_file}
+            ;;
+        ?)
+            echo ""
+            ;;
+    esac
+done

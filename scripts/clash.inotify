@@ -21,9 +21,9 @@ service_control() {
     if [ "${monitor_file}" = "disable" ] ; then
         touch ${signal_file}
         if [ "${events}" = "d" ] ; then
-            ${service_path} -s &> ${folder_run}/service.log && ${tproxy_path} -s &> ${folder_run}/iptables.log &
+            ${service_path} -s &> ${folder_run}/service.log && ${tproxy_path} -s &>> ${folder_run}/service.log &
         elif [ "${events}" = "n" ] ; then
-            ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/iptables.log &
+            ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &
         fi
         rm -rf ${signal_file}
     fi

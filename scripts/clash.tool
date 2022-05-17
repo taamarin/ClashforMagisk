@@ -4,26 +4,26 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . ${scripts_dir}/clash.config
 
-monitor_local_ipv4() {
-    local_ipv4=$(ip a | awk '$1~/inet$/{print $2}')
+monitor_local_ip() {
+    local_ipv4=$(ip a | ${busybox_path} awk '$1~/inet$/{print $2}')
     local_ipv6=$(ip -6 a | awk '$1~/inet6$/{print $2}')
-    rules_ipv4=$(${iptables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | awk '{print $9}'  2>&1)
-    rules_ipv6=$(${ip6tables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | awk '{print $8}'  2>&1)
+    rules_ipv4=$(${iptables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | ${busybox_path} awk '{print $9}'  2>&1)
+    rules_ipv6=$(${ip6tables_wait} -t mangle -nvL FILTER_LOCAL_IP | grep "ACCEPT" | ${busybox_path} awk '{print $8}'  2>&1)
 
     change=0
 
-    wifistatus=$(dumpsys connectivity | grep "WIFI" | grep "state:" | awk -F ", " '{print $2}' | awk -F "=" '{print $2}' 2>&1)
+    wifistatus=$(dumpsys connectivity | grep "WIFI" | grep "state:" | ${busybox_path} awk -F ", " '{print $2}' | ${busybox_path} awk -F "=" '{print $2}' 2>&1)
 
     if test ! -z "${wifistatus}" ; then
         if test ! "${wifistatus}" = "$(cat ${Clash_run_path}/lastwifi)" ; then
             change=$((${change} + 1))
-            echo "${wifistatus}" > ${Clash_run_path}/lastwifi
-		elif [ "$(ip route get 1.2.3.4 | awk '{print $5}' 2>&1)" != "wlan0"  ] ; then
+            echo -n "${wifistatus}" > ${Clash_run_path}/lastwifi
+		elif [ "$(ip route get 1.2.3.4 | ${busybox_path} awk '{print $5}' 2>&1)" != "wlan0"  ] ; then
 			change=$((${change} + 1))
-			echo "${wifistatus}" >  ${Clash_run_path}/lastwifi
+			echo -n "${wifistatus}" >  ${Clash_run_path}/lastwifi
         fi
     else    
-        echo "" > ${Clash_run_path}/lastwifi
+        echo -n "" > ${Clash_run_path}/lastwifi
     fi
 
     if test "$(settings get global mobile_data 2>&1)" -eq 1 ; then
@@ -39,7 +39,7 @@ monitor_local_ipv4() {
     if test "${mobilestatus}" -ne 0 ; then
         if test ! "${mobilestatus}" = "$(cat ${Clash_run_path}/lastmobile)" ; then
             change=$((${change} + 1))
-            echo "${mobilestatus}" > ${Clash_run_path}/lastmobile
+            echo -n "${mobilestatus}" > ${Clash_run_path}/lastmobile
         fi
     fi
 
@@ -52,27 +52,57 @@ monitor_local_ipv4() {
                 ${iptables_wait} -t mangle -I FILTER_LOCAL_IP -d ${subnet} -j ACCEPT
             fi
         done
-        echo "info msg= iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
+
+        ip4_local_port=$(ip a | ${busybox_path} awk '$1~/inet$/{print $2}' | sort -u)
+        echo -n "info msg= Ipv4: | " >> ${CFM_logs_file}
+            for loca_port in ${ip4_local_port[*]} ; do
+                sleep 0.5
+                echo -n "${loca_port} |  " >> ${CFM_logs_file}
+            done
+#        echo "info msg= Iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
     else
-        echo "warn msg= tidak ada perubahan di ip lokal, tidak ada pemrosesan yang akan dilakukan" >> ${CFM_logs_file}
+        ip4_local_port=$(ip a | ${busybox_path} awk '$1~/inet$/{print $2}' | sort -u)
+        echo -n "info msg= Ipv4: | " >> ${CFM_logs_file}
+            for loca_port in ${ip4_local_port[*]} ; do
+                sleep 0.5
+                echo -n "${loca_port} | " >> ${CFM_logs_file}
+            done
+#        echo "info msg= tidak ada perubahan di ip lokal" >> ${CFM_logs_file}
     fi
+
+    echo "" >> ${CFM_logs_file}
 
     if test "${change}" -ne 0 ; then
-        for rules_subnet6 in ${rules_ipv6[*]} ; do
-            ${ip6tables_wait} -t mangle -D FILTER_LOCAL_IP -d ${rules_subnet6} -j ACCEPT
-        done
+         for rules_subnet6 in ${rules_ipv6[*]} ; do
+             ${ip6tables_wait} -t mangle -D FILTER_LOCAL_IP -d ${rules_subnet6} -j ACCEPT
+         done
 
-        for subnet6 in ${local_ipv6[*]} ; do
-            if ! (${ip6tables_wait} -t mangle -C FILTER_LOCAL_IP -d ${subnet6} -j ACCEPT > /dev/null 2>&1) ; then
-                ${ip6tables_wait} -t mangle -I FILTER_LOCAL_IP -d ${subnet6} -j ACCEPT
-            fi
-        done
-    echo "info msg= aturan iptables untuk melewati ipv4/ipv6 lokal telah diperbarui." >> ${CFM_logs_file}
+         for subnet6 in ${local_ipv6[*]} ; do
+             if ! (${ip6tables_wait} -t mangle -C FILTER_LOCAL_IP -d ${subnet6} -j ACCEPT > /dev/null 2>&1) ; then
+                 ${ip6tables_wait} -t mangle -I FILTER_LOCAL_IP -d ${subnet6} -j ACCEPT
+             fi
+         done
+
+         ip6_local_port=$(ip -6 a | ${busybox_path} awk '$1~/inet6$/{print $2}' | sort -u)
+         echo -n "info msg= Ipv6: | " >> ${CFM_logs_file}
+             for loca_port in ${ip6_local_port[*]} ; do
+                 sleep 0.5
+                echo -n "${loca_port} | " >> ${CFM_logs_file}
+             done
+         echo "" >> ${CFM_logs_file}
+         echo "info msg= Iptables untuk melewati ip lokal telah diperbarui." >> ${CFM_logs_file}
     else
-    echo "info msg= tidak ada perubahan di ipv4/ipv6 lokal, tidak ada pemrosesan yang akan dilakukan" >> ${CFM_logs_file}
-        exit 0
+         ip6_local_port=$(ip -6 a | ${busybox_path} awk '$1~/inet6$/{print $2}' | sort -u)
+         echo -n "info msg= Ipv6: | " >> ${CFM_logs_file}
+             for loca_port in ${ip6_local_port[*]} ; do
+                sleep 0.5
+                echo -n "${loca_port} | " >> ${CFM_logs_file}
+             done
+         echo "" >> ${CFM_logs_file}
+         echo "info msg= tidak ada perubahan di ip lokal" >> ${CFM_logs_file}
+         exit 0
     fi
-
+ 
     unset local_ipv4
     unset rules_ipv4
     unset local_ipv6
@@ -85,34 +115,146 @@ monitor_local_ipv4() {
 find_packages_uid() {
     echo -n "" > ${appuid_file}
     for package in `cat ${filter_packages_file} | sort -u` ; do
-        awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
-        if [ "${mode}" = "blacklist" ] ; then
-            echo "info msg= • ${package} di filter." >> ${CFM_logs_file}
-#        elif [ "${mode}" = "whitelist" ] ; then
-#            echo "info msg= ${package} Proksi " >> ${CFM_logs_file}
+        ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
+        if [ "${mode}" = "whitelist" ] ; then
+            echo "info msg= • ${package} proksi." >> ${CFM_logs_file}
+        else
+            echo "info msg= ${package} di filter " >> ${CFM_logs_file}
         fi
     done
 }
 
-limit_clash() {
+cgroup_limit() {
     if [ "${Cgroup_memory_limit}" == "" ]; then
         return
     fi
     if [ "${Cgroup_memory_path}" == "" ]; then
-        Cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
+        Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
     fi
 
-    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= limit Memory: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "war msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
+    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= Cgroup memory limit: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "warning msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
 
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "warning msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
 
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "war msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "warning msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
 
     if [ -d "${Cgroup_memory_path}/clash" ]; then
-        echo "info msg= Cgroup enable " >> ${CFM_logs_file}
+        echo "info msg= Clash cgroup activated | status: ${Cgroup_memory} " >> ${CFM_logs_file}
     elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
-        echo "war msg= Cgroup failed " >> ${CFM_logs_file}
+        echo "warning msg= Cgroup failed" >> ${CFM_logs_file}
     fi
+}
+
+restart_clash() {
+    ${scripts_dir}/clash.service -k && ${scripts_dir}/clash.tproxy -k
+    ${scripts_dir}/clash.service -s && ${scripts_dir}/clash.tproxy -s
+    if [ "$?" == "0" ]; then
+        echo "info msg= Clash berhasil dimulai ulang." >>${CFM_logs_file}
+    else
+        echo "error msg= Clash Gagal dimulai ulang." >>${CFM_logs_file}
+    fi
+}
+
+update_file() {
+        file="$1"
+        file_bak="${file}.bak"
+        update_url="$2"
+
+        mv -f ${file} ${file_bak}
+        echo "curl -L -A 'clash' ${update_url} -o ${file} "
+        curl -L -A 'clash' ${update_url} -o ${file} 2>&1 # >> /dev/null 2>&1
+
+        sleep 1
+
+        if [ -f "${file}" ] ; then
+            rm -rf ${file_bak}
+            echo "info msg= Update ${file} done." >> ${CFM_logs_file}
+        else
+            mv ${file_bak} ${file}
+            echo "error msg= Update ${file} failed." >> ${CFM_logs_file}
+        fi
+}
+
+auto_update() {
+    echo ${date_day} > ${CFM_logs_file}
+    if [ "${auto_updateGeoX}" = "true" ] ; then
+       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} > ${Clash_run_path}/update.log
+       if [ "$?" = "0" ]; then
+          flag=true
+       fi
+    fi
+
+    if [ "${auto_updateGeoX}" = "true" ] ; then
+       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> ${Clash_run_path}/update.log
+       if [ "$?" = "0" ]; then
+          flag=true
+       fi
+    fi
+
+    if [ ${auto_updateSubcript} == "true" ]; then
+       cp -F ${Clash_data_dir}/run/config.yaml ${Clash_data_dir}/config.yaml.backup
+       update_file ${Clash_config_file} ${Subcript_url} >> ${Clash_run_path}/update.log
+       if [ "$?" = "0" ]; then
+          flag=true
+       fi
+    fi
+
+    if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
+        restart_clash
+    else
+        echo "info msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
+    fi
+}
+
+keep_dns() {
+    local_dns=`getprop net.dns1`
+
+    if [ "${local_dns}" != "${static_dns}" ] ; then
+        for count in $(seq 1 $(getprop | grep dns | wc -l)); do
+            setprop net.dns${count} ${static_dns}
+        done
+    fi
+
+    if [ $(sysctl net.ipv4.ip_forward) != "1" ] ; then
+        sysctl -w net.ipv4.ip_forward=1
+    fi
+
+    unset local_dns
+}
+
+port_detection() {
+    clash_pid=`cat ${Clash_pid_file}`
+    match_count=0
+
+#    if (ss -h > /dev/null 2>&1) ; then
+#       clash_port=$(ss -antup | grep "${Clash_bin_name}" | ${busybox_path} awk '$7~/'pid="${clash_pid}"*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
+#    else
+#        clash_port=$(netstat -anlp | grep -v p6 | grep "${Clash_bin_name}" | ${busybox_path} awk '$6~/'"${clash_pid}"*'/{print $4}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
+#    fi
+
+    clash_port=$(ss -antup | grep "${Clash_bin_name}" | ${busybox_path} awk '$7~/'pid="${clash_pid}"*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
+
+    echo -n "info msg= port: | "  >> ${CFM_logs_file}
+    for sub_port in ${clash_port[*]} ; do
+        sleep 0.5
+        echo -n "${sub_port} | " >> ${CFM_logs_file}
+    done
+    echo "" >>${CFM_logs_file}
+    if ! (echo ${clash_port} | grep ${Clash_tproxy_port}); then
+        echo "error msg= tproxy/tun port is not up." >>${CFM_logs_file}
+        exit 1
+    fi
+    if ! (echo ${clash_port} | grep ${Clash_dns_port}); then
+        echo "error msg= dns port is not up." >>${CFM_logs_file}
+        exit 1
+    fi
+
+    if [ "${Clash_tun_status}" == "false" ]; then
+        echo "info msg= tproxy and dns ports are up." >>${CFM_logs_file}
+    else
+        echo "info msg= tun and dns ports are up." >>${CFM_logs_file}
+    fi
+    exit 0
 }
 
 ui_start() {
@@ -139,27 +281,31 @@ ui_stop() {
     rm -rf ${ui_pid}
     echo "info msg= php(ui) stopped." >> ${Clash_run_path}/ui.logs
 }
-
-while getopts ":fmrsl" signal ; do
+while getopts ":fklmup" signal ; do
     case ${signal} in
         f)
             find_packages_uid
             ;;
+        k)
+            keep_dns
+            ;;
+        l)
+            cgroup_limit
+            ;;
         m)
             if [ "${mode}" = "blacklist" ] && [ -f "${Clash_pid_file}" ] ; then
-                monitor_local_ipv4
+                monitor_local_ip
             else
                 exit 0
             fi
             ;;
-        r)
-            ui_start
+        u)
+            auto_update
             ;;
-        s)
-            ui_stop
-            ;;
-        l)
-            limit_clash
+        p)
+            echo "info msg= port detected: waiting 10s" >> ${CFM_logs_file}  
+            sleep 10
+            port_detection
             ;;
         ?)
             echo ""

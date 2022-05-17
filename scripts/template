@@ -1,58 +1,45 @@
 # Proxy Transparan
 tproxy-port: 9898
-# rule / global / direct 
 mode: 'rule' 
-# Set to true to allow connections to the local-end server from
-# other LAN IP addresses 
 allow-lan: true
-# This is only applicable when `allow-lan` is `true`
-# '*': bind all IP addresses
-# 192.168.122.11: bind a single IPv4 address
-# "[aaaa::a8aa:ff:fe09:57d8]": bind a single IPv6 address
 bind-address: "*"
 # info / warning / error / debug / silent
-log-level: 'silent'
-# When set to false, resolver won't translate hostnames to IPv6 addresses
+log-level: 'warning'
 ipv6: false
-# RESTful web API listening address
-external-controller: '0.0.0.0:9090'
-# serve it at `http://{{external-controller}}/ui`
+external-controller: '127.0.0.1:9090'
 external-ui: 'yacd-gh-pages'
 # [Meta eksklusif] default unified-delay: true
 unified-delay: true
-# [Meta eksklusif] Gunakan geodata-mode: false
-# default geodata-mode: false
-geodata-mode: false
+# [Meta eksklusif] Gunakan geodata-mode: true
+# default geodata-mode: true
+geodata-mode: true
 # [Meta eksklusif] Koneksi TCP bersamaan,
 # Serentak semua IP, pilih IP dengan jabat tangan tercepat untuk terhubung
 tcp-concurrent: false
-# Authenticate by spedifying HTTP header `Authorization: Bearer ${secret}`
 secret: ""
-# Outbound interface name
 interface-name: ""
-# DNS server settings
-# This section is optional. When not present, the DNS server will be disabled.
 dns:
   enable: true
-  ipv6: true
-  # These nameservers are used to resolve the DNS nameserver hostnames below.
-  # Specify IP addresses only
+  ipv6: false
   default-nameserver:
     - '1.1.1.1'
     - '8.8.8.8'
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/15
+  fake-ip-range: 198.18.0.1/16
   # lookup hosts and return IP record
   use-hosts: true
-  fake-ip-filter: ['connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*']
+  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*']
   nameserver:
     - '1.1.1.1'
+    - '[2606:4700:4700::1111]:53'
   fallback:
     - '1.0.0.1'
-  #  nameserver-policy:
-  #    'zoomappdocs.zoom.us': '140.213.88.253'
-  # This is a countermeasure against DNS pollution attacks.
+    - '[2606:4700:4700::1001]:53'
+#  nameserver-policy:
+#    "tamarin.mjee.me": '8.8.8.8'
+#    "dev.appsflyer.com": '1.1.1.1'
+  #  This is a countermeasure against DNS pollution attacks.
   fallback-filter:
     geoip: true
     geoip-code: 'ID'
@@ -60,13 +47,26 @@ dns:
       - 'GFW'
       - 'GREATFIRE'
     ipcidr:
-      - 0.0.0.0/8
-      - 192.168.0.0/16
+    - 0.0.0.0/8
+    - 10.0.0.0/8
+    - 100.64.0.0/10
+    - 127.0.0.0/8
+    - 169.254.0.0/16
+    - 172.16.0.0/12
+    - 192.0.0.0/24
+    - 192.0.2.0/24
+    - 192.88.99.0/24
+    - 192.168.0.0/16
+    - 198.18.0.0/15
+    - 198.51.100.0/24
+    - 203.0.113.0/24
+    - 224.0.0.0/4
+    - 240.0.0.0/4
+    - 255.255.255.255/32
+    domain: ["+.google.com", "+.facebook.com", "+.youtube.com", "+.githubusercontent.com", "+.googlevideo.com"]
 tun:
   enable: false
-  # default utun
   device: utun
-  # gvisor or system
   stack: system
   dns-hijack:
     - 'any:53'
@@ -75,18 +75,23 @@ tun:
   auto-detect-interface: false
 sniffer:
   enable: false
-  force: false
+  force: true
   sniffing:
     - tls
     - http
-  skip-domain:
-    - '+.apple.com'
-  force-domain:
-    - 'google.com'
+  # Destination port whitelist, the sniffer will only sniff the ports in the whitelist, the default is 0-65535, it is recommended to set it to a common port
   port-whitelist:
+    - 80
     - 443
     - 8000-9000
+  # If the sniffed domain name result is in this list, it will not take effect
+  skip-domain:
+    - '+.apple.com'
+  # Nama domain yang perlu diendus, di sini nama domain adalah nama domain yang diperoleh dengan logika asli crash, jika kosong, hanya permintaan IP yang akan diendus, dan '+' akan diendus
+  force-domain:
+    - '+'
 iptables:
-  # default false, don't set true
   enable: false
+  # default false, don't set true"
   inbound-interface: "lo"
+  
