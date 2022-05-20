@@ -1,5 +1,6 @@
 {
-"versionCfm": "1.9.4",
-"scriptVer": "1",
-"messageUpdate": "update Clash for Magisk"
+   "versionCfm": "1.9.4",
+   "scriptVer": "1",
+   "versionApp": "1.4.1",
+   "messageUpdate": "update Clash for Magisk"
 }
