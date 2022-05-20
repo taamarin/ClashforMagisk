@@ -116,10 +116,10 @@ find_packages_uid() {
     echo -n "" > ${appuid_file}
     for package in `cat ${filter_packages_file} | sort -u` ; do
         ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
-        if [ "${mode}" = "whitelist" ] ; then
-            echo "info msg= • ${package} proksi." >> ${CFM_logs_file}
-        else
+        if [ "${mode}" = "blacklist" ] ; then
             echo "info msg= ${package} di filter " >> ${CFM_logs_file}
+#            echo "info msg= • ${package} proksi." >> ${CFM_logs_file}
+#        else
         fi
     done
 }
@@ -178,14 +178,14 @@ update_file() {
 auto_update() {
     echo ${date_day} > ${CFM_logs_file}
     if [ "${auto_updateGeoX}" = "true" ] ; then
-       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} > ${Clash_run_path}/update.log
+       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} > ${Clash_run_path}/run.log
        if [ "$?" = "0" ]; then
           flag=true
        fi
     fi
 
     if [ "${auto_updateGeoX}" = "true" ] ; then
-       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> ${Clash_run_path}/update.log
+       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> ${Clash_run_path}/run.log
        if [ "$?" = "0" ]; then
           flag=true
        fi
@@ -193,7 +193,7 @@ auto_update() {
 
     if [ ${auto_updateSubcript} == "true" ]; then
        cp -F ${Clash_data_dir}/run/config.yaml ${Clash_data_dir}/config.yaml.backup
-       update_file ${Clash_config_file} ${Subcript_url} >> ${Clash_run_path}/update.log
+       update_file ${Clash_config_file} ${Subcript_url} >> ${Clash_run_path}/run.log
        if [ "$?" = "0" ]; then
           flag=true
        fi
@@ -225,36 +225,19 @@ keep_dns() {
 port_detection() {
     clash_pid=`cat ${Clash_pid_file}`
     match_count=0
-
-#    if (ss -h > /dev/null 2>&1) ; then
-#       clash_port=$(ss -antup | grep "${Clash_bin_name}" | ${busybox_path} awk '$7~/'pid="${clash_pid}"*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
-#    else
-#        clash_port=$(netstat -anlp | grep -v p6 | grep "${Clash_bin_name}" | ${busybox_path} awk '$6~/'"${clash_pid}"*'/{print $4}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
-#    fi
-
-    clash_port=$(ss -antup | grep "${Clash_bin_name}" | ${busybox_path} awk '$7~/'pid="${clash_pid}"*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
-
-    echo -n "info msg= port: | "  >> ${CFM_logs_file}
+    
+    if (ss -h > /dev/null 2>&1) ; then
+        clash_port=$(ss -antup | grep "${Clash_bin_name}" | ${busybox_path} awk '$7~/'pid="${clash_pid}"*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
+    else
+        echo "info msg= skip port detected" >> ${CFM_logs_file}
+        exit 0
+    fi
+    echo -n "info msg= port detected: " >> ${CFM_logs_file}
     for sub_port in ${clash_port[*]} ; do
         sleep 0.5
-        echo -n "${sub_port} | " >> ${CFM_logs_file}
+        echo -n "${sub_port}   " >> ${CFM_logs_file}
     done
-    echo "" >>${CFM_logs_file}
-    if ! (echo ${clash_port} | grep ${Clash_tproxy_port}); then
-        echo "error msg= tproxy/tun port is not up." >>${CFM_logs_file}
-        exit 1
-    fi
-    if ! (echo ${clash_port} | grep ${Clash_dns_port}); then
-        echo "error msg= dns port is not up." >>${CFM_logs_file}
-        exit 1
-    fi
-
-    if [ "${Clash_tun_status}" == "false" ]; then
-        echo "info msg= tproxy and dns ports are up." >>${CFM_logs_file}
-    else
-        echo "info msg= tun and dns ports are up." >>${CFM_logs_file}
-    fi
-    exit 0
+        echo "" >>${CFM_logs_file} 
 }
 
 ui_start() {
@@ -299,12 +282,19 @@ while getopts ":fklmup" signal ; do
                 exit 0
             fi
             ;;
-        u)
-            auto_update
+        u)   
+            if [ "${auto_updateGeoX}" = "true" ] && [ "${auto_updateSubcript}" = "true" ]; then 
+                auto_update
+            elif [ "${auto_updateGeoX}" = "true" ] && "${auto_updateSubcript}" = "false" ]; then 
+                auto_update
+            elif [ "${auto_updateGeoX}" = "false" ] && [ "${auto_updateSubcript}" = "true" ]; then    
+                auto_update
+            else
+               exit 1
+            fi
+            exit 1
             ;;
         p)
-            echo "info msg= port detected: waiting 10s" >> ${CFM_logs_file}  
-            sleep 10
             port_detection
             ;;
         ?)

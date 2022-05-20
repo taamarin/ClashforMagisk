@@ -12,10 +12,11 @@ Clash_pid_file="${clash_run_path}/clash.pid"
 
 if [ -f ${Clash_pid_file} ] ; then
     kill -15 `cat ${Clash_pid_file}`
+    ${scripts_dir}/clash.tproxy -k
     rm -rf ${Clash_pid_file}
 fi
 
-start_tproxy() {
+start_service() {
   ${scripts_dir}/clash.service -s
   if [ -f /data/adb/clash/run/clash.pid ] ; then
     ${scripts_dir}/clash.tproxy -s
@@ -25,7 +26,7 @@ start_tproxy() {
 if [ ! -f /data/adb/clash/manual ] ; then
   echo -n "" > /data/adb/clash/run/service.log
   if [ ! -f ${moddir}/disable ] ; then
-      start_tproxy
+      start_service
   fi
   if [ "$?" = 0 ] ; then
      ulimit -SHn 1000000

@@ -134,7 +134,6 @@ start_clash() {
            ulimit -SHn 1000000
            nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/${date_day}.log 2>&1 &
            echo -n $! > ${Clash_pid_file}
-           # Cgroup service
            if [ "${Cgroup_memory}" = "true" ] ; then
                if ! (${scripts_dir}/clash.tool -l) ; then
                   echo -n ""
@@ -145,7 +144,6 @@ start_clash() {
            echo "info msg= Test ${temporary_config_file}" >> ${CFM_logs_file}
            echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
            echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
-#           echo "info msg= Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
        else
            grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}' >> ${CFM_logs_file}
            if [ "${use_config}" == "false" ]; then
@@ -163,21 +161,16 @@ start_clash() {
        exit 1
    fi
 
-# port detected 
-   if (ss -h > /dev/null 2>&1) ; then
+   if [ "${port_detect}" = "true" ]; then
        if ! (${scripts_dir}/clash.tool -p) ; then
-           kill -15 `cat ${Clash_pid_file}`
-           rm -rf ${Clash_pid_file}
-           echo "error msg= port is not detected, the crash kernel and subsequent logic have been stopped." >> ${CFM_logs_file}
-           exit 1
+           echo -n ""
+           exit 0
        fi
    else
-        echo "info msg= tidak tersedia binary iproute2" >> ${CFM_logs_file} 
-        echo "error msg= skip port detected" >> ${CFM_logs_file}
+        echo "info msg= skip port detected" >> ${CFM_logs_file}
    fi
 }
 
-# stop Clash service
 stop_clash() {
     if [ "${Clash_tun_status}" = "true" ] ; then
         kill -9 `cat ${Clash_pid_file}`
@@ -190,7 +183,7 @@ stop_clash() {
             rm -rf /data/adb/clash/run/appuid.list
         fi
     fi
-#    echo -n "" > /data/adb/clash/run/root
+    echo -n "" > /data/adb/clash/run/root
     rm -rf ${Clash_pid_file}
 }
 
