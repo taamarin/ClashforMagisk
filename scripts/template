@@ -1,51 +1,43 @@
-# Proxy Transparan
-tproxy-port: 9898
+tproxy-port: 9999
 mode: 'rule' 
 allow-lan: true
 bind-address: "*"
-# info / warning / error / debug / silent
-log-level: 'warning'
+log-level: silent
 ipv6: false
-external-controller: '127.0.0.1:9090'
-external-ui: 'yacd-gh-pages'
-# [Meta eksklusif] default unified-delay: true
+external-controller: 0.0.0.0:9090
+external-ui: yacd-gh-pages
+# [ feature Meta ]
 unified-delay: true
-# [Meta eksklusif] Gunakan geodata-mode: true
-# default geodata-mode: true
 geodata-mode: true
-# [Meta eksklusif] Koneksi TCP bersamaan,
-# Serentak semua IP, pilih IP dengan jabat tangan tercepat untuk terhubung
 tcp-concurrent: false
+enable-process: false
 secret: ""
-interface-name: ""
 dns:
   enable: true
   ipv6: false
   default-nameserver:
     - '1.1.1.1'
-    - '8.8.8.8'
   listen: 0.0.0.0:1053
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  # lookup hosts and return IP record
   use-hosts: true
-  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*']
+  fake-ip-filter: ['+.clash.metacubex.one', '+.networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*', 'dns.msftnsci.com', 'www.msftnsci.com', 'www.msftconnecttest.com']
   nameserver:
     - '1.1.1.1'
     - '[2606:4700:4700::1111]:53'
   fallback:
     - '1.0.0.1'
     - '[2606:4700:4700::1001]:53'
-#  nameserver-policy:
-#    "tamarin.mjee.me": '8.8.8.8'
-#    "dev.appsflyer.com": '1.1.1.1'
-  #  This is a countermeasure against DNS pollution attacks.
+  nameserver-policy:
+    "tamarin.mjee.me": '8.8.8.8'
+    "dev.appsflyer.com": '1.1.1.1'
   fallback-filter:
     geoip: true
     geoip-code: 'ID'
     geosite: 
       - 'GFW'
       - 'GREATFIRE'
+    domain: ["+.google.com", "+.facebook.com", "+.youtube.com", "+.githubusercontent.com", "+.googlevideo.com"]
     ipcidr:
     - 0.0.0.0/8
     - 10.0.0.0/8
@@ -63,10 +55,9 @@ dns:
     - 224.0.0.0/4
     - 240.0.0.0/4
     - 255.255.255.255/32
-    domain: ["+.google.com", "+.facebook.com", "+.youtube.com", "+.githubusercontent.com", "+.googlevideo.com"]
 tun:
   enable: false
-  device: utun
+  device: Meta
   stack: system
   dns-hijack:
     - 'any:53'
@@ -79,19 +70,15 @@ sniffer:
   sniffing:
     - tls
     - http
-  # Destination port whitelist, the sniffer will only sniff the ports in the whitelist, the default is 0-65535, it is recommended to set it to a common port
   port-whitelist:
     - 80
     - 443
     - 8000-9000
-  # If the sniffed domain name result is in this list, it will not take effect
   skip-domain:
     - '+.apple.com'
-  # Nama domain yang perlu diendus, di sini nama domain adalah nama domain yang diperoleh dengan logika asli crash, jika kosong, hanya permintaan IP yang akan diendus, dan '+' akan diendus
   force-domain:
     - '+'
 iptables:
-  enable: false
-  # default false, don't set true"
+  enable: false # dn't set true
   inbound-interface: "lo"
-  
+interface-name: ""

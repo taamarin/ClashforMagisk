@@ -2,10 +2,21 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
-. ${scripts_dir}/clash.config
+. /data/adb/clash/scripts/clash.config
 
 start_clash() {
     rm -rf /data/adb/clash/run/*`date "+%Z"`.log
+
+    if [ "${config_online}" = "true" ] ; then
+        if ! [ "$(head -1 /data/adb/clash/run/root)" = "disable" ] ; then
+            if ! (${scripts_dir}/clash.tool -o) ; then
+                echo "error msg= Gagal download Config, pastikan ada koneksi internet" >> ${CFM_logs_file}
+                exit 1
+            fi
+        fi
+    else
+        echo "info msg= download config online tidak aktif" > ${CFM_logs_file}
+    fi
 
     if [ "${ipv6}" = "false" ] ; then
         echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
@@ -132,7 +143,7 @@ start_clash() {
        ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.log
        if [ "$?" = 0 ] ; then
            ulimit -SHn 1000000
-           nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/${date_day}.log 2>&1 &
+           nohup /data/adb/magisk/busybox setuidgid 0:3005 /data/adb/clash/core/"${Clash_bin_name}" -d /data/adb/clash -f /data/adb/clash/run/config.yaml > /data/adb/clash/run/${date_day}.log 2>&1 &
            echo -n $! > ${Clash_pid_file}
            if [ "${Cgroup_memory}" = "true" ] ; then
                if ! (${scripts_dir}/clash.tool -l) ; then
@@ -160,6 +171,8 @@ start_clash() {
        echo "error msg= ${Clash_config_file} tidak terdeteksi." >> ${CFM_logs_file}
        exit 1
    fi
+
+   sleep 3
 
    if [ "${port_detect}" = "true" ]; then
        if ! (${scripts_dir}/clash.tool -p) ; then

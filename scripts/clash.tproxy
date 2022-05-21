@@ -2,7 +2,7 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
-. ${scripts_dir}/clash.config
+. /data/adb/clash/scripts/clash.config
 
 start_tproxy() {
     ip rule add fwmark ${mark_id} lookup ${mark_id}
@@ -72,7 +72,6 @@ start_tproxy() {
 
     if [ "${ipv6}" == "true" ]; then
         if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-#            ${scripts_dir}/clash.tool -f
             AID=`cat ${appuid_file} | sort -u`
             for appuid in ${AID[@]} ; do
                 ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
@@ -183,12 +182,12 @@ stop_tproxy() {
     fi
 
     ${iptables_wait} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
-    
+
     ${iptables_wait} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
 
     ${iptables_wait} -t nat -F CLASH_DNS_EXTERNAL
     ${iptables_wait} -t nat -X CLASH_DNS_EXTERNAL
-    
+
     ${iptables_wait} -t nat -F CLASH_DNS_LOCAL
     ${iptables_wait} -t nat -X CLASH_DNS_LOCAL
     if [ "${ipv6}" == "true" ]; then
@@ -206,7 +205,7 @@ stop_tproxy() {
     fi
 
     ${iptables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
-    
+
     ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
 
     ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL

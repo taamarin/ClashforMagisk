@@ -2,8 +2,8 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
-service_path="${scripts_dir}/clash.service"
-tproxy_path="${scripts_dir}/clash.tproxy"
+service_path="/data/adb/clash/scripts/clash.service"
+tproxy_path="/data/adb/clash/scripts/clash.tproxy"
 signal_file="/data/adb/clash/run/cmdRunning"
 folder_run="/data/adb/clash/run"
 

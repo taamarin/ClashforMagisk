@@ -2,7 +2,7 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
-. ${scripts_dir}/clash.config
+. /data/adb/clash/scripts/clash.config
 
 monitor_local_ip() {
     local_ipv4=$(ip a | ${busybox_path} awk '$1~/inet$/{print $2}')
@@ -118,8 +118,8 @@ find_packages_uid() {
         ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
         if [ "${mode}" = "blacklist" ] ; then
             echo "info msg= ${package} di filter " >> ${CFM_logs_file}
-#            echo "info msg= • ${package} proksi." >> ${CFM_logs_file}
-#        else
+        else
+            echo "info msg= • ${package} proksi." >> ${CFM_logs_file}
         fi
     done
 }
@@ -147,6 +147,10 @@ cgroup_limit() {
 
 restart_clash() {
     ${scripts_dir}/clash.service -k && ${scripts_dir}/clash.tproxy -k
+
+    echo -n "disable" > /data/adb/clash/run/root
+    sleep 0.5
+
     ${scripts_dir}/clash.service -s && ${scripts_dir}/clash.tproxy -s
     if [ "$?" == "0" ]; then
         echo "info msg= Clash berhasil dimulai ulang." >>${CFM_logs_file}
@@ -161,6 +165,7 @@ update_file() {
         update_url="$2"
 
         mv -f ${file} ${file_bak}
+        echo "info msg= backup file ${file_bak}" >> ${CFM_logs_file}
         echo "curl -L -A 'clash' ${update_url} -o ${file} "
         curl -L -A 'clash' ${update_url} -o ${file} 2>&1 # >> /dev/null 2>&1
 
@@ -168,24 +173,22 @@ update_file() {
 
         if [ -f "${file}" ] ; then
             rm -rf ${file_bak}
-            echo "info msg= Update ${file} done." >> ${CFM_logs_file}
+            echo "info msg= `date "+%R %Z"` Update ${file} done." >> ${CFM_logs_file}
         else
-            mv ${file_bak} ${file}
-            echo "error msg= Update ${file} failed." >> ${CFM_logs_file}
+            echo "error msg= `date "+%R %Z"` Update ${file} failed." >> ${CFM_logs_file}
         fi
 }
 
 auto_update() {
-    echo ${date_day} > ${CFM_logs_file}
     if [ "${auto_updateGeoX}" = "true" ] ; then
-       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} > ${Clash_run_path}/run.log
+       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} >> ${CFM_logs_file}
        if [ "$?" = "0" ]; then
           flag=true
        fi
     fi
 
     if [ "${auto_updateGeoX}" = "true" ] ; then
-       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> ${Clash_run_path}/run.log
+       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> ${CFM_logs_file}
        if [ "$?" = "0" ]; then
           flag=true
        fi
@@ -193,7 +196,7 @@ auto_update() {
 
     if [ ${auto_updateSubcript} == "true" ]; then
        cp -F ${Clash_data_dir}/run/config.yaml ${Clash_data_dir}/config.yaml.backup
-       update_file ${Clash_config_file} ${Subcript_url} >> ${Clash_run_path}/run.log
+       update_file ${Clash_config_file} ${Subcript_url} >> ${CFM_logs_file}
        if [ "$?" = "0" ]; then
           flag=true
        fi
@@ -203,6 +206,26 @@ auto_update() {
         restart_clash
     else
         echo "info msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
+    fi
+}
+
+config_online() {
+    clash_pid=`cat ${Clash_pid_file}`
+    match_count=0
+
+    echo "info msg= Download Config online" > ${CFM_logs_file}
+    update_file ${Clash_config_file} ${Subcript_url} >> ${CFM_logs_file}
+    sleep 1
+    if [ -f "${Clash_config_file}" ] ; then
+        match_count=$((${match_count} + 1))
+    fi
+
+    if [ ${match_count} -ge 1 ] ; then
+        echo "info msg= download succes." >> ${CFM_logs_file}
+        exit 0
+    else
+        echo "error msg= download failed, pastikan Url Tidak kosong" >> ${CFM_logs_file}
+        exit 1
     fi
 }
 
@@ -232,6 +255,7 @@ port_detection() {
         echo "info msg= skip port detected" >> ${CFM_logs_file}
         exit 0
     fi
+
     echo -n "info msg= port detected: " >> ${CFM_logs_file}
     for sub_port in ${clash_port[*]} ; do
         sleep 0.5
@@ -264,7 +288,7 @@ ui_stop() {
     rm -rf ${ui_pid}
     echo "info msg= php(ui) stopped." >> ${Clash_run_path}/ui.logs
 }
-while getopts ":fklmup" signal ; do
+while getopts ":fklmupo" signal ; do
     case ${signal} in
         f)
             find_packages_uid
@@ -282,12 +306,12 @@ while getopts ":fklmup" signal ; do
                 exit 0
             fi
             ;;
-        u)   
+        u)
             if [ "${auto_updateGeoX}" = "true" ] && [ "${auto_updateSubcript}" = "true" ]; then 
                 auto_update
             elif [ "${auto_updateGeoX}" = "true" ] && "${auto_updateSubcript}" = "false" ]; then 
                 auto_update
-            elif [ "${auto_updateGeoX}" = "false" ] && [ "${auto_updateSubcript}" = "true" ]; then    
+            elif [ "${auto_updateGeoX}" = "false" ] && [ "${auto_updateSubcript}" = "true" ]; then
                 auto_update
             else
                exit 1
@@ -295,7 +319,12 @@ while getopts ":fklmup" signal ; do
             exit 1
             ;;
         p)
+            sleep 0.5
             port_detection
+            ;;
+        o)
+            sleep 0.5
+            config_online
             ;;
         ?)
             echo ""
