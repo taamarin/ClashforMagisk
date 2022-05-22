@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/system/bin/sh
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
@@ -165,17 +165,22 @@ update_file() {
         update_url="$2"
 
         mv -f ${file} ${file_bak}
-        echo "info msg= backup file ${file_bak}" >> ${CFM_logs_file}
+        echo ""  >> ${CFM_logs_file}
+        echo "info warning= backup file ${file_bak}" >> ${CFM_logs_file}
         echo "curl -L -A 'clash' ${update_url} -o ${file} "
         curl -L -A 'clash' ${update_url} -o ${file} 2>&1 # >> /dev/null 2>&1
 
         sleep 1
 
         if [ -f "${file}" ] ; then
-            rm -rf ${file_bak}
+#            rm -rf ${file_bak}
             echo "info msg= `date "+%R %Z"` Update ${file} done." >> ${CFM_logs_file}
         else
             echo "error msg= `date "+%R %Z"` Update ${file} failed." >> ${CFM_logs_file}
+            if [ -f "${file_bak}" ]; then
+                mv ${file_bak} ${file}
+                echo "warning msg= `date "+%R %Z"` restore ${file}." >> ${CFM_logs_file}
+            fi
         fi
 }
 
@@ -195,7 +200,7 @@ auto_update() {
     fi
 
     if [ ${auto_updateSubcript} == "true" ]; then
-       cp -F ${Clash_data_dir}/run/config.yaml ${Clash_data_dir}/config.yaml.backup
+#       cp -F ${Clash_config_file} ${Clash_config_file}.bak
        update_file ${Clash_config_file} ${Subcript_url} >> ${CFM_logs_file}
        if [ "$?" = "0" ]; then
           flag=true
@@ -205,7 +210,7 @@ auto_update() {
     if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
         restart_clash
     else
-        echo "info msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
+        echo "warning msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
 }
 
@@ -213,6 +218,7 @@ config_online() {
     clash_pid=`cat ${Clash_pid_file}`
     match_count=0
 
+#    cp -F ${Clash_config_file} ${Clash_config_file}.bak
     echo "info msg= Download Config online" > ${CFM_logs_file}
     update_file ${Clash_config_file} ${Subcript_url} >> ${CFM_logs_file}
     sleep 1
@@ -307,11 +313,11 @@ while getopts ":fklmupo" signal ; do
             fi
             ;;
         u)
-            if [ "${auto_updateGeoX}" = "true" ] && [ "${auto_updateSubcript}" = "true" ]; then 
+            if [ "${auto_updateSubcript}" = "true" ] && [ "${auto_updateGeoX}" = "true" ]; then 
                 auto_update
-            elif [ "${auto_updateGeoX}" = "true" ] && "${auto_updateSubcript}" = "false" ]; then 
+            elif [ "${auto_updateSubcript}" = "true" ] && "${auto_updateGeoX}" = "false" ]; then 
                 auto_update
-            elif [ "${auto_updateGeoX}" = "false" ] && [ "${auto_updateSubcript}" = "true" ]; then
+            elif [ "${auto_updateSubcript}" = "false" ] && [ "${auto_updateGeoX}" = "true" ]; then
                 auto_update
             else
                exit 1

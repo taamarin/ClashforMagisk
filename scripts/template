@@ -1,4 +1,4 @@
-tproxy-port: 9999
+tproxy-port: 9898
 mode: 'rule' 
 allow-lan: true
 bind-address: "*"
@@ -24,13 +24,13 @@ dns:
   fake-ip-filter: ['+.clash.metacubex.one', '+.networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*', 'dns.msftnsci.com', 'www.msftnsci.com', 'www.msftconnecttest.com']
   nameserver:
     - '1.1.1.1'
-    - '[2606:4700:4700::1111]:53'
+#    - '[2606:4700:4700::1111]:53'
   fallback:
     - '1.0.0.1'
-    - '[2606:4700:4700::1001]:53'
-  nameserver-policy:
-    "tamarin.mjee.me": '8.8.8.8'
-    "dev.appsflyer.com": '1.1.1.1'
+#    - '[2606:4700:4700::1001]:53'
+#  nameserver-policy:
+#    "tamarin.mjee.me": '8.8.8.8'
+#    "dev.appsflyer.com": '1.1.1.1'
   fallback-filter:
     geoip: true
     geoip-code: 'ID'
@@ -57,7 +57,8 @@ dns:
     - 255.255.255.255/32
 tun:
   enable: false
-  device: Meta
+  # biarkan default utun
+  device: utun
   stack: system
   dns-hijack:
     - 'any:53'

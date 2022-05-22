@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/system/bin/sh
 
 moddir="/data/adb/modules/ClashforMagisk"
 if [ -n "$(magisk -v | grep lite)" ]; then
