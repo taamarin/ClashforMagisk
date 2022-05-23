@@ -194,7 +194,6 @@ stop_clash() {
             rm -rf /data/adb/clash/run/appuid.list
         fi
     fi
-    rm -rf /data/adb/clash/run/cron.log
     rm -rf ${Clash_pid_file}
 }
 
