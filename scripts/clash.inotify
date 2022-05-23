@@ -21,6 +21,7 @@ service_control() {
     if [ "${monitor_file}" = "disable" ] ; then
         touch ${signal_file}
         if [ "${events}" = "d" ] ; then
+            nohup /data/adb/magisk/busybox crond -c /data/adb/clash/run > /dev/null 2>&1 &
             ${service_path} -s &> ${folder_run}/service.log && ${tproxy_path} -s &>> ${folder_run}/service.log &
         elif [ "${events}" = "n" ] ; then
             ${service_path} -k &>> ${folder_run}/service.log && ${tproxy_path} -k &>> ${folder_run}/service.log &

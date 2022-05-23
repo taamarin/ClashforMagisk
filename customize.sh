@@ -159,6 +159,7 @@ set_perm  ${clash_data_dir}/scripts/clash.tproxy 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.tool 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.inotify 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.service 0  0  0755
+set_perm  ${clash_data_dir}/scripts/clash.cron 0  0  0755
 set_perm  ${clash_data_dir}/scripts/start.sh 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.config ${system_uid} ${system_gid} 0755
 set_perm  ${clash_service_dir}/cfm_service.sh   0  0  0755

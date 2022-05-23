@@ -423,7 +423,7 @@ while getopts ":sk" signal ; do
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
                 stop_tproxy
-                echo "info msg= Iptables tproxy dihapus" >> ${CFM_logs_file}
+                echo "warning msg= Iptables tproxy dihapus" >> ${CFM_logs_file}
             elif [ "${Clash_tun_status}" == "true" ]; then
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -432,10 +432,10 @@ while getopts ":sk" signal ; do
                         ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                         ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                     fi
-                    echo "info msg= tun dihapus," >> ${CFM_logs_file}
+                    echo "warning msg= tun dihapus," >> ${CFM_logs_file}
                 else
                     stop_tun
-                    echo "info msg= Iptables tun dihapus," >> ${CFM_logs_file}
+                    echo "warning msg= Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi
             echo "info msg= discontinued" >> ${CFM_logs_file}
