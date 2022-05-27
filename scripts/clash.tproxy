@@ -19,12 +19,12 @@ start_tproxy() {
         ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
     fi
 
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
     done
 
     if [ "${ipv6}" == "true" ]; then
-        for subnet in ${reserved_ip6[@]} ; do
+        for subnet in ${reserved_ip6[*]} ; do
             ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
         done
     fi
@@ -53,30 +53,27 @@ start_tproxy() {
         ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
     fi
 
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
     done
     if [ "${ipv6}" == "true" ]; then
-        for subnet in ${reserved_ip6[@]} ; do
+        for subnet in ${reserved_ip6[*]} ; do
             ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
         done
     fi
 
-    if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-        ${scripts_dir}/clash.tool -f
-        AID=`cat ${appuid_file} | sort -u`
-        for appuid in ${AID[@]} ; do
-            ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-        done
-    fi
+    echo "warning msg= filter/bypass mode: (${mode}). " >> ${CFM_logs_file}
+    ${scripts_dir}/clash.tool -f
+    AID=`cat ${appuid_file} | sort -u`
+    for appuid in ${AID[*]} ; do
+        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
+    done
 
     if [ "${ipv6}" == "true" ]; then
-        if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-            AID=`cat ${appuid_file} | sort -u`
-            for appuid in ${AID[@]} ; do
-                ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-            done
-        fi
+        AID=`cat ${appuid_file} | sort -u`
+        for appuid in ${AID[*]} ; do
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
+        done
     fi
 
     ${iptables_wait} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${mark_id}
@@ -262,20 +259,17 @@ start_tun() {
     ${iptables_wait} -t mangle -N CLASH_EXTERNAL
     ${iptables_wait} -t mangle -N CLASH_LOCAL
 
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
     done
 
-    if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-        ${scripts_dir}/clash.tool -f
-        AID=`cat ${appuid_file} | sort -u`
-            for appuid in ${AID[@]} ; do
-                ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-            done
-    else
-        ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-    fi
+    echo "warning msg= filter/bypass mode: (${mode})" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+    ${scripts_dir}/clash.tool -f
+    AID=`cat ${appuid_file} | sort -u`
+        for appuid in ${AID[*]} ; do
+            ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
+        done
 
     ${iptables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
     ${iptables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
@@ -287,25 +281,21 @@ start_tun() {
         ${ip6tables_wait} -t mangle -N CLASH_EXTERNAL
         ${ip6tables_wait} -t mangle -N CLASH_LOCAL
 
-        for subnet in ${reserved_ip6[@]} ; do
+        for subnet in ${reserved_ip6[*]} ; do
             ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
         done
 
-        if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-            AID=`cat ${appuid_file} | sort -u`
-                for appuid in ${AID[@]} ; do
-                    ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-                done
-        else
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-        fi
+        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
+        AID=`cat ${appuid_file} | sort -u`
+        for appuid in ${AID[*]} ; do
+            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
+        done
 
         ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
         ${ip6tables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
     fi
 
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
         ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
     done
 
@@ -314,7 +304,7 @@ start_tun() {
     ${iptables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
 
     if [ "${ipv6}" = "true" ] ; then
-        for subnet in ${reserved_ip6[@]} ; do
+        for subnet in ${reserved_ip6[*]} ; do
             ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
         done
 
@@ -384,9 +374,10 @@ while getopts ":sk" signal ; do
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
                stop_tproxy
-               echo "info msg= refresh Iptables tproxy" >> ${CFM_logs_file}
+               echo "warning msg= scripts refresh Iptables tproxy" >> ${CFM_logs_file}
+               sleep 0.5
                start_tproxy
-               echo "info msg= Iptables tproxy diterapkan" >> ${CFM_logs_file}
+               echo "info msg= scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            elif [ "${Clash_tun_status}" == "true" ]; then
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
                    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -395,6 +386,7 @@ while getopts ":sk" signal ; do
                        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                    fi
+                   echo "warning msg= refresh tun diterapkan" >> ${CFM_logs_file}
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
                    if [ "${ipv6}" = "true" ] ; then
@@ -405,9 +397,9 @@ while getopts ":sk" signal ; do
                else
                   sleep 0.5
                   stop_tun
-                  echo "info msg= refresh Iptables tun" >> ${CFM_logs_file}
+                  echo "warning msg= refresh scripts Iptables tun" >> ${CFM_logs_file}
                   start_tun
-                  echo "info msg= Iptables tun diterapkan" >> ${CFM_logs_file}
+                  echo "info msg= scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            else
                typo_notif
@@ -417,13 +409,13 @@ while getopts ":sk" signal ; do
            fi
            if [ -f ${Clash_pid_file} ] ; then
                echo "info msg= Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
-               echo "info msg= connected" >> ${CFM_logs_file}
+               echo "info msg= Connect" >> ${CFM_logs_file}
            fi
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
                 stop_tproxy
-                echo "warning msg= Iptables tproxy dihapus" >> ${CFM_logs_file}
+                echo "warning msg= scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             elif [ "${Clash_tun_status}" == "true" ]; then
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -435,10 +427,10 @@ while getopts ":sk" signal ; do
                     echo "warning msg= tun dihapus," >> ${CFM_logs_file}
                 else
                     stop_tun
-                    echo "warning msg= Iptables tun dihapus," >> ${CFM_logs_file}
+                    echo "warning msg= scripts Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi
-            echo "info msg= discontinued" >> ${CFM_logs_file}
+            echo "info msg= disConnect" >> ${CFM_logs_file}
             ;;
         ?)
             echo ""

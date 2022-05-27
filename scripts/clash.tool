@@ -77,15 +77,20 @@ monitor_local_ipv4() {
 }
 
 find_packages_uid() {
-    echo -n "" > ${appuid_file}
-    for package in `cat ${filter_packages_file} | sort -u` ; do
-        ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
-        if [ "${mode}" = "blacklist" ] ; then
-            echo "info msg= ${package} di filter " >> ${CFM_logs_file}
-        else
-            echo "info msg= • ${package} proksi." >> ${CFM_logs_file}
-        fi
-    done
+    if [ "${Clash_enhanced_mode}" == "redir-host" ] ; then
+        echo -n "" > ${appuid_file} 
+        for package in `cat ${filter_packages_file} | sort -u` ; do
+            ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
+            if [ "${mode}" = "blacklist" ] ; then
+                echo "info msg= ${package} di filter " >> ${CFM_logs_file}
+            elif [ "${mode}" = "whitelist" ] ; then
+                echo "info msg= ${package} diproksi." >> ${CFM_logs_file}
+            fi
+        done
+    else
+        echo "warning msg= filter/bypass dimatikan" >> ${CFM_logs_file}
+        echo "warning msg= set (enhanced-mode: redir-host) to activate the filter" >> ${CFM_logs_file}
+    fi
 }
 
 cgroup_limit() {
@@ -96,14 +101,14 @@ cgroup_limit() {
         Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
     fi
 
-    mkdir -p "${Cgroup_memory_path}/clash" && echo "info msg= Cgroup memory limit: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "warning msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
+    mkdir -p "${Cgroup_memory_path}/clash" && echo "warning msg= Cgroup memory limit: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo "warning msg= failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
 
     echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo "info msg= create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo "warning msg= can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
 
     echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo "info msg= create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo "warning msg= can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
 
     if [ -d "${Cgroup_memory_path}/clash" ]; then
-        echo "info msg= Clash cgroup activated | status: ${Cgroup_memory} " >> ${CFM_logs_file}
+        echo "info msg= Clash cgroup activated | status: (${Cgroup_memory})" >> ${CFM_logs_file}
     elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
         echo "warning msg= Cgroup failed" >> ${CFM_logs_file}
     fi
@@ -129,12 +134,11 @@ update_file() {
         update_url="$2"
 
         mv -f ${file} ${file_bak}
-        echo ""  >> ${CFM_logs_file}
         echo "warning msg= backup file ${file_bak}" >> ${CFM_logs_file}
         echo "curl -L -A 'clash' ${update_url} -o ${file} "
         curl -L -A 'clash' ${update_url} -o ${file} 2>&1
 
-        sleep 1
+        sleep 0.5
 
         if [ -f "${file}" ] ; then
             echo "info msg= `date "+%R %Z"` Update ${file} done." >> ${CFM_logs_file}
@@ -180,10 +184,11 @@ config_online() {
     clash_pid=`cat ${Clash_pid_file}`
     match_count=0
 
-#    cp -F ${Clash_config_file} ${Clash_config_file}.bak
     echo "warning msg= Download Config online" > ${CFM_logs_file}
     update_file ${Clash_config_file} ${Subcript_url} >> ${CFM_logs_file}
-    sleep 1
+
+    sleep 0.5
+
     if [ -f "${Clash_config_file}" ] ; then
         match_count=$((${match_count} + 1))
     fi
@@ -211,6 +216,7 @@ keep_dns() {
     fi
 
     unset local_dns
+    exit 0
 }
 
 port_detection() {
@@ -227,37 +233,53 @@ port_detection() {
     echo -n "info msg= port detected: " >> ${CFM_logs_file}
     for sub_port in ${clash_port[*]} ; do
         sleep 1
-        echo -n "${sub_port}   " >> ${CFM_logs_file}
+        echo -n "   ${sub_port}">> ${CFM_logs_file}
     done
         echo "" >> ${CFM_logs_file} 
 }
 
-ui_start() {
-    local pid=`cat ${ui_pid} 2> /dev/null`
-    if (cat /proc/${pid}/cmdline | grep -q php) ; then
-        echo "info msg= php(ui) service is running." > ${Clash_run_path}/ui.logs
+file_start() {
+    local PID=`cat /data/adb/clash/run/filemanager.pid 2> /dev/null`
+    if (cat /proc/${PID}/cmdline | grep -q php) ; then
+        echo "info msg= file manager service is running." > /data/adb/clash/run/filemanager.log
         exit 1
     fi
 
-    if [ -f "${ui}" ] ; then
-        chown 0:3005 ${ui}
-        chmod 0755 ${ui}
-        nohup ${busybox_path} setuidgid 0:3005 ${ui} -S 127.0.0.1:9999 -t ${Clash_data_dir} > /dev/null 2>&1 &
-        echo -n $! > ${ui_pid}
-        echo "info msg= php(ui) service is running." > ${Clash_run_path}/ui.logs
+    if [ -f ${php_bin_path} ] ; then
+        chown 0:3005 /data/data/com.termux/files/usr/bin/php
+        chmod 0755 /data/data/com.termux/files/usr/bin/php
+        nohup ${busybox_path} setuidgid 0:3005 /data/data/com.termux/files/usr/bin/php -S 0.0.0.0:9999 -t /data/adb/clash > /dev/null 2>&1 &
+        echo -n $! > /data/adb/clash/run/filemanager.pid
+        echo "info msg= file manager service is running (PID: `cat /data/adb/clash/run/filemanager.pid`)" > ${Clash_run_path}/filemanager.log
     else
-       echo "error msg= php binary not detected." >> ${Clash_run_path}/ui.logs
+       echo "error msg= PHP binary not detected." >> /data/adb/clash/run/filemanager.log
        exit 1
     fi
 }
 
-ui_stop() {
-    kill -15 `cat ${ui_pid}`
-    rm -rf ${ui_pid}
-    echo "info msg= php(ui) stopped." >> ${Clash_run_path}/ui.logs
+file_stop() {
+    kill -9 `cat /data/adb/clash/run/filemanager.pid`
+    rm -rf /data/adb/clash/run/filemanager.pid
+    echo "info msg= file manager service is  stopped." >> /data/adb/clash/run/filemanager.log
 }
-while getopts ":fklmupo" signal ; do
+
+clash_cron() {
+# interval dalam detik, tidak boleh lebih dari 60
+step=5
+i=0
+    while ((i < 60)) ; do  
+        i=$i+step
+        ${scripts_dir}/clash.tool -m # > /data/adb/clash/run/cron.log
+        sleep $step
+    done  
+    exit 0
+}
+
+while getopts ":afklmupoxc" signal ; do
     case ${signal} in
+        a)
+            clash_cron
+            ;;
         f)
             find_packages_uid
             ;;
@@ -265,6 +287,7 @@ while getopts ":fklmupo" signal ; do
             keep_dns
             ;;
         l)
+            sleep 0.5
             cgroup_limit
             ;;
         m)
@@ -293,6 +316,12 @@ while getopts ":fklmupo" signal ; do
         o)
             sleep 0.5
             config_online
+            ;;
+        x)
+            file_start
+            ;;
+        c)
+            file_stop
             ;;
         ?)
             echo ""

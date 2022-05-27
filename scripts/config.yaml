@@ -1,14 +1,86 @@
+tproxy-port: 9898
+mode: 'rule' 
+allow-lan: true
+unified-delay: true
+bind-address: "*"
+log-level: silent
+ipv6: false
+geodata-mode: true
+external-controller: 0.0.0.0:9090
+external-ui: dashboard
+tcp-concurrent: false
+secret: ""
+dns:
+  enable: true
+  ipv6: false
+  default-nameserver:
+    - '1.1.1.1'
+    - '8.8.8.8'
+  listen: 0.0.0.0:1053
+  enhanced-mode: redir-host
+  fake-ip-range: 198.18.0.1/16
+  use-hosts: true
+  fake-ip-filter: ['+.clash.metacubex.one', '+.networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*', 'dns.msftnsci.com', 'www.msftnsci.com', 'www.msftconnecttest.com']
+  nameserver:
+    - '1.1.1.1'
+  fallback:
+    - '1.0.0.1'
+  proxy-server-nameserver: ['tls://1.1.1.1:853#NETWORK', 'tls://8.8.8.8:853#NETWORK']
+  nameserver-policy:
+    'tamarin.mjee.me': 1.1.1.1
+  fallback-filter:
+    geoip: true
+    geoip-code: 'ID'
+    geosite: ['GFW', 'GREATFIRE']
+    domain: ["+.google.com", "+.facebook.com", "+.youtube.com", "+.githubusercontent.com", "+.googlevideo.com"]
+    ipcidr:
+    - 0.0.0.0/8
+    - 10.0.0.0/8
+    - 100.64.0.0/10
+    - 127.0.0.0/8
+    - 169.254.0.0/16
+    - 172.16.0.0/12
+    - 192.0.0.0/24
+    - 192.0.2.0/24
+    - 192.88.99.0/24
+    - 192.168.0.0/16
+    - 198.18.0.0/15
+    - 198.51.100.0/24
+    - 203.0.113.0/24
+    - 224.0.0.0/4
+    - 240.0.0.0/4
+    - 255.255.255.255/32
+tun:
+  enable: false
+  stack: system
+  dns-hijack: ['any:53', 'tcp://any:53']
+  auto-route: false
+  auto-detect-interface: false
+sniffer:
+  enable: true
+  sniffing:
+    - tls
+    - http
+  port-whitelist: []
+  skip-domain: []
+  force-domain: []
+iptables: {enable: false, inbound-interface: "lo", bypass: []}
+interface-name: "rmnet0"
+enable-process: false
+hosts:
+  'google.com': 141.193.213.20
+profile: {store-selected: true, store-fake-ip: false}
 proxies:
-  - name: trojan SSL
+  - name: AKUN 1
     server: sgovh-trojan.bonds.id
     port: 443
     type: trojan
     password: f9e3cff0-ae52-11ec-ab01-1239d0255272
     skip-cert-verify: true
-    sni: "shopee.co.id"
+    sni: BUG.COM
     udp: true
-  - name: trojan Go
-    server: tamarin.mjee.me
+  - name: AKUN 2
+    server: BUG.COM
     port: 443
     type: trojan
     password: f9e3cff0-ae52-11ec-ab01-1239d0255272
@@ -21,27 +93,57 @@ proxies:
       headers:
         Host: sgovh-trojan.bonds.id
 proxy-groups:
-  - name: FASTSSH-SSHKIT-HOWDY
+  - name: NETWORK
     type: select
     proxies:
-      - trojan SSL
-      - trojan Go
-      - balance
-      - best-ping
-  - name: balance
-    type: load-balance
-    strategy: consistent-hashing
-    url: http://www.gstatic.com/generate_204
-    interval: 300
+      - FIOS
+      - VIOS
+      - AKUN 1
+      - AKUN 2
+  - name: FIOS
+    type: select
+    use:
+      - CLASH
+  - name: VIOS
+    type: select
+    use:
+      - YOUR
+  - name: ADS
+    type: select
     proxies:
-      - trojan SSL
-      - trojan Go
-  - name: best-ping
-    type: url-test
-    url: http://www.gstatic.com/generate_204
-    interval: 300
-    proxies:
-      - trojan SSL
-      - trojan Go
+      - REJECT
+      - DIRECT
+      - NETWORK
+proxy-providers:
+  CLASH:
+    type: file
+    interval: 86000
+    url: ""
+    path: ./confs/FIOS.yaml
+    health-check:
+      enable: true
+      url: 'http://cp.cloudflare.com/generate_204'
+      interval: 600
+  YOUR:
+    type: file
+    interval: 86000
+    url: ""
+    path: ./confs/VIOS.yaml
+    health-check:
+      enable: true
+      url: 'http://cp.cloudflare.com/generate_204'
+      interval: 600
+rule-providers:
+  CATEGORY-REJECT-ALL:
+    type: http
+    behavior: domain
+    interval: 86400
+    url: "https://rules.kr328.app/category-porn.yaml"
+    path: ./confs/ruleset/category-reject-all.yaml
 rules:
-  - MATCH,FASTSSH-SSHKIT-HOWDY
+  - RULE-SET,CATEGORY-REJECT-ALL,ADS
+  - GEOSITE,CATEGORY-ADS-ALL,ADS
+  - GEOSITE,YOUTUBE,FIOS
+  - GEOIP,PRIVATE,GLOBAL,no-resolve
+  - GEOIP,ID,FIOS,no-resolve
+  - MATCH,NETWORK

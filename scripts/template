@@ -7,7 +7,7 @@ log-level: silent
 ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
-external-ui: yacd-gh-pages
+external-ui: dashboard
 tcp-concurrent: false
 secret: ""
 dns:
@@ -15,8 +15,9 @@ dns:
   ipv6: false
   default-nameserver:
     - '1.1.1.1'
+    - '8.8.8.8'
   listen: 0.0.0.0:1053
-  enhanced-mode: fake-ip
+  enhanced-mode: redir-host
   fake-ip-range: 198.18.0.1/16
   use-hosts: true
   fake-ip-filter: ['+.clash.metacubex.one', '+.networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*', 'dns.msftnsci.com', 'www.msftnsci.com', 'www.msftconnecttest.com']
@@ -24,15 +25,13 @@ dns:
     - '1.1.1.1'
   fallback:
     - '1.0.0.1'
+#  proxy-server-nameserver: ['tls://1.1.1.1:853#CLASH', 'tls://8.8.8.8:853#CLASH']
 #  nameserver-policy:
-#    "tamarin.mjee.me": '8.8.8.8'
-#    "dev.appsflyer.com": '1.1.1.1'
+    'tamarin.mjee.me': 1.1.1.1
   fallback-filter:
-    geoip: false
+    geoip: true
     geoip-code: 'ID'
-    geosite: 
-      - 'GFW'
-      - 'GREATFIRE'
+    geosite: ['GFW', 'GREATFIRE']
     domain: ["+.google.com", "+.facebook.com", "+.youtube.com", "+.githubusercontent.com", "+.googlevideo.com"]
     ipcidr:
     - 0.0.0.0/8
@@ -54,27 +53,20 @@ dns:
 tun:
   enable: false
   stack: system
-  dns-hijack:
-    - 'any:53'
-    - 'tcp://any:53'
+  dns-hijack: ['any:53', 'tcp://any:53']
   auto-route: false
   auto-detect-interface: false
 sniffer:
-  enable: false
-  force: true
+  enable: true
   sniffing:
     - tls
     - http
-  port-whitelist:
-    - 80
-    - 443
-    - 8000-9000
-  skip-domain:
-    - '+.apple.com'
-  force-domain:
-    - '+'
-iptables:
-  enable: false
-  inbound-interface: "lo"
+  port-whitelist: []
+  skip-domain: []
+  force-domain: []
+iptables: {enable: false, inbound-interface: "lo", bypass: []}
 interface-name: ""
 enable-process: false
+hosts:
+  'google.com': 141.193.213.20
+profile: {store-selected: true, store-fake-ip: false}

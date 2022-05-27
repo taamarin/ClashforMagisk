@@ -37,7 +37,7 @@ start_clash() {
     echo -n "" > ${CFM_logs_file}
     echo "${date_day}" > ${CFM_logs_file}
     ${Clash_bin_path} -v >> ${CFM_logs_file} 
-    echo "Clash for Magisk v1.10.0" > /dev/null
+    echo "Clash for Magisk v1.10.5" > /dev/null
 
     if [ ! -d ${Clash_data_dir}/switch ] ; then
         if [ ! "${use_config}" == "false" ]; then
@@ -62,8 +62,6 @@ start_clash() {
     local PID=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name}) ; then
         ${scripts_dir}/clash.tproxy -s
-        echo "warning msg= no process performed" >> ${CFM_logs_file}
-        echo "warning msg= Clash service is running PID: `grep "" ${Clash_pid_file}`" >> ${CFM_logs_file}
         exit 1
     else
         echo "info msg= Executed Clash service" >> ${CFM_logs_file}
@@ -72,6 +70,10 @@ start_clash() {
     if [ "${Clash_tun_status}" = "true" ] ; then
         mkdir -p /dev/net
         [ ! -L /dev/net/tun ] && ln -s /dev/tun /dev/net/tun
+        echo "warning msg= mengunakan mode (tun)." >> ${CFM_logs_file}
+        echo "warning msg= create  /dev/net/tun." >> ${CFM_logs_file}
+    else
+        echo "warning msg= mengunakan mode (tproxy)." >> ${CFM_logs_file}
     fi
 
     if [ -f "${temporary_config_file}" ] ; then
@@ -102,42 +104,51 @@ start_clash() {
     fi
 
     if [ -f "${Clash_bin_path}" ] ; then
-       echo "info msg= set permissions CLASH ${Clash_user_group}" >> ${CFM_logs_file}
-       chown 0:0 ${Clash_bin_path}
-       chmod 0700 ${Clash_bin_path}
-       chown ${Clash_user_group} ${temporary_config_file}
-       chmod 0644 ${temporary_config_file}
-       setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
+        echo "info msg= set permissions Clash ${Clash_user_group}" >> ${CFM_logs_file}
+        chown 0:0 ${Clash_bin_path}
+        chown 0:0 ${temporary_config_file}
+        chmod 0700 ${Clash_bin_path}
+        chmod 0644 ${temporary_config_file}
+        setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
 
-       ${busybox_path} crontab -c /data/adb/clash/run -r
-       touch /data/adb/clash/run/root
-       chmod 0600 /data/adb/clash/run/root
+        /data/adb/magisk/busybox crontab -c /data/adb/clash/run -r
+        touch /data/adb/clash/run/root
+        chmod 0600 /data/adb/clash/run/root
 
-       echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
-       && echo "info msg= auto Update GeoX & Subscription (${update_interval})" >> ${CFM_logs_file}
-       echo "info msg= Geo status: ${auto_updateGeoX} | Subs status: ${auto_updateSubcript}" >> ${CFM_logs_file}
-#        echo "* */3 * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-#        && echo "info msg= dns tetap dihidupkan." >> ${CFM_logs_file}
+        if [ "${update_interval}" = "false" ]; then
+            echo "info msg= auto Update Geo & Subs not active." >> ${CFM_logs_file}
+        else
+            echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
+            && echo "info msg= auto Update GeoX & SubScription (${update_interval})." >> ${CFM_logs_file}
+            echo "info msg= Geo status: (${auto_updateGeoX}) | Subs status: (${auto_updateSubcript})." >> ${CFM_logs_file}
+        fi
 
-       sed -i '/^[  ]*$/d' ${CFM_logs_file}
-       if [ "${filter_local}" = "true" ] && [ "${Clash_tun_status}" == "false" ] ; then
-           com="${scripts_dir}/clash.cron"
-           echo "*/1 * * * * ${com}" >> ${Clash_run_path}/root && echo "warning msg= bypass otomatis ip lokal dihidupkan." >> ${CFM_logs_file}
-       else
-           echo "info msg= local ip auto bypass is turned off." >> ${CFM_logs_file}
-       fi
+        if [ "${static_dns}" = "false" ]; then
+            echo "info msg= static dns: ${static_dns}." >> ${CFM_logs_file}
+        else
+            echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
+            && echo "warning msg= set static dns: ${static_dns}." >> ${CFM_logs_file}
+        fi
+
+        sed -i '/^[  ]*$/d' ${CFM_logs_file}
+        if [ "${filter_local}" = "true" ] && [ "${Clash_tun_status}" = "false" ] ; then
+            clash_cron="${scripts_dir}/clash.tool -a"
+            echo "* */10 * * * ${clash_cron}" >> ${Clash_run_path}/root && echo "warning msg= bypass otomatis ip lokal dihidupkan." >> ${CFM_logs_file}
+        else
+            echo "info msg= local ip auto bypass is turned off." >> ${CFM_logs_file}
+        fi
     else
-       echo "error msg= Clash has stopped." >> ${CFM_logs_file}
-       echo "error msg= Kernel Clash ${Clash_bin_path} tidak terdeteksi !!!." >> ${CFM_logs_file}
-       exit 1
+        echo "error msg= Kernel Clash ${Clash_bin_path} tidak terdeteksi !!!." >> ${CFM_logs_file}
+        exit 1
     fi
 
    if [ -f ${temporary_config_file} ] ; then
        ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/clash.log
        if [ "$?" = 0 ] ; then
            ulimit -SHn 1000000
-           nohup /data/adb/magisk/busybox setuidgid 0:3005 /data/adb/clash/core/"${Clash_bin_name}" -d /data/adb/clash -f /data/adb/clash/run/config.yaml > /data/adb/clash/run/${date_day}.log 2>&1 &
+           nohup /data/adb/magisk/busybox setuidgid 0:3005 /data/adb/clash/core/"${Clash_bin_name}" -d /data/adb/clash -f /data/adb/clash/run/config.yaml > /data/adb/clash/run/Core.${date_day}.log 2>&1 &
            echo -n $! > ${Clash_pid_file}
+           echo "info msg= tcp-concurrent:${Clash_tcp_concurrent}" >> ${CFM_logs_file}
            if [ "${Cgroup_memory}" = "true" ] ; then
                if ! (${scripts_dir}/clash.tool -l) ; then
                   echo -n ""
@@ -145,7 +156,8 @@ start_clash() {
            else
                echo "info msg= Cgroup | status: ${Cgroup_memory}" >> ${CFM_logs_file}
            fi
-           echo "info msg= Test ${temporary_config_file}" >> ${CFM_logs_file}
+           sleep 0.5
+           echo "info msg= test ${temporary_config_file}" >> ${CFM_logs_file}
            echo "`grep "level=" ${Clash_run_path}/clash.log | ${busybox_path} awk -F 'level=' '{print $2}'`" >> ${CFM_logs_file}
            echo "info msg= `grep "test" ${Clash_run_path}/clash.log`" >>  ${CFM_logs_file}
        else
@@ -155,45 +167,52 @@ start_clash() {
            else
                mv ${temporary_config_file} ${Clash_data_dir}/switch/${use_config}
            fi
-           echo "error msg= Check again ${Clash_config_file} " >> ${CFM_logs_file}
-           echo "error msg= Clash has stopped." >> ${CFM_logs_file}
+           echo "error msg= Check kembali ${Clash_config_file} " >> ${CFM_logs_file}
            exit 1
        fi
    else
-       echo "error msg= Clash has stopped." >> ${CFM_logs_file}
        echo "error msg= ${Clash_config_file} tidak terdeteksi." >> ${CFM_logs_file}
        exit 1
    fi
 
-   sleep 3
+   sleep 0.5
 
    if [ "${port_detect}" = "true" ]; then
        if ! (${scripts_dir}/clash.tool -p) ; then
            exit 0
        fi
    else
-        echo "info msg= skip port detected" >> ${CFM_logs_file}
+        echo "warning msg= skip port detected" >> ${CFM_logs_file}
    fi
 }
 
 stop_clash() {
-    if [ "${Clash_tun_status}" = "true" ] ; then
-        kill -9 `cat ${Clash_pid_file}`
-    else
-        kill -15 `cat ${Clash_pid_file}`
-    fi
-
-    cronexe=$(ps -ef | grep root | grep "crond -c /data/adb/clash/" | /data/adb/magisk/busybox awk '{ print $2 }')
-    for cronex in ${cronexe[*]} ; do
-       kill -15 ${cronex}
+    clashkill=$(ps -ef | grep root | grep "${Clash_bin_name} -d /data/adb/clash" | /data/adb/magisk/busybox awk '{ print $2 }' | sort -u)
+    for clashkil in ${clashkill[*]} ; do
+       if [ "${Clash_tun_status}" = "true" ] ; then
+          kill -9 ${clashkil}
+       else
+          kill -15 ${clashkil}
+       fi
     done
 
-    if [ -f ${Clash_pid_file} ] ; then
+    sleep 0.5
+
+    cronkill=$(ps -ef | grep root | grep "crond -c /data/adb/clash/" | /data/adb/magisk/busybox awk '{ print $2 }' | sort -u)
+    for cronkil in ${cronkill[*]} ; do
+       kill -15 ${cronkil}
+    done
+
+    local PIDs=`cat ${Clash_pid_file} 2> /dev/null`
+    if (cat /proc/${PIDs}/cmdline | grep -q ${Clash_bin_name}) ; then
+        echo "error msg= failed to stop Clash." >> ${CFM_logs_file}
+        ${scripts_dir}/clash.tproxy -s
+        exit 1
+    else
         echo "warning msg= Clash has stopped." >> ${CFM_logs_file}
-        if [ -f ${Clash_data_dir}/run/appuid.list ] ; then
-            rm -rf /data/adb/clash/run/appuid.list
-        fi
     fi
+
+    rm -rf /data/adb/clash/run/appuid.list
     rm -rf ${Clash_pid_file}
 }
 
