@@ -1,0 +1,29 @@
+#!/system/bin/sh
+
+scripts=`realpath $0`
+scripts_dir=`dirname ${scripts}`
+service_path="/data/clash/scripts/clash.service"
+tproxy_path="/data/clash/scripts/clash.iptables"
+
+events=$1
+monitor_dir=$2
+monitor_file=$3
+
+folder_run() {
+    if [ ! -d "/data/clash/run" ] ; then
+        mkdir -p /data/clash/run
+    fi
+}
+
+service_control() {
+    if [ "${monitor_file}" = "disable" ] ; then
+        if [ "${events}" = "d" ] ; then
+            ${service_path} -s &> /data/clash/run/service.log && ${tproxy_path} -s &>> /data/clash/run/service.log &
+        elif [ "${events}" = "n" ] ; then
+            ${service_path} -k &>> /data/clash/run/service.log && ${tproxy_path} -k &>> /data/clash/run/service.log &
+        fi
+    fi
+}
+
+folder_run
+service_control
