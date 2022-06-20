@@ -1,14 +1,6 @@
-<<<<<<< HEAD
 id=ClashForMagisk
 name=Clash for Magisk
 version=v1.12.5
-versionCode=20220619
+versionCode=20220620
 author=t@amarin
-=======
-id=ClashforMagisk
-name=Clash for Magisk
-version=
-versionCode=
-author=Taamarin
->>>>>>> 957413e (beta)
 description=Clash core with service scripts for Android

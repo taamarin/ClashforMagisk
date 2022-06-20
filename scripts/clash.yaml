@@ -1,8 +1,1 @@
-trojan://ac0fce00-e5e3-11ec-9f6b-1239d0255272@id-rackhtj.bonds.id:443?security=tls&headerType=none&type=tcp&sni=maps.google.co.id#trojan+%28tls%29
-trojan://5abe689d-f83d-425b-aa4c-5f3d9a597546@tamarin.mjee.me:8080?mode=gun&security=tls&type=grpc&serviceName=grpc&sni=sgt3.sshocean.net#trojan+%28grpc%29
-trojan://ac0fce00-e5e3-11ec-9f6b-1239d0255272@tamarin.mjee.me:443?path=%2Fhowdy&security=tls&host=id-rackhtj.bonds.id&type=ws&sni=id-rackhtj.bonds.id#trojan+%28go%29
-vmess://eyJhZGQiOiJ0YW1hcmluLm1qZWUubWUiLCJhaWQiOiIwIiwiaG9zdCI6IiIsImlkIjoiYTAyNjkxM2YtOGFhNi00MzZiLWE4ODEtMTFkNGExY2FiNTAxIiwibmV0IjoiZ3JwYyIsInBhdGgiOiJncnBjIiwicG9ydCI6IjQ0MyIsInBzIjoidm1lc3MgKGdycGMpIiwic2N5IjoiYXV0byIsInNuaSI6InNnMWdycGMuc2VydmVyc3NoLnVzIiwidGxzIjoidGxzIiwidHlwZSI6Imd1biIsInYiOiIyIn0=
-vmess://eyJhZGQiOiJ0YW1hcmluLm1qZWUubWUiLCJhaWQiOiIwIiwiaG9zdCI6ImlkMy52MnJheXNlcnYuY29tIiwiaWQiOiJhYjc5ZDBjOS0wOTJiLTQ3MWEtOWYxOC1jZTM0MmQzMTZiNDYiLCJuZXQiOiJ3cyIsInBhdGgiOiIvc3Nob2NlYW4iLCJwb3J0IjoiNDQzIiwicHMiOiJ2bWVzcyAod3N0bHMpIiwic2N5IjoiYXV0byIsInNuaSI6ImlkMy52MnJheXNlcnYuY29tIiwidGxzIjoidGxzIiwidHlwZSI6IiIsInYiOiIyIn0=
-vmess://eyJhZGQiOiJ0YW1hcmluLm1qZWUubWUiLCJhaWQiOiIwIiwiaG9zdCI6ImlkMy52MnJheXNlcnYuY29tIiwiaWQiOiJhYjc5ZDBjOS0wOTJiLTQ3MWEtOWYxOC1jZTM0MmQzMTZiNDYiLCJuZXQiOiJ3cyIsInBhdGgiOiIvc3Nob2NlYW4iLCJwb3J0IjoiODAiLCJwcyI6InZtZXNzICh3cykiLCJzY3kiOiJhdXRvIiwic25pIjoiIiwidGxzIjoiIiwidHlwZSI6IiIsInYiOiIyIn0=
-vless://6148ea39-6ff5-4cad-9db5-bba0cdc18250@sg1-grpc.xvless.xyz:443?mode=gun&security=tls&encryption=none&type=grpc&serviceName=grpc&sni=sg1-grpc.xvless.xyz#vless+%28grpc%29
-vless://a805538e-db5c-4a69-b2be-03d5b19b430f@tamarin.mjee.me:443?path=%2Fvless&security=tls&encryption=none&host=id3.v2vless.xyz&type=ws&sni=id3.v2vless.xyz#vless+%28tls%29
+proxies:

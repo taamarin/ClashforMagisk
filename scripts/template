@@ -26,9 +26,10 @@ dns:
   use-hosts: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com', 'yacd.mjee.me']
+  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com']
   nameserver:
-    - 1.1.1.1
+    # TAMABH IP BUG
+    - 8.8.8.8
   proxy-server-nameserver: []
   fallback: []
   fallback-filter:
@@ -37,12 +38,14 @@ dns:
     geosite: []
     domain: []
     ipcidr: []
+auto-redir:
+  enable: false
+  auto-route: true
 tun:
   enable: false
-  device: Meta
   stack: system
   dns-hijack:
-    - 'any:53'
+    - any:53
   auto-route: true
   auto-detect-interface: true
 sniffer:
@@ -54,7 +57,5 @@ sniffer:
   skip-domain: []
   port-whitelist: []
 iptables: {enable: false, inbound-interface: "", bypass: []}
-#hosts:
-#  'note.microsoft.com': 104.18.38.174
-#  'maps.google.com': 141.193.213.20
+hosts: {'mjee.me': 104.18.38.174, 'cacerts.digicert.com': 141.193.213.20}
 tproxy-port: 9898
