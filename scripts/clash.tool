@@ -143,12 +143,12 @@ update_file() {
         sleep 0.5
 
         if [ -f "${file}" ] ; then
-            echo "info msg= `date "+%R %Z"` Update ${file} done." >> ${CFM_logs_file}
+            echo "info msg= `date` Update ${file} done." >> ${CFM_logs_file}
         else
-            echo "error msg= `date "+%R %Z"` Update ${file} failed." >> ${CFM_logs_file}
+            echo "error msg= `date` Update ${file} failed." >> ${CFM_logs_file}
             if [ -f "${file_bak}" ]; then
                 mv ${file_bak} ${file}
-                echo "warning msg= `date "+%R %Z"` restore ${file}." >> ${CFM_logs_file}
+                echo "warning msg= `date` restore ${file}." >> ${CFM_logs_file}
             fi
         fi
 }
@@ -278,8 +278,8 @@ i=0
 
 update_meta() {
 if [ "${use_premium}" == "false" ]; then
-    curl -L -A 'clash' "${official_link_meta}/${latest_meta_version}/${version_meta}" -o ${file_meta} >&2 \
-    && echo "info msg= update core Meta succes" || echo "error msg= update core Meta failed"
+    url_meta="${official_link_meta}/${latest_meta_version}/${version_meta}"
+    update_file ${file_meta} ${url_meta} > ${CFM_logs_file}
     
     if (gunzip --help > /dev/null 2>&1) ; then
         if [ -f ${file_meta} ]; then
@@ -294,25 +294,14 @@ if [ "${use_premium}" == "false" ]; then
     fi
 
     mv -f /data/clash/Clash.Meta* /data/clash/core/lib
-    restart_clash
-
-else
-    curl -L -A 'clash' "${official_link_premium}/${latest_premium_version}/${version_premium}" -o ${file_premium} >&2 \
-    && echo "info msg= update core Meta succes" || echo "error msg= update core Meta failed"
-    
-    if (gunzip --help > /dev/null 2>&1) ; then
-        if [ -f ${file_premium} ]; then
-            gunzip /data/clash/*.gz
-        else
-            echo "gunzip failed"
-            exit 1
-        fi
-    else
-        echo "error msg= gunzip not found "
-        exit 1
+    if [ "$?" = "0" ]; then
+        flag=true
     fi
-
-    mv -f /data/clash/Clash.Premium* /data/clash/core/lib
+    if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
+        restart_clash
+    else
+        echo "warning msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
+    fi
 fi
 }
 
