@@ -133,8 +133,10 @@ update_file() {
         file_bak="${file}.bak"
         update_url="$2"
 
-        mv -f ${file} ${file_bak}
-        echo "warning msg= backup file ${file_bak}" >> ${CFM_logs_file}
+        if [ -f ${file} ]; then
+            mv -f ${file} ${file_bak}
+            echo "warning msg= backup file ${file_bak}" >> ${CFM_logs_file}
+        fi
         echo "curl -L -A 'clash' ${update_url} -o ${file} "
         curl -L -A 'clash' ${update_url} -o ${file} 2>&1
 
@@ -274,7 +276,47 @@ i=0
     exit 0
 }
 
-while getopts ":afklmupoxc" signal ; do
+update_meta() {
+if [ "${use_premium}" == "false" ]; then
+    curl -L -A 'clash' "${official_link_meta}/${latest_meta_version}/${version_meta}" -o ${file_meta} >&2 \
+    && echo "info msg= update core Meta succes" || echo "error msg= update core Meta failed"
+    
+    if (gunzip --help > /dev/null 2>&1) ; then
+        if [ -f ${file_meta} ]; then
+            gunzip /data/clash/*.gz
+        else
+            echo "gunzip failed"
+            exit 1
+        fi
+    else
+        echo "error msg= gunzip not found "
+        exit 1
+    fi
+
+    mv -f /data/clash/Clash.Meta* /data/clash/core/lib
+    restart_clash
+
+else
+    curl -L -A 'clash' "${official_link_premium}/${latest_premium_version}/${version_premium}" -o ${file_premium} >&2 \
+    && echo "info msg= update core Meta succes" || echo "error msg= update core Meta failed"
+    
+    if (gunzip --help > /dev/null 2>&1) ; then
+        if [ -f ${file_premium} ]; then
+            gunzip /data/clash/*.gz
+        else
+            echo "gunzip failed"
+            exit 1
+        fi
+    else
+        echo "error msg= gunzip not found "
+        exit 1
+    fi
+
+    mv -f /data/clash/Clash.Premium* /data/clash/core/lib
+fi
+}
+
+while getopts ":afklmupoxcq" signal ; do
     case ${signal} in
         a)
             clash_cron
@@ -309,7 +351,6 @@ while getopts ":afklmupoxc" signal ; do
             exit 1
             ;;
         p)
-#            echo "info msg= waiting 5s..." >> ${CFM_logs_file}
             sleep 0.5
             port_detection
             ;;
@@ -322,6 +363,9 @@ while getopts ":afklmupoxc" signal ; do
             ;;
         c)
             file_stop
+            ;;
+        q)
+            update_meta
             ;;
         ?)
             echo ""

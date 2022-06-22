@@ -3,7 +3,7 @@ allow-lan: true
 unified-delay: true
 bind-address: '*'
 log-level: silent
-ipv6: false
+ipv6: true
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: clash-dashboard/dist
@@ -19,28 +19,33 @@ geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Co
 dns:
   enable: true
   device: Meta
-  ipv6: false
+  ipv6: true
   default-nameserver:
     - 1.1.1.1
+    - 9.9.9.9
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ['networktest.twilio.com', '+.twilio.com']
   nameserver:
-    # TAMABH IP BUG
+    - https://149.112.112.112/dns-query
+    - quic://dns.adguard.com
+    - tls://dns.adguard.com
+  proxy-server-nameserver:
+    - 104.18.38.174
+  fallback:
+    - 1.1.1.1
     - 8.8.8.8
-  proxy-server-nameserver: []
-  fallback: []
   fallback-filter:
     geoip: false
     geoip-code: ID
     geosite: []
-    domain: []
+    domain:
+      - '+.google.com'
     ipcidr: []
 auto-redir:
   enable: false
-  auto-route: true
+  auto-route: false
 tun:
   enable: false
   stack: system
@@ -53,9 +58,15 @@ sniffer:
   sniffing:
     - tls
     - http
-  force-domain: []
-  skip-domain: []
-  port-whitelist: []
+  force-domain:
+    - '+'
+  skip-domain:
+    - '+.google.com'
+  port-whitelist:
+    - 443
+    - 80
 iptables: {enable: false, inbound-interface: "", bypass: []}
-hosts: {'mjee.me': 104.18.38.174, 'cacerts.digicert.com': 141.193.213.20}
+hosts:
+  '+.clash.meta': 127.0.0.1
+  'cacerts.digicert.com': 141.193.213.20
 tproxy-port: 9898
