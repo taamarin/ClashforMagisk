@@ -5,8 +5,8 @@ scripts_dir=`dirname ${scripts}`
 . /data/clash/clash.config
 
 create_rule_rules() {
-    ip -4 rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
-    ip -4 route add local default dev lo table ${table_id}
+    ip rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
+    ip route add local default dev lo table ${table_id}
     if [ "${ipv6}" = "true" ] ; then
         ip -6 rule add fwmark ${mark_id} table ${table_id} pref ${pref_id}
         ip -6 route add local default dev lo table ${table_id}
@@ -462,7 +462,7 @@ while getopts ":sk" signal ; do
                   echo "info msg= scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
-           rm -rf /data/clash/run/Ctest.logs
+           rm -rf /data/clash/run/config.logs
            rm -rf /data/clash/run/cmdRunning
            echo "info msg= Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            echo "info msg= Connect" >> ${CFM_logs_file}

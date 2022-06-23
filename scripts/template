@@ -6,7 +6,7 @@ log-level: silent
 ipv6: true
 geodata-mode: true
 external-controller: 0.0.0.0:9090
-external-ui: clash-dashboard/dist
+external-ui: dashboard/dist
 tcp-concurrent: false
 interface-name: ""
 enable-process: false

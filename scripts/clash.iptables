@@ -384,7 +384,7 @@ while getopts ":sk" signal ; do
                   echo "info msg= scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
-           rm -rf /data/clash/run/Ctest.logs
+           rm -rf /data/clash/run/config.logs
            rm -rf /data/clash/run/cmdRunning
            echo "info msg= Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            echo "info msg= Connect" >> ${CFM_logs_file}

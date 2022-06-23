@@ -277,12 +277,19 @@ i=0
 }
 
 update_meta() {
-if [ "${use_premium}" == "false" ]; then
-    url_meta="${official_link_meta}/${latest_meta_version}/${version_meta}"
-    update_file ${file_meta} ${url_meta} > ${CFM_logs_file}
-    
+    if [ "${use_premium}" == "false" ]; then
+        file_core="/data/clash/Clash.Meta.gz"
+        file_name="Clash.Meta"
+        url_meta="${official_link_meta}/${latest_meta_version}/${version_meta}"
+        update_file ${file_core} ${url_meta} > ${CFM_logs_file}
+    else
+        update_file ${file_premium} ${official_link_premium} > ${CFM_logs_file}
+        file_core="/data/clash/Clash.Premium.gz"
+        file_name="Clash.Premium"
+    fi
+
     if (gunzip --help > /dev/null 2>&1) ; then
-        if [ -f ${file_meta} ]; then
+        if [ -f ${file_core} ]; then
             gunzip /data/clash/*.gz
         else
             echo "gunzip failed"
@@ -293,24 +300,36 @@ if [ "${use_premium}" == "false" ]; then
         exit 1
     fi
 
-    mv -f /data/clash/Clash.Meta* /data/clash/core/lib
+    mv -f /data/clash/${file_name} /data/clash/core/lib
     if [ "$?" = "0" ]; then
         flag=true
     fi
+
     if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
         restart_clash
     else
         echo "warning msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
-fi
+
+} 
+
+update_dashboard() {
+rm -rf /data/clash/dashboard/dist/*
+curl -L -A 'clash' ${url_dashboard} -o ${file_dasboard} 2>&1
+unzip -o "${file_dasboard}" "yacd-meta-gh-pages/*" -d /data/clash/ >&2
+mv -f /data/clash/yacd-meta-gh-pages/* /data/clash/dashboard/dist \
+
+rm -rf /data/clash/yacd-meta-gh-pages
+rm -rf ${file_dasboard}
+
 }
 
-while getopts ":afklmupoxcq" signal ; do
+while getopts ":afklmupoxcqd" signal ; do 
     case ${signal} in
         a)
             clash_cron
             ;;
-        f)
+        f) 
             find_packages_uid
             ;;
         k)
@@ -355,6 +374,9 @@ while getopts ":afklmupoxcq" signal ; do
             ;;
         q)
             update_meta
+            ;;
+        d)
+            update_dashboard
             ;;
         ?)
             echo ""
