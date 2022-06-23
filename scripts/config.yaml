@@ -1,19 +1,25 @@
 proxies:
 proxy-groups:
-- {name: "CLASH", type: select, use: [TOUR]}
+- {name: "CLASH", type: select, use: [YOUR]}
 - {name: "ADS-ALL", type: select, proxies: [REJECT, DIRECT, CLASH]}
 proxy-providers:
-  TOUR:
+  YOUR:
     type: file
     path: ./confs/clash.yaml
     health-check:
       enable: true
       url: 'http://cp.cloudflare.com/generate_204'
-      interval: 600
+      interval: 1200
 rules:
-- AND,((DST-PORT,5228-5230),(NETWORK,TCP)),DIRECT
+- AND,((DST-PORT,5228-5230),(NETWORK,TCP),(DOMAIN-KEYWORD,google)),DIRECT
+- AND,((UID,10263) && (NETWORK,UDP)),REJECT
+- AND,((UID,10285) && (NETWORK,UDP)),DIRECT
 - IP-CIDR,127.0.0.1/8,DIRECT,no-resolve
 - IP-CIDR,198.18.0.1/16,DIRECT,no-resolve
 - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+- IP-CIDR6,::1/128,DIRECT,no-resolve
+- IP-CIDR6,fc00::/7,DIRECT,no-resolve
+- IP-CIDR6,fe80::/10,DIRECT,no-resolve
+- IP-CIDR6,fd00::/8,DIRECT,no-resolve
 - GEOSITE,CATEGORY-ADS-ALL,ADS-ALL
 - MATCH,CLASH
