@@ -132,8 +132,8 @@ rm -rf ${MODPATH}/module.prop
 touch ${MODPATH}/module.prop
 echo "id=ClashForMagisk" > ${MODPATH}/module.prop
 echo "name=Clash For Magisk" >> ${MODPATH}/module.prop
-echo "version=v1.12.5" >> ${MODPATH}/module.prop
-echo "versionCode=20220620" >> ${MODPATH}/module.prop
+echo "version=v1.12.6" >> ${MODPATH}/module.prop
+echo "versionCode=20220627" >> ${MODPATH}/module.prop
 echo "author=t@amarin" >> ${MODPATH}/module.prop
 echo "description= Use iptables to support Clash's transparent proxy. Hey, damn half-crippled Android!!!" >> ${MODPATH}/module.prop
 

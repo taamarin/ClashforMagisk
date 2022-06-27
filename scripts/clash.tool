@@ -278,29 +278,30 @@ i=0
 
 update_core() {
     if [ "${use_premium}" == "false" ]; then
-        file_core="/data/clash/Clash.Meta.gz"
-        file_name="Clash.Meta"
+        #latest_meta_version=`curl -ks https://api.github.com/repos/taamarin/Clash.Meta/releases | grep -m 1 "tag_name" | grep -o "Prerelease-Alpha"`
+        latest_meta_version="Prerelease-Alpha"
+        version_meta="Clash.Meta-android-arm64-alpha.gz"
+        file_core="Clash.Meta"
         url_meta="${official_link_meta}/${latest_meta_version}/${version_meta}"
-        update_file ${file_core} ${url_meta} > ${CFM_logs_file}
+        update_file /data/clash/"${file_core}".gz ${url_meta} > ${CFM_logs_file}
     else
-        file_core="/data/clash/Clash.Premium.gz"
-        file_name="Clash.Premium"
-        update_file ${file_core} ${official_link_premium} > ${CFM_logs_file}
+        file_core="Clash.Premium"
+        update_file /data/clash/"${file_core}".gz ${official_link_premium} > ${CFM_logs_file}
     fi
 
     if (gunzip --help > /dev/null 2>&1) ; then
-        if [ -f ${file_core} ]; then
-            gunzip /data/clash/${file_core}
+        if [ -f /data/clash/"${file_core}".gz ]; then
+            gunzip /data/clash/"${file_core}".gz
         else
             echo "gunzip failed"
             exit 1
         fi
     else
-        echo "error msg= gunzip not found "
+        echo "error msg= gunzip not found"
         exit 1
     fi
 
-    mv -f /data/clash/"${file_name}" /data/clash/core/lib
+    mv -f /data/clash/"${file_core}" /data/clash/core/lib
     if [ "$?" = "0" ]; then
         flag=true
     fi
@@ -310,21 +311,19 @@ update_core() {
     else
         echo "warning msg= Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
-
-} 
-
-update_dashboard() {
-    rm -rf /data/clash/dashboard/dist/*
-    curl -L -A 'clash' ${url_dashboard} -o ${file_dasboard} 2>&1
-    unzip -o "${file_dasboard}" "yacd-meta-gh-pages/*" -d /data/clash/ >&2
-    mv -f /data/clash/yacd-meta-gh-pages/* /data/clash/dashboard/dist \
-
-    rm -rf /data/clash/yacd-meta-gh-pages
-    rm -rf ${file_dasboard}
-
 }
 
-while getopts ":afklmupoxcqd" signal ; do
+update_dashboard() {
+    file_dasboard="/data/clash/dashboard.zip"
+    rm -rf /data/clash/dashboard/dist
+
+    curl -L -A 'clash' ${url_dashboard} -o ${file_dasboard} 2>&1
+    unzip -o  "${file_dasboard}" "yacd-meta-gh-pages/*" -d /data/clash/dashboard >&2
+    mv -f /data/clash/dashboard/yacd-meta-gh-pages /data/clash/dashboard/dist 
+    rm -rf ${file_dasboard}
+}
+
+while getopts ":afklmupoxced" signal ; do
     case ${signal} in
         a)
             clash_cron
@@ -372,7 +371,7 @@ while getopts ":afklmupoxcqd" signal ; do
         c)
             file_stop
             ;;
-        q)
+        e)
             update_core
             ;;
         d)

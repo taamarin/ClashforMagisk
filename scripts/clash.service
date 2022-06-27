@@ -21,7 +21,7 @@ start_clash() {
     echo -n "" > ${CFM_logs_file}
     echo "${date_day}" >> ${CFM_logs_file}
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.12.0" > /dev/null
+    echo "Clash for Magisk v1.12.6" > /dev/null
 
     err="failed to replace Core."
     if [ "${use_premium}" == "true" ]; then
@@ -139,10 +139,10 @@ start_clash() {
     fi
 
     if [ -f "${Clash_bin_path}" ] ; then
-        echo "info msg= set permissions Clash ${Clash_user_group}" >> ${CFM_logs_file}
+        echo "info msg= set permissions clash" >> ${CFM_logs_file}
         chown 0:0 ${Clash_bin_path}
-        chown 0:3005 ${temporary_config_file}
-        chmod 6755 ${Clash_bin_path}
+        chown 0:0 ${temporary_config_file}
+        chmod 0700 ${Clash_bin_path}
         chmod 0644 ${temporary_config_file}
         setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
 
@@ -155,7 +155,7 @@ start_clash() {
             && echo "info msg= auto Update GeoX & SubScription (${update_interval})." >> ${CFM_logs_file}
             echo "info msg= Geo status: [${auto_updateGeoX}] | Subs status: (${auto_updateSubcript})." >> ${CFM_logs_file}
         else
-            echo "info msg= auto Update Geo & Subs not active." >> ${CFM_logs_file}
+            echo "info msg= auto Update GeoX & Subs not active." >> ${CFM_logs_file}
         fi
 
         if [ ! "${static_dns}" == "false" ]; then
