@@ -19,7 +19,7 @@ CPFM_mode_dir="${modules_dir}/clash_premium"
 clash_data_sc="${clash_data_dir}/scripts"
 mod_config="${clash_data_sc}/clash.config"
 geoip_file_path="${clash_data_dir}/Country.mmdb"
-yacd_dir="${clash_data_dir}/clash-dashboard"
+yacd_dir="${clash_data_dir}/dashboard"
 
 if [ $BOOTMODE ! = true ] ; then
   abort "Error: silahkan install di magisk manager"
@@ -39,7 +39,7 @@ ui_print "- Create folder Clash."
 mkdir -p ${clash_data_dir}
 mkdir -p ${clash_data_dir_core}
 mkdir -p ${MODPATH}${ca_path}
-mkdir -p ${clash_data_dir}/clash-dashboard
+mkdir -p ${clash_data_dir}/dashboard
 mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
@@ -62,11 +62,11 @@ esac
 
 unzip -o "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH >&2
 
-ui_print "- unzip clash-dashboard"
-if [ ! -d /data/clash-dashboard ] ; then
-    rm -rf "${clash_data_dir}/clash-dashboard/*"
+ui_print "- unzip dashboard"
+if [ ! -d /data/dashboard ] ; then
+    rm -rf "${clash_data_dir}/dashboard/*"
 fi
-unzip -o ${MODPATH}/clash-dashboard.zip -d ${clash_data_dir}/clash-dashboard/ >&2
+unzip -o ${MODPATH}/dashboard.zip -d ${clash_data_dir}/dashboard/ >&2
 
 ui_print "- move Scripts Clash"
 rm -rf "${clash_data_dir}/scripts/*"
@@ -86,6 +86,8 @@ if [ ! -f "${dns_path}/resolv.conf" ] ; then
     touch ${MODPATH}${dns_path}/resolv.conf
     echo nameserver 8.8.8.8 > ${MODPATH}${dns_path}/resolv.conf
     echo nameserver 1.1.1.1 >> ${MODPATH}${dns_path}/resolv.conf
+    echo nameserver 9.9.9.9 >> ${MODPATH}${dns_path}/resolv.conf
+    echo nameserver 149.112.112.112 >> ${MODPATH}${dns_path}/resolv.conf
 fi
 
 if [ ! -f "${clash_data_dir}/scripts/packages.list" ] ; then
@@ -119,7 +121,7 @@ else
     rm -rf ${clash_data_dir_core}/ss
 fi
 
-rm -rf ${MODPATH}/clash-dashboard.zip
+rm -rf ${MODPATH}/dashboard.zip
 rm -rf ${MODPATH}/scripts
 rm -rf ${MODPATH}/GeoX
 rm -rf ${MODPATH}/binary
@@ -143,7 +145,7 @@ set_perm_recursive ${clash_service_dir} 0 0 0755 0755
 set_perm_recursive ${clash_data_dir} ${uid} ${gid} 0755 0644
 set_perm_recursive ${clash_data_dir}/scripts ${uid} ${gid} 0755 0755
 set_perm_recursive ${clash_data_dir}/core ${uid} ${gid} 0755 0755
-set_perm_recursive ${clash_data_dir}/clash-dashboard ${uid} ${gid} 0755 0644
+set_perm_recursive ${clash_data_dir}/dashboard ${uid} ${gid} 0755 0644
 set_perm  ${MODPATH}/service.sh  0  0  0755
 set_perm  ${MODPATH}/uninstall.sh  0  0  0755
 set_perm  ${MODPATH}/system/bin/setcap  0  0  0755
