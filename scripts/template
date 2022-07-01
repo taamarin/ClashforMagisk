@@ -7,7 +7,7 @@ ipv6: true
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: dashboard/dist
-tcp-concurrent: false
+tcp-concurrent: true
 interface-name: ""
 enable-process: false
 geodata-loader: memconservative
@@ -15,7 +15,7 @@ secret: ""
 profile:
   store-selected: true
   store-fake-ip: false
-geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat", geosite: "https://github.com/taamarin/GeoSite.dat/raw/release/dlc.dat"}
+# geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat", geosite: "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geosite.dat"}
 dns:
   enable: true
   device: Meta
@@ -26,7 +26,8 @@ dns:
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: fake-ip
-  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com']
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', 'localhost.ptlogin2.qq.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*']
   nameserver:
     - https://149.112.112.112/dns-query
     - quic://dns.adguard.com
@@ -36,13 +37,36 @@ dns:
   fallback:
     - 1.1.1.1
     - 8.8.8.8
-  fallback-filter:
-    geoip: false
-    geoip-code: ID
-    geosite: []
-    domain:
-      - '+.google.com'
-    ipcidr: []
+  geoip: false
+  geoip-code: "ID"
+  geosite: []
+  ipcidr:
+    - 0.0.0.0/8
+    - 10.0.0.0/8
+    - 100.64.0.0/10
+    - 127.0.0.0/8
+    - 169.254.0.0/16
+    - 172.16.0.0/12
+    - 192.0.0.0/24
+    - 192.0.2.0/24
+    - 192.88.99.0/24
+    - 192.168.0.0/16
+    - 198.18.0.0/15
+    - 198.51.100.0/24
+    - 203.0.113.0/24
+    - 224.0.0.0/4
+    - 240.0.0.0/4
+    - 255.255.255.255/32
+  domain:
+    - "+.google.com"
+    - "+.facebook.com"
+    - "+.youtube.com"
+    - "+.githubusercontent.com"
+    - "+.googlevideo.com"
+    - "+.msftconnecttest.com"
+    - "+.msftncsi.com"
+    - "msftconnecttest.com"
+    - "msftncsi.com"
 auto-redir:
   enable: false
   auto-route: false
@@ -51,8 +75,8 @@ tun:
   stack: system
   dns-hijack:
     - any:53
-  auto-route: true
-  auto-detect-interface: true
+  auto-route: false
+  auto-detect-interface: false
 sniffer:
   enable: false
   sniffing:
