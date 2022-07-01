@@ -276,17 +276,24 @@ i=0
     exit 0
 }
 
+
+
 update_core() {
     if [ "${use_premium}" == "false" ]; then
-        #latest_meta_version=`curl -ks https://api.github.com/repos/taamarin/Clash.Meta/releases | grep -m 1 "tag_name" | grep -o "Prerelease-Alpha"`
-        latest_meta_version="Prerelease-Alpha"
-        version_meta="Clash.Meta-android-arm64-alpha.gz"
+        curl -ks https://api.github.com/repos/MetaCubeX/Clash.Meta/releases | grep -m 1 "browser_download_url" | grep -o "https://github.com/MetaCubeX/Clash.Meta/releases/download/Prerelease-Alpha/Clash.Meta-android-arm64-alpha-[A-Z,a-z,0-9]*.gz" > /data/clash/run/url_meta_update.json
+
+#        curl -ks https://api.github.com/repos/taamarin/Clash.Meta/releases  | grep -m 1 "browser_download_url" | grep -o "https://github.com/taamarin/Clash.Meta/releases/download/Alpha/Clash.Meta-android-arm64-alpha-[A-Z,a-z,0-9]*.gz" > /data/clash/run/url_meta_update.json
+
+        sleep 0.5
+
         file_core="Clash.Meta"
-        url_meta="${official_link_meta}/${latest_meta_version}/${version_meta}"
+        url_meta=$(cat /data/clash/run/url_meta_update.json)
         update_file /data/clash/"${file_core}".gz ${url_meta} > ${CFM_logs_file}
+        rm -rf /data/clash/run/url_meta_update.json
     else
         file_core="Clash.Premium"
-        update_file /data/clash/"${file_core}".gz ${official_link_premium} > ${CFM_logs_file}
+        url_premium="https://release.dreamacro.workers.dev/latest/clash-linux-armv8-latest.gz"
+        update_file /data/clash/"${file_core}".gz ${url_premium} > ${CFM_logs_file}
     fi
 
     if (gunzip --help > /dev/null 2>&1) ; then
@@ -314,6 +321,7 @@ update_core() {
 }
 
 update_dashboard() {
+    url_dashboard="https://github.com/taamarin/yacd-meta/archive/refs/heads/gh-pages.zip"
     file_dasboard="/data/clash/dashboard.zip"
     rm -rf /data/clash/dashboard/dist
 

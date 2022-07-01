@@ -32,11 +32,11 @@ start_clash() {
         && echo "" || echo "error msg= ${err}" >> ${CFM_logs_file}
     fi
 
-#    if [ -f "/data/adb/modules/ClashForMagisk/disable" ]; then
-#        echo ""
-#    else
-#        ${Clash_bin_path} -v >> ${CFM_logs_file}
-#    fi
+    if [ -f "/data/adb/modules/ClashForMagisk/disable" ]; then
+        echo ""
+    else
+        ${Clash_bin_path} -v >> ${CFM_logs_file}
+    fi
 
     if [ "${ipv6}" == "false" ] ; then
         echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
@@ -80,11 +80,7 @@ start_clash() {
         fi
     fi
 
-    if [ ! "${use_config}" == "false" ]; then
-        echo "info msg= Config ${Clash_config_file}." >> ${CFM_logs_file}
-    else
-        echo "info msg= Config default ${Clash_config_file}." >> ${CFM_logs_file}
-    fi
+    echo "info msg= Config ${Clash_config_file}." >> ${CFM_logs_file}
 
     local PID=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name}) ; then
@@ -99,14 +95,13 @@ start_clash() {
     if [ "${Clash_tun_status}" == "true" ] ; then
         mkdir -p /dev/net
         [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-        echo "info msg= mengunakan mode [tun]." >> ${CFM_logs_file}
+        echo "info msg= mengunakan mode [tun], stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
         echo "info msg= create /dev/net/tun." >> ${CFM_logs_file}
 
         sed -i 's/listen:.*/listen: ""/' /data/clash/template
         sed -i 's/tproxy-port:.*/tproxy-port: 0/' /data/clash/template
     else
         echo "info msg= mengunakan mode [tproxy]." >> ${CFM_logs_file}
-
         sed -i 's/listen:.*/listen: 0.0.0.0:1053/' /data/clash/template
         sed -i 's/tproxy-port:.*/tproxy-port: 9898/' /data/clash/template
     fi
