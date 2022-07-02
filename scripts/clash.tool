@@ -276,19 +276,13 @@ i=0
     exit 0
 }
 
-
-
 update_core() {
     if [ "${use_premium}" == "false" ]; then
-        curl -ks https://api.github.com/repos/MetaCubeX/Clash.Meta/releases | grep -m 1 "browser_download_url" | grep -o "https://github.com/MetaCubeX/Clash.Meta/releases/download/Prerelease-Alpha/Clash.Meta-android-arm64-alpha-[A-Z,a-z,0-9]*.gz" > /data/clash/run/url_meta_update.json
-
-#        curl -ks https://api.github.com/repos/taamarin/Clash.Meta/releases  | grep -m 1 "browser_download_url" | grep -o "https://github.com/taamarin/Clash.Meta/releases/download/Alpha/Clash.Meta-android-arm64-alpha-[A-Z,a-z,0-9]*.gz" > /data/clash/run/url_meta_update.json
-
-        sleep 0.5
-
         file_core="Clash.Meta"
-        url_meta=$(cat /data/clash/run/url_meta_update.json)
-        update_file /data/clash/"${file_core}".gz ${url_meta} > ${CFM_logs_file}
+        archh="arm64"
+        url_official_meta="https://github.com/MetaCubeX/Clash.Meta/releases"
+        version_meta=`curl -ks https://api.github.com/repos/MetaCubeX/Clash.Meta/releases | grep -m 1 "tag_name" | grep -o "v[0-9.]*"`
+        update_file /data/clash/"${file_core}".gz ${url_official_meta}/download/"${version_meta}"/Clash.Meta-android-"${archh}"-"${version_meta}".gz > ${CFM_logs_file}
         rm -rf /data/clash/run/url_meta_update.json
     else
         file_core="Clash.Premium"
