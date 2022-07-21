@@ -9,7 +9,7 @@ events=$1
 monitor_dir=$2
 monitor_file=$3
 
-folder_run() {
+create_run() {
     if [ ! -d "/data/clash/run" ] ; then
         mkdir -p /data/clash/run
     fi
@@ -18,12 +18,12 @@ folder_run() {
 service_control() {
     if [ "${monitor_file}" = "disable" ] ; then
         if [ "${events}" = "d" ] ; then
-            ${service_path} -s &> /data/clash/run/service.log && ${tproxy_path} -s &>> /data/clash/run/service.log &
+            ${service_path} -s && ${tproxy_path} -s
         elif [ "${events}" = "n" ] ; then
-            ${service_path} -k &>> /data/clash/run/service.log && ${tproxy_path} -k &>> /data/clash/run/service.log &
+            ${service_path} -k && ${tproxy_path} -k
         fi
     fi
 }
 
-folder_run
+create_run
 service_control

@@ -62,7 +62,7 @@ start_tproxy() {
         done
     fi
 
-    echo "warning msg= filter/bypass mode: (${mode}). " >> ${CFM_logs_file}
+    echo $date_log"warn: filter/bypass mode: (${mode}). " >> ${CFM_logs_file}
     ${scripts_dir}/clash.tool -f
     AID=`cat ${appuid_file} | sort -u`
     for appuid in ${AID[*]} ; do
@@ -234,7 +234,7 @@ stop_tproxy() {
     fi
 
     if [ "${monitor_local_ip}" == "true" ]; then
-        ${iptables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_I
+        ${iptables_wait} -t mangle -D OUTPUT -j FILTER_LOCAL_IP
         ${iptables_wait} -t mangle -D PREROUTING -j FILTER_LOCAL_IP
         ${iptables_wait} -t mangle -F FILTER_LOCAL_IP
         ${iptables_wait} -t mangle -X FILTER_LOCAL_IP
@@ -266,7 +266,7 @@ start_tun() {
         ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
     done
 
-    echo "warning msg= filter/bypass mode: (${mode})" >> ${CFM_logs_file}
+    echo $date_log"warn: filter/bypass mode: (${mode})" >> ${CFM_logs_file}
     ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
     ${scripts_dir}/clash.tool -f
     AID=`cat ${appuid_file} | sort -u`
@@ -355,11 +355,11 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               stop_tproxy
-               echo "warning msg= scripts refresh Iptables tproxy" >> ${CFM_logs_file}
+               stop_tproxy &> /data/clash/run/service.log
+               echo $date_log"warn: scripts refresh Iptables tproxy" >> ${CFM_logs_file}
                sleep 0.5
-               start_tproxy
-               echo "info msg= scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
+               start_tproxy &>> /data/clash/run/service.log
+               echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
                    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -368,31 +368,31 @@ while getopts ":sk" signal ; do
                        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                    fi
-                   echo "warning msg= refresh tun diterapkan" >> ${CFM_logs_file}
+                   echo $date_log"warn: refresh tun diterapkan" >> ${CFM_logs_file}
                    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
                    if [ "${ipv6}" == "true" ] ; then
                        ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
                        ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
                    fi
-                   echo "info msg= tun diterapkan" >> ${CFM_logs_file}
+                   echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
                else
                   sleep 0.5
-                  stop_tun
-                  echo "warning msg= refresh scripts Iptables tun" >> ${CFM_logs_file}
-                  start_tun
-                  echo "info msg= scripts Iptables tun diterapkan" >> ${CFM_logs_file}
+                  stop_tun &> /data/clash/run/service.log
+                  echo $date_log"warn: refresh scripts Iptables tun" >> ${CFM_logs_file}
+                  start_tun &>> /data/clash/run/service.log
+                  echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
            rm -rf /data/clash/run/config.logs
            rm -rf /data/clash/run/cmdRunning
-           echo "info msg= Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
-           echo "info msg= Connect" >> ${CFM_logs_file}
+           echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
+           echo $date_log"info: Connect" >> ${CFM_logs_file}
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                stop_tproxy
-                echo "warning msg= scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
+                stop_tproxy &>> /data/clash/run/service.log
+                echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             else
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
                     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
@@ -401,13 +401,13 @@ while getopts ":sk" signal ; do
                         ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
                         ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
                     fi
-                    echo "warning msg= tun dihapus," >> ${CFM_logs_file}
+                    echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
                 else
-                    stop_tun
-                    echo "warning msg= scripts Iptables tun dihapus," >> ${CFM_logs_file}
+                    stop_tun &>> /data/clash/run/service.log
+                    echo $date_log"warn: scripts Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi
-            echo "warning msg= disConnect" >> ${CFM_logs_file}
+            echo $date_log"warn: disConnect" >> ${CFM_logs_file}
             ;;
         ?)
             echo ""
