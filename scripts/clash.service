@@ -146,10 +146,9 @@ start_clash() {
         touch /data/clash/run/root
         chmod 0700 /data/clash/run/root
 
-        if [ "${update_core}" == "true" ]; then
-            echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" > ${Clash_run_path}/root \
-            && echo $date_log"info: schedule Update Core (${schedule_update_core})" >> ${CFM_logs_file}
-            echo $date_log"info: schedule Update Core: [${update_core}]" >> ${CFM_logs_file}
+        if [ ! "${schedule_update_core}" == "false" ]; then
+            echo "${schedule_schedule_update_core} ${scripts_dir}/clash.tool -e" > ${Clash_run_path}/root \
+            && echo $date_log"info: schedule Update Core (${schedule_schedule_update_core})" >> ${CFM_logs_file}
         else
             echo $date_log"info: schedule Update Core not active." >> ${CFM_logs_file}
         fi

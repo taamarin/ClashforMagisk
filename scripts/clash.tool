@@ -292,13 +292,23 @@ update_core() {
 
     if (gunzip --help > /dev/null 2>&1) ; then
         if [ -f /data/clash/"${file_core}".gz ]; then
-            gunzip /data/clash/"${file_core}".gz
+            if (gunzip /data/clash/"${file_core}".gz) ; then
+                echo ""
+            else
+                echo $date_log"err: Gunzip ${file_core}.gz failed"  >> ${CFM_logs_file}
+                if [ -f /data/clash/"${file_core}".gz.bak ]; then
+                    rm -rf /data/clash/"${file_core}".gz.bak
+                else
+                    rm -rf /data/clash/"${file_core}".gz
+                fi                    
+                exit 1
+            fi
         else
-            echo "gunzip failed"
+            echo $date_log"err: Gunzip ${file_core}.gz failed"  >> ${CFM_logs_file}
             exit 1
         fi
     else
-        echo $date_log"err: gunzip not found"
+        echo $date_log"err: Gunzip not found"  >> ${CFM_logs_file}
         exit 1
     fi
 
@@ -376,6 +386,7 @@ while getopts ":afklmupoxced" signal ; do
             file_stop
             ;;
         e)
+            echo "proses download"
             echo -n > /data/clash/run/UpCore.log
             update_core
             ;;
