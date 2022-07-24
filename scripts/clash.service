@@ -11,7 +11,7 @@ start_clash() {
     if [ "${config_online}" == "true" ] ; then
         if ! [ "$(head -1 /data/clash/run/root)" == "disable" ] ; then
             if ! (${scripts_dir}/clash.tool -o) ; then
-                echo $date_log"err: Gagal download Config, pastikan terkoneksi internet." >> ${CFM_logs_file}
+                echo $date_log"err: failed to download config, make sure you are connected to the internet." >> ${CFM_logs_file}
                 exit 1
             fi
         fi
@@ -67,16 +67,16 @@ start_clash() {
 
     if [ "${use_premium}" == "true" ]; then
         if [ -f "${Clash_bin_path}" ] ; then
-            echo $date_log"info: Use Clash Premium." >> ${CFM_logs_file}
+            echo $date_log"info: Using Clash Premium." >> ${CFM_logs_file}
         else
-            echo $date_log"err: no Core in ${Clash_bin_path}" >> ${CFM_logs_file}
+            echo $date_log"err: Core not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
         fi
     else
         if [ -f "${Clash_bin_path}" ] ; then
-            echo $date_log"info: Use Clash Meta." >> ${CFM_logs_file}
+            echo $date_log"info: Using Clash Meta." >> ${CFM_logs_file}
         else
-            echo $date_log"err: no Core in ${Clash_bin_path}" >> ${CFM_logs_file}
+            echo $date_log"err: Core not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
         fi
     fi
@@ -88,7 +88,7 @@ start_clash() {
         ${scripts_dir}/clash.iptables -s
         exit 1
     else
-        echo $date_log"info: executed Clash service." >> ${CFM_logs_file}
+        echo $date_log"info: Executed Clash service." >> ${CFM_logs_file}
     fi
 
     echo $date_log"info: Status ipv6: ${ipv6}" >> ${CFM_logs_file}
@@ -96,13 +96,13 @@ start_clash() {
     if [ "${Clash_tun_status}" == "true" ] ; then
         mkdir -p /dev/net
         [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-        echo $date_log"info: mengunakan mode [tun], stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
+        echo $date_log"info: using [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
         echo $date_log"info: create /dev/net/tun." >> ${CFM_logs_file}
 
         sed -i 's/listen:.*/listen: ""/' /data/clash/template
         sed -i 's/tproxy-port:.*/tproxy-port: 0/' /data/clash/template
     else
-        echo $date_log"info: mengunakan mode [tproxy]." >> ${CFM_logs_file}
+        echo $date_log"info: using [proxy] mode." >> ${CFM_logs_file}
         sed -i 's/listen:.*/listen: 0.0.0.0:1053/' /data/clash/template
         sed -i 's/tproxy-port:.*/tproxy-port: 9898/' /data/clash/template
     fi
@@ -118,11 +118,11 @@ start_clash() {
            sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
            sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
         else
-           echo $date_log"err: files ${Clash_config_file} tidak ditemukan !!!" >> ${CFM_logs_file}
+           echo $date_log"err: files ${Clash_config_file} not found !!!" >> ${CFM_logs_file}
            exit 1
         fi
     else
-        echo $date_log"err: files ${Clash_dns} tidak ditemukan !!!" >> ${CFM_logs_file}
+        echo $date_log"err: files ${Clash_dns} not found !!!" >> ${CFM_logs_file}
         exit 1
     fi
 
@@ -130,12 +130,12 @@ start_clash() {
     && echo $date_log"info: merge files ${Clash_config_file} & template Succes." >> ${CFM_logs_file} || echo $date_log"err: merge files ${Clash_config_file} & template failed !!!" >> ${CFM_logs_file}
 
     if [ ! -f "${temporary_config_file}" ] ; then
-       echo $date_log"err: ${temporary_config_file} tidak terdeteksi !!!." >> ${CFM_logs_file}
+       echo $date_log"err: ${temporary_config_file} not found !!!." >> ${CFM_logs_file}
        exit 1
     fi
 
     if [ -f "${Clash_bin_path}" ] ; then
-        echo $date_log"info: set permissions clash" >> ${CFM_logs_file}
+#        echo $date_log"info: set permissions clash" >> ${CFM_logs_file}
         chown ${Clash_user_group} ${Clash_bin_path}
         chown ${Clash_user_group} ${temporary_config_file}
         chmod 6755 ${Clash_bin_path}
@@ -149,17 +149,17 @@ start_clash() {
         if [ "${update_core}" == "true" ]; then
             echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" > ${Clash_run_path}/root \
             && echo $date_log"info: schedule Update Core (${schedule_update_core})" >> ${CFM_logs_file}
-            echo $date_log"info: auto Update Core: [${update_core}]" >> ${CFM_logs_file}
+            echo $date_log"info: schedule Update Core: [${update_core}]" >> ${CFM_logs_file}
         else
-            echo $date_log"info: auto Update Core not active." >> ${CFM_logs_file}
+            echo $date_log"info: schedule Update Core not active." >> ${CFM_logs_file}
         fi
 
         if [ ! "${update_interval}" == "false" ]; then
             echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
-            && echo $date_log"info: auto Update GeoX & SubScription (${update_interval})." >> ${CFM_logs_file}
+            && echo $date_log"info: schedule Update GeoX & SubScription (${update_interval})." >> ${CFM_logs_file}
             echo $date_log"info: Geo status: [${auto_updateGeoX}] | Subs status: (${auto_updateSubcript})." >> ${CFM_logs_file}
         else
-            echo $date_log"info: auto Update GeoX & Subs not active." >> ${CFM_logs_file}
+            echo $date_log"info: schedule Update GeoX & Subs not active." >> ${CFM_logs_file}
         fi
 
         if [ ! "${static_dns}" == "false" ]; then
@@ -173,12 +173,12 @@ start_clash() {
         sed -i '/^[  ]*$/d' ${CFM_logs_file}
         if [ "${filter_local}" == "true" ] && [ "${Clash_tun_status}" == "false" ] ; then
             clash_cron="${scripts_dir}/clash.tool -a"
-            echo "*/1 * * * * ${clash_cron}" >> ${Clash_run_path}/root && echo $date_log"warn: bypass otomatis ip lokal dihidupkan." >> ${CFM_logs_file}
+            echo "*/1 * * * * ${clash_cron}" >> ${Clash_run_path}/root && echo $date_log"warn: local ip auto bypass is turned on." >> ${CFM_logs_file}
         else
             echo $date_log"info: local ip auto bypass is turned off." >> ${CFM_logs_file}
         fi
     else
-        echo $date_log"err: Kernel Clash ${Clash_bin_path} tidak terdeteksi !!!." >> ${CFM_logs_file}
+        echo $date_log"err: Clash kernel ${Clash_bin_path} not found !!!." >> ${CFM_logs_file}
         exit 1
     fi
 
@@ -209,15 +209,15 @@ start_clash() {
                 else
                     mv ${temporary_config_file} ${Clash_data_dir}/confs/config/${use_config}
                 fi
-                echo $date_log"err: ceks kembali ${Clash_config_file} & template." >> ${CFM_logs_file}
+                echo $date_log"err: recheck ${Clash Config_file} & template." >> ${CFM_logs_file}
                 exit 1
             fi
         else
-            echo $date_log"err: Core cfm error/rusak/tidak support ">> ${CFM_logs_file}
+            echo $date_log"err: Core CFM error/broken/not supported ">> ${CFM_logs_file}
             exit 1
         fi
     else
-        echo $date_log"err: ${Clash_config_file} tidak terdeteksi." >> ${CFM_logs_file}
+        echo $date_log"err: ${Clash_config_file} not found." >> ${CFM_logs_file}
         exit 1
     fi
 

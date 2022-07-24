@@ -3,7 +3,7 @@ allow-lan: true
 unified-delay: true
 bind-address: '*'
 log-level: silent
-ipv6: true
+ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: dashboard/dist
@@ -23,7 +23,7 @@ profile:
 dns:
   enable: true
   device: Meta
-  ipv6: true
+  ipv6: false
   prefer-h3: false #start DOH to use http/3 first
   default-nameserver:
     - 1.1.1.1
