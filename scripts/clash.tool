@@ -32,6 +32,7 @@ monitor_local_ipv4() {
         if [ "${card2}" = 1 ] ; then
             mobilestatus=2
         fi
+
         if [ ! "${mobilestatus}" = "$(cat ${Clash_run_path}/lastmobile)" ]; then
             change=true
             echo "${mobilestatus}" >${Clash_run_path}/lastmobile
@@ -155,28 +156,31 @@ update_file() {
 
 auto_update() {
     if [ "${auto_updateGeoX}" == "true" ] ; then
-       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} >> ${CFM_logs_file}
+       update_file ${Clash_GeoIP_file} ${GeoIP_dat_url} >> /data/clash/run/UpGeoSub.log
        if [ "$?" = "0" ]; then
           flag=true
        fi
     fi
 
     if [ "${auto_updateGeoX}" == "true" ] ; then
-       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> ${CFM_logs_file}
+       update_file ${Clash_GeoSite_file} ${GeoSite_url} >> /data/clash/run/UpGeoSub.log
        if [ "$?" = "0" ]; then
           flag=true
        fi
     fi
 
     if [ ${auto_updateSubcript} == "true" ]; then
-       update_file ${Clash_config_file} ${Subcript_url} >> ${CFM_logs_file}
+       update_file ${Clash_config_file} ${Subcript_url} >> /data/clash/run/UpGeoSub.log
        if [ "$?" = "0" ]; then
           flag=true
        fi
     fi
 
+
     if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
-        restart_clash
+        if [ "${restart_clash}" == "true" ] ; then
+            restart_clash
+        fi
     else
         echo $date_log"warn: Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
@@ -278,20 +282,12 @@ i=0
 
 update_core() {
     if [ "${use_premium}" == "false" ]; then
-        file_core="Clash.Meta"
-        arch="arm64"
-        url_meta="https://github.com/taamarin/Clash.Meta/releases"
-        api_meta="https://api.github.com/repos/taamarin/Clash.Meta/releases"
-
-        # tag_meta=`curl -ks https://api.github.com/repos/MetaCubeX/Clash.Meta/releases | grep -m 2 "tag_name" | grep -o "v[A-Z,a-z,0-9.]*"`
-
-        version_meta=`curl -ks $api_meta | grep -m 5 "name" | grep -o "Clash.Meta-linux-$arch-alpha@[A-Z,a-z,0-9.]*"`
-
-        update_file /data/clash/"${file_core}".gz ${url_meta}/download/alpha/"${version_meta}" > ${CFM_logs_file}
+        tag_meta=$(curl -fsSL ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+        filename="${file_core}-${platform}-${arch}-${tag_meta}"
+        update_file /data/clash/${file_core}.gz ${url_meta}/download/${tag_meta}/${filename}.gz >> /data/clash/run/UpCore.log
     else
-        file_core="Clash.Premium"
-        url_premium="https://release.dreamacro.workers.dev/latest/clash-linux-armv8-latest.gz"
-        update_file /data/clash/"${file_core}".gz ${url_premium} > ${CFM_logs_file}
+        filename=$(curl -fsSL "$url_premium/tag/premium" | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
+        update_file /data/clash/"${file_core}".gz ${url_premium}/download/premium/${filename}.gz >> /data/clash/run/UpCore.log
     fi
 
     if (gunzip --help > /dev/null 2>&1) ; then
@@ -319,13 +315,14 @@ update_core() {
 }
 
 update_dashboard() {
-    url_dashboard="https://github.com/taamarin/yacd-meta/archive/refs/heads/gh-pages.zip"
+    url_dashboard="https://github.com/haishanh/yacd/archive/refs/heads/gh-pages.zip"
+    #url_dashboard="https://github.com/taamarin/yacd-meta/archive/refs/heads/gh-pages.zip"
     file_dasboard="/data/clash/dashboard.zip"
     rm -rf /data/clash/dashboard/dist
 
     curl -L -A 'clash' ${url_dashboard} -o ${file_dasboard} 2>&1
-    unzip -o  "${file_dasboard}" "yacd-meta-gh-pages/*" -d /data/clash/dashboard >&2
-    mv -f /data/clash/dashboard/yacd-meta-gh-pages /data/clash/dashboard/dist 
+    unzip -o  "${file_dasboard}" "yacd-gh-pages/*" -d /data/clash/dashboard >&2
+    mv -f /data/clash/dashboard/yacd-gh-pages /data/clash/dashboard/dist 
     rm -rf ${file_dasboard}
 }
 
@@ -346,12 +343,13 @@ while getopts ":afklmupoxced" signal ; do
             ;;
         m)
             if [ "${mode}" = "blacklist" ] && [ -f "${Clash_pid_file}" ] ; then
-                monitor_local_ipv4
+                monitor_local_ipv4 &>> /data/clash/run/service.log
             else
                 exit 0
             fi
             ;;
         u)
+            echo -n > /data/clash/run/UpGeoSub.log
             if [ "${auto_updateSubcript}" == "true" ] && [ "${auto_updateGeoX}" == "true" ]; then 
                 auto_update
             elif [ "${auto_updateSubcript}" == "true" ] && "${auto_updateGeoX}" == "false" ]; then 
@@ -378,6 +376,7 @@ while getopts ":afklmupoxced" signal ; do
             file_stop
             ;;
         e)
+            echo -n > /data/clash/run/UpCore.log
             update_core
             ;;
         d)

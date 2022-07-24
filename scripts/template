@@ -11,11 +11,12 @@ tcp-concurrent: true
 interface-name: ""
 enable-process: false
 geodata-loader: memconservative
+inbound-tfo: true
 secret: ""
 profile:
   store-selected: true
   store-fake-ip: false
-geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/Loyalsoldier/v2ray-rules-dat/raw/release/geoip.dat", geosite: "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat"}
+# geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/v2fly/geoip/raw/release/cn.dat", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/geosite.dat"}
 # experimental:
 #  fingerprints:
 #    - "8F111FA9AD3CD8E917A118522CAC39EA33741B3BBE73F91CECE548D5CCB0E5E8"
@@ -66,5 +67,5 @@ sniffer:
   skip-domain: ['+.google.com']
   port-whitelist: ['443', '80']
 hosts:
-  'cacerts.digicert.com': 172.67.199.35
+  'cacerts.digicert.com': 172.67.199.34
 tproxy-port: 9898

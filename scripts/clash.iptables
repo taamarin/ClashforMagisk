@@ -351,34 +351,42 @@ stop_tun() {
     fi
 }
 
+stop_tun_portabel(){
+    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+        if [ "${ipv6}" = "true" ] ; then
+            ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+            ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+        fi
+}
+
+start_tun_portabel(){
+    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+        if [ "${ipv6}" = "true" ] ; then
+            ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+            ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+        fi
+}
+
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               stop_tproxy &> /data/clash/run/service.log
+               stop_tproxy &>> /data/clash/run/service.log
                echo $date_log"warn: scripts refresh Iptables tproxy" >> ${CFM_logs_file}
                sleep 0.5
                start_tproxy &>> /data/clash/run/service.log
                echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                   ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                   ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                   if [ "${ipv6}" == "true" ] ; then
-                       ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                       ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                   fi
+                   stop_tun_portabel &>> /data/clash/run/service.log
                    echo $date_log"warn: refresh tun diterapkan" >> ${CFM_logs_file}
-                   ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
-                   ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-                   if [ "${ipv6}" == "true" ] ; then
-                       ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
-                       ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-                   fi
+                   start_tun_portabel &>> /data/clash/run/service.log
                    echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
                else
                   sleep 0.5
-                  stop_tun &> /data/clash/run/service.log
+                  stop_tun &>> /data/clash/run/service.log
                   echo $date_log"warn: refresh scripts Iptables tun" >> ${CFM_logs_file}
                   start_tun &>> /data/clash/run/service.log
                   echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
@@ -395,12 +403,7 @@ while getopts ":sk" signal ; do
                 echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             else
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                    if [ "${ipv6}" == "true" ] ; then
-                        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                    fi
+                    stop_tun_portabel &>> /data/clash/run/service.log
                     echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
                 else
                     stop_tun &>> /data/clash/run/service.log

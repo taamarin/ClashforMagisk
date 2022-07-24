@@ -18,7 +18,7 @@ start_clash() {
     fi
 
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.12.6" > /dev/null
+    echo "Clash for Magisk v1.12.8" >> ${CFM_logs_file}
 
     chmod 0755 /data/clash/core/lib/*
 
@@ -144,7 +144,15 @@ start_clash() {
 
         /data/adb/magisk/busybox crontab -c /data/clash/run -r
         touch /data/clash/run/root
-        chmod 0600 /data/clash/run/root
+        chmod 0700 /data/clash/run/root
+
+        if [ "${update_core}" == "true" ]; then
+            echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" > ${Clash_run_path}/root \
+            && echo $date_log"info: schedule Update Core (${schedule_update_core})" >> ${CFM_logs_file}
+            echo $date_log"info: auto Update Core: [${update_core}]" >> ${CFM_logs_file}
+        else
+            echo $date_log"info: auto Update Core not active." >> ${CFM_logs_file}
+        fi
 
         if [ ! "${update_interval}" == "false" ]; then
             echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
@@ -261,12 +269,12 @@ stop_clash() {
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-            stop_clash
+            stop_clash &> /data/clash/run/service.log
             sleep 0.5
-            start_clash
+            start_clash &>> /data/clash/run/service.log
             ;;
         k)
-            stop_clash
+            stop_clash &>> /data/clash/run/service.log
             ;;
         ?)
             echo ""

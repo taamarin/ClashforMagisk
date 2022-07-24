@@ -25,14 +25,14 @@ flush_rule_rules() {
 create_mangle_prerouting_chain() {
     ${iptables_wait} -t mangle -N CLASH_PRE
 
-    ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "warning msg= Your system may have castrated tproxy-tcp" >> ${CFM_logs_file}
-    ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "warning msg= Your system may have castrated tproxy-udp" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo $date_log"warn: Your system may have castrated tproxy-tcp" >> ${CFM_logs_file}
+    ${iptables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo $date_log"warn: Your system may have castrated tproxy-udp" >> ${CFM_logs_file}
  
     if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -N CLASH_PRE
 
-        ${ip6tables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "warning msg= Your system may have castrated Tproxy-TCP6" >> ${CFM_logs_file}
-        ${ip6tables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo "warning msg= Your system may have castrated Tproxy-UDP6" >> ${CFM_logs_file} 
+        ${ip6tables_wait} -t mangle -A CLASH_PRE -p tcp -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo $date_log"warn: Your system may have castrated Tproxy-TCP6" >> ${CFM_logs_file}
+        ${ip6tables_wait} -t mangle -A CLASH_PRE -p udp ! --dport 53 -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id} && echo "" || echo $date_log"warn: Your system may have castrated Tproxy-UDP6" >> ${CFM_logs_file} 
     fi
 }
 
@@ -69,7 +69,7 @@ create_mangle_prerouting_filter() {
 }
 
 create_mangle_output_filter() {
-    echo "warning msg= filter/bypass (${mode}) turn on" >> ${CFM_logs_file}
+    echo $date_log"warn: filter/bypass (${mode}) turn on" >> ${CFM_logs_file}
     ${scripts_dir}/clash.tool -f
 
     ${iptables_wait} -t mangle -N FILTER_OUT_CLASH
@@ -327,7 +327,7 @@ start_tun(){
         ${iptables_wait} -t mangle -A CLASH_OUT -d ${subnet} -j RETURN
     done
 
-    echo "warning msg= filter/bypass (${mode}) turn on" >> ${CFM_logs_file}
+    echo $date_log"warn: filter/bypass (${mode}) turn on" >> ${CFM_logs_file}
     ${scripts_dir}/clash.tool -f
     apps=`cat ${appuid_file} | sort -u`
     if [ "${mode}" = "blacklist" ] ; then
@@ -429,63 +429,69 @@ stop_tun(){
    fi
 }
 
+stop_tun_portabel(){
+    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+        if [ "${ipv6}" = "true" ] ; then
+            ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
+            ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
+        fi
+}
+
+start_tun_portabel(){
+    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+        if [ "${ipv6}" = "true" ] ; then
+            ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
+            ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
+        fi
+}
+
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               flush_rule_rules && flush_rules
-               echo "warning msg= scripts refresh Iptables tproxy" >> ${CFM_logs_file}
+               flush_rule_rules && flush_rules &>> /data/clash/run/service.log
+               echo $date_log"warn: scripts refresh Iptables tproxy" >> ${CFM_logs_file}
                sleep 0.5
-               create_rule_rules && apply_rules
-               echo "info msg= scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
+               create_rule_rules && apply_rules &>> /data/clash/run/service.log
+               echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
+               rm -rf /data/clash/run/lastwifi
+               rm -rf /data/clash/run/lastmobile
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                   ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                   ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                   if [ "${ipv6}" = "true" ] ; then
-                       ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                       ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                   fi
-                   echo "warning msg= refresh tun diterapkan" >> ${CFM_logs_file}
-                   ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
-                   ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-                   if [ "${ipv6}" = "true" ] ; then
-                       ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
-                       ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-                   fi
-                   echo "info msg= tun diterapkan" >> ${CFM_logs_file}
+                    stop_tun_portabel &>> /data/clash/run/service.log
+                    echo $date_log"warn: refresh tun diterapkan" >> ${CFM_logs_file}
+                    sleep 0.5
+                    start_tun_portabel &>> /data/clash/run/service.log
+                    echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
                else
+                  stop_tun &>> /data/clash/run/service.log
+                  echo $date_log"warn: refresh scripts Iptables tun" >> ${CFM_logs_file}
                   sleep 0.5
-                  stop_tun
-                  echo "warning msg= refresh scripts Iptables tun" >> ${CFM_logs_file}
-                  start_tun
-                  echo "info msg= scripts Iptables tun diterapkan" >> ${CFM_logs_file}
+                  start_tun &>> /data/clash/run/service.log
+                  echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
            rm -rf /data/clash/run/config.logs
            rm -rf /data/clash/run/cmdRunning
-           echo "info msg= Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
-           echo "info msg= Connect" >> ${CFM_logs_file}
+           echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
+           echo $date_log"info: Connect" >> ${CFM_logs_file}
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                flush_rule_rules && flush_rules
-                echo "warning msg= scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
+                flush_rule_rules && flush_rules &>> /data/clash/run/service.log
+                echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             else
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                    if [ "${ipv6}" = "true" ] ; then
-                        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-                        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-                    fi
-                    echo "warning msg= tun dihapus," >> ${CFM_logs_file}
+                    stop_tun_portabel &>> /data/clash/run/service.log
+                    echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
                 else
-                    stop_tun
-                    echo "warning msg= scripts Iptables tun dihapus," >> ${CFM_logs_file}
+                    stop_tun &>> /data/clash/run/service.log
+                    echo $date_log"warn: scripts Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi
-            echo "warning msg= disConnect" >> ${CFM_logs_file}
+            echo $date_log"warn: disConnect" >> ${CFM_logs_file}
             ;;
         ?)
             echo ""
