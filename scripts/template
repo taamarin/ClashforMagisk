@@ -7,7 +7,7 @@ ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: dashboard/dist
-tcp-concurrent: true
+tcp-concurrent: false
 interface-name: ""
 enable-process: false
 geodata-loader: memconservative
@@ -16,14 +16,13 @@ secret: ""
 profile:
   store-selected: true
   store-fake-ip: false
-geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/v2fly/geoip/raw/release/cn.dat", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/geosite.dat"}
+# geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/v2fly/geoip/raw/release/cn.dat", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/geosite.dat"}
 # experimental:
-#  fingerprints:
-#    - "8F111FA9AD3CD8E917A118522CAC39EA33741B3BBE73F91CECE548D5CCB0E5E8"
+  # fingerprint: xxxx # 同 experimental.fingerprints 使用 sha256 指纹，配置协议独立的指纹，将忽略 experimental.fingerprints
 dns:
   enable: true
   device: Meta
-  ipv6: false
+  ipv6: true
   prefer-h3: false #start DOH to use http/3 first
   default-nameserver:
     - 1.1.1.1
@@ -34,9 +33,10 @@ dns:
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ['networktest.twilio.com', '+.twilio.com', 'connect.rom.miui.com', '+.msftnsci.com', '+.msftconnecttest.com', '+.gstatic.com', '+.stun.*.*', '+.stun.*.*.*', '+.stun.*.*.*.*', '+.time.*', '+.time.*.*', '+.time.*.*.*', '+.ntp.*', '+.ntp.*.*', '+.ntp.*.*.*']
   nameserver:
+    - 172.67.199.34 ## GANTI BUG YG KALIAN GUNAKAN 
+    - https://1.1.1.1/dns-query
     - tls://dns.quad9.net
     - quic://dns.adguard.com
-    - https://1.1.1.1/dns-query
 #  proxy-server-nameserver:
 #    - 172.67.199.34
 #  fallback:
@@ -50,6 +50,7 @@ dns:
 #    ipcidr:
 #      - 0.0.0.0/32
 #    domain: ['+.google.com', '+.facebook.com', '+.youtube.com', '+.githubusercontent.com', '+.googlevideo.com', '+.msftconnecttest.com', '+.msftncsi.com', 'msftconnecttest.com', 'msftncsi.com']
+# feature CLASH PREMIUM 
 # auto-redir:
 #  enable: false
 #  auto-route: false

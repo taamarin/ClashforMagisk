@@ -18,7 +18,7 @@ start_clash() {
     fi
 
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.12.8" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.12.9" >> ${CFM_logs_file}
 
     chmod 0755 /data/clash/core/lib/*
 
@@ -102,7 +102,7 @@ start_clash() {
         sed -i 's/listen:.*/listen: ""/' /data/clash/template
         sed -i 's/tproxy-port:.*/tproxy-port: 0/' /data/clash/template
     else
-        echo $date_log"info: using [proxy] mode." >> ${CFM_logs_file}
+        echo $date_log"info: using [tproxy] mode." >> ${CFM_logs_file}
         sed -i 's/listen:.*/listen: 0.0.0.0:1053/' /data/clash/template
         sed -i 's/tproxy-port:.*/tproxy-port: 9898/' /data/clash/template
     fi
@@ -147,14 +147,14 @@ start_clash() {
         chmod 0700 /data/clash/run/root
 
         if [ ! "${schedule_update_core}" == "false" ]; then
-            echo "${schedule_schedule_update_core} ${scripts_dir}/clash.tool -e" > ${Clash_run_path}/root \
-            && echo $date_log"info: schedule Update Core (${schedule_schedule_update_core})" >> ${CFM_logs_file}
+            echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" > ${Clash_run_path}/root \
+            && echo $date_log"info: schedule Update Core (${schedule_update_core})" >> ${CFM_logs_file}
         else
             echo $date_log"info: schedule Update Core not active." >> ${CFM_logs_file}
         fi
 
         if [ ! "${update_interval}" == "false" ]; then
-            echo "${update_interval} ${scripts_dir}/clash.tool -u" > ${Clash_run_path}/root \
+            echo "${update_interval} ${scripts_dir}/clash.tool -u" >> ${Clash_run_path}/root \
             && echo $date_log"info: schedule Update GeoX & SubScription (${update_interval})." >> ${CFM_logs_file}
             echo $date_log"info: Geo status: [${auto_updateGeoX}] | Subs status: (${auto_updateSubcript})." >> ${CFM_logs_file}
         else

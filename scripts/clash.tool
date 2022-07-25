@@ -282,12 +282,18 @@ i=0
 
 update_core() {
     if [ "${use_premium}" == "false" ]; then
-        tag_meta=$(curl -fsSL ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
-        filename="${file_core}-${platform}-${arch}-${tag_meta}"
-        update_file /data/clash/${file_core}.gz ${url_meta}/download/${tag_meta}/${filename}.gz >> /data/clash/run/UpCore.log
+        if [ "${meta_alpha}" == "false" ]; then
+            tag_meta=$(curl -fsSL ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+            filename="${file_core}-${platform}-${arch}-${tag_meta}"
+            update_file /data/clash/${file_core}.gz ${url_meta}/download/${tag_meta}/${filename}.gz > ${CFM_logs_file}
+        else
+            tag_meta=$(curl -fsSL ${url_meta} | grep -oE "alpha-[a-z,0-9]+" | head -1)
+            filename="${file_core}-${platform}-${arch}-${tag_meta}"
+            update_file /data/clash/${file_core}.gz ${url_meta}/download/Prerelease-Alpha/${filename}.gz > ${CFM_logs_file}
+        fi
     else
         filename=$(curl -fsSL "$url_premium/tag/premium" | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
-        update_file /data/clash/"${file_core}".gz ${url_premium}/download/premium/${filename}.gz >> /data/clash/run/UpCore.log
+        update_file /data/clash/"${file_core}".gz ${url_premium}/download/premium/${filename}.gz > ${CFM_logs_file}
     fi
 
     if (gunzip --help > /dev/null 2>&1) ; then
@@ -300,7 +306,11 @@ update_core() {
                     rm -rf /data/clash/"${file_core}".gz.bak
                 else
                     rm -rf /data/clash/"${file_core}".gz
-                fi                    
+                fi
+                if [ -f /data/clash/run/clash.pid ]; then
+                    echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
+                    echo $date_log"info: Connect" >> ${CFM_logs_file}
+                fi
                 exit 1
             fi
         else
@@ -387,7 +397,6 @@ while getopts ":afklmupoxced" signal ; do
             ;;
         e)
             echo "proses download"
-            echo -n > /data/clash/run/UpCore.log
             update_core
             ;;
         d)
