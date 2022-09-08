@@ -176,7 +176,6 @@ auto_update() {
        fi
     fi
 
-
     if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
         if [ "${restart_clash}" == "true" ] ; then
             restart_clash
@@ -312,7 +311,8 @@ update_core() {
                 if (gunzip /data/clash/"${file_core}".gz) ; then
                     echo ""
                 else
-                    echo $date_log"err: Gunzip ${file_core}.gz failed"  >> ${CFM_logs_file}
+                    echo $date_log"err: gunzip ${file_core}.gz failed"  > ${CFM_logs_file}
+                    echo $date_log"warn: periksa kembali url" >> ${CFM_logs_file}
                     if [ -f /data/clash/"${file_core}".gz.bak ]; then
                         rm -rf /data/clash/"${file_core}".gz.bak
                     else
@@ -325,16 +325,18 @@ update_core() {
                     exit 1
                 fi
            else
-                echo $date_log"warn: Gunzip ${file_core}.gz failed"  >> ${CFM_logs_file}
+                echo $date_log"warn: gunzip ${file_core}.gz failed"  >> ${CFM_logs_file}
                 echo $date_log"warn: pastikan ada koneksi internet"  >> ${CFM_logs_file}
                 echo $date_log"warn: use default core"  >> ${CFM_logs_file}
                 exit 1
             fi
         else
-            echo $date_log"err: Gunzip not found"  >> ${CFM_logs_file}
+            echo $date_log"err: gunzip not found"  >> ${CFM_logs_file}
             exit 1
         fi
     fi
+
+    mv -f /data/clash/"${file_core}" /data/clash/core/lib
 
     if [ "$?" = "0" ]; then
         flag=true
@@ -343,7 +345,7 @@ update_core() {
     if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
         restart_clash
     else
-        echo "" # echo $date_log"warn: Clash tidak dimulai ulang" >> ${CFM_logs_file}
+       echo "" # $date_log"warn: Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
 }
 
