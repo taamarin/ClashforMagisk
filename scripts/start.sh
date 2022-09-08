@@ -33,5 +33,5 @@ if [ ! -f /data/clash/manual ] ; then
      inotifyd ${scripts_dir}/clash.inotify ${moddir} &>> /dev/null &
      echo -n $! > /data/clash/run/inotifyd.pid
   fi
-  nohup /data/adb/magisk/busybox crond -c /data/clash/run > /dev/null 2>&1 &
+#  nohup /data/adb/magisk/busybox crond -c /data/clash/run > /dev/null 2>&1 &
 fi

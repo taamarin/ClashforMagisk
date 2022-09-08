@@ -1,60 +1,100 @@
 mode: rule
-allow-lan: true
+allow-lan: false
 unified-delay: true
 bind-address: '*'
 log-level: silent
 ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
-external-ui: clash-dashboard/dist
+external-ui: dashboard/dist
 tcp-concurrent: false
 interface-name: ""
 enable-process: false
 geodata-loader: memconservative
+inbound-tfo: false
 secret: ""
 profile:
   store-selected: true
   store-fake-ip: false
-geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb", geoip: "https://github.com/v2fly/geoip/raw/release/geoip-only-cn-private.dat", geosite: "https://github.com/taamarin/GeoSite.dat/raw/release/dlc.dat"}
+geox-url: {
+    mmdb: "https://github.com/Hackl0us/GeoIP2-CN/raw/release/Country.mmdb",
+    geoip: "https://github.com/v2fly/geoip/releases/latest/download/geoip-only-cn-private.dat",
+    geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/geosite.dat"
+}
+experimental: {
+    sniff-tls-sni: false, #featured CLASH.PREMIUM
+    fingerprint: ""
+}
+# auto-redir:
+    #  enable: false, #featured CLASH.PREMIUM
+    #  auto-route: false
+tun:
+  enable: false
+  stack: system
+  dns-hijack:
+    - any:53
+  auto-route: false
+  auto-detect-interface: false
+#ebpf:
+#  auto-redir: # redirect mode, only supports TCP
+#    - rmnet_data1
+#  redirect-to-tun: # UDP+TCP Do not enable auto-route to use this feature
+#    - rmnet_data1
+sniffer:
+  enable: false
+  sniffing:
+    - tls
+    - http
+  force-domain:
+    - '+'
+  skip-domain: 
+    - '+.google.com'
+  port-whitelist:
+    - 443
+    - 80
 dns:
   enable: true
   device: Meta
-  ipv6: false
+  ipv6: true
+  prefer-h3: false #start DOH to use http/3 first
   default-nameserver:
     - 1.1.1.1
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter: ['networktest.twilio.com', '+.twilio.com', 'yacd.mjee.me']
+  fake-ip-filter: [
+    "*.local",
+    "*.localhost",
+    "dns.*",
+    "dns.*.*",
+    "*.twilio.com",
+    "*.*.twilio.com"
+  ]
   nameserver:
-    - 1.1.1.1
-  proxy-server-nameserver: []
-  fallback: []
-  fallback-filter:
-    geoip: false
-    geoip-code: ID
-    geosite: []
-    domain: []
-    ipcidr: []
-tun:
-  enable: false
-  device: Meta
-  stack: system
-  dns-hijack:
-    - 'any:53'
-  auto-route: true
-  auto-detect-interface: true
-sniffer:
-  enable: false
-  sniffing:
-    - tls
-    - http
-  force-domain: []
-  skip-domain: []
-  port-whitelist: []
-iptables: {enable: false, inbound-interface: "", bypass: []}
-#hosts:
-#  'note.microsoft.com': 104.18.38.174
-#  'maps.google.com': 141.193.213.20
+    - https://1.1.1.1/dns-query
+    - 149.112.112.112
+    - 94.140.14.14
+#  proxy-server-nameserver:
+    # https://dns.google/dns-query
+    # tls://dns.adguard-dns.com
+#  fallback:
+    # https://1.1.1.1/dns-query
+    # quic://dns.adguard-dns.com
+    # tls://dns.google
+#  fallback-filter:
+#    geoip: false
+#    geoip-code: "!ID"
+#    geosite:
+      # GFW
+#    ipcidr:
+      # 240.0.0.0/4
+#    domain:
+      #  '+.google.com',
+      #  '+.facebook.com',
+      #  '+.youtube.com'
+hosts: {
+  "cacerts.digicert.com": "104.21.21.147"
+}
+# mitm-port: 7894
 tproxy-port: 9898
