@@ -4,6 +4,8 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . /data/clash/clash.config
 
+logs_service="/data/clash/run/service.log"
+
 cmd_crond() {
     nohup /data/adb/magisk/busybox crond -c /data/clash/run > /dev/null 2>&1 &
     # touch /data/clash/run/cmdRunning
@@ -22,114 +24,41 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.1" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.13.1" > /dev/null
 }
 
-replace_core() {
-    chmod 0755 /data/clash/core/lib/*
-    rm -rf /data/clash/core/clash
-    err="failed to replace Core。"
+replace_kernel() {
+    chmod 0755 /data/clash/kernel/lib/*
+    rm -rf /data/clash/kernel/clash
+    err="failed to replace kernel。"
     if [ "${use_premium}" == "true" ]; then
-        cp -f ${Clash_Premium} /data/clash/core/clash \
+        cp -f ${Clash_Premium} /data/clash/kernel/clash \
         && echo "" || echo $date_log"err: ${err}" >> ${CFM_logs_file}
     else
-        cp -f ${Clash_Meta} /data/clash/core/clash \
+        cp -f ${Clash_Meta} /data/clash/kernel/clash \
         && echo "" || echo $date_log"err: ${err}" >> ${CFM_logs_file}
     fi
 }
 
-check_version() {
-    if [ "${use_premium}" == "false" ]; then
-        if [ "${meta_alpha}" == "false" ]; then
-            clash_version=`${Clash_bin_path} -v | awk -F ' ' '{print $3}'`
-        else
-            clash_version=`${Clash_bin_path} -v | awk -F ' ' '{print $3}' | awk -F '-' '{print $2}'`
-        fi
-    else
-        clash_version=`${Clash_bin_path} -v | awk -F ' ' '{print $2}'`
-    fi
-
-    if [ "${use_premium}" == "false" ]; then
-        if [ "${meta_alpha}" == "false" ]; then
-            tag_meta=$(curl -fsSL ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
-            filename="${file_core}-${platform}-${arch}-${tag_meta}"
-            latest_version=$(echo ${filename} | awk -F '-' '{print $4}')
-        else
-            tag_meta=$(curl -fsSL ${url_meta} | grep -oE "${tag_name}" | head -1)
-            filename="${file_core}-${platform}-${arch}-${tag_meta}"
-            latest_version=$(echo ${filename} | awk -F '[-]' '{print $5}')
-        fi
-    else
-        filename=$(curl -fsSL ${url_premium}/tag/premium | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
-        latest_version=$(echo ${filename} | awk -F '[-]' '{print $4}')
-    fi
- 
-    if [ "${latest_version}" != "${clash_version}" ] ; then
-        if [ "${use_premium}" == "false" ]; then
-            if [ "${meta_alpha}" == "true" ]; then
-                echo $date_log"info: Pembaruan kernel terdeteksi untuk Clash Meta alpha ${latest_version}。" >> ${CFM_logs_file}
-                echo $date_log"info: Mulai Pembaruan。" >> ${CFM_logs_file}
-            else
-                echo $date_log"info: Pembaruan kernel terdeteksi untuk Clash Meta ${latest_version}。"  >> ${CFM_logs_file}
-                echo $date_log"info: Mulai Pembaruan。" >> ${CFM_logs_file}
-            fi
-        else
-            echo $date_log"info: Pembaruan kernel terdeteksi untuk Clash premium ${latest_version}。" >> ${CFM_logs_file}
-            echo $date_log"info: Mulai Pembaruan。" >> ${CFM_logs_file}
-        fi
-        if ! [ "${schedule_update_core}" == "false" ] ; then
-            if ! (${scripts_dir}/clash.tool -e) ; then
-                exit 1
-            fi
-        else
-            echo $date_log"warn: Pembaruan kernel dimatika。"  >> ${CFM_logs_file}
-        fi
-    else
-        if [ "${use_premium}" == "false" ]; then
-            if [ "${meta_alpha}" == "true" ]; then
-                echo $date_log"info: Clash Meta Alpha Up to date, mulai Clash。" >> ${CFM_logs_file}
-            else
-                echo $date_log"info: Clash Meta Up to date, mulai Clash。" >> ${CFM_logs_file}
-            fi
-        else
-            echo $date_log"info: Clash Premium Up to date, mulai Clash。" >> ${CFM_logs_file}
-        fi
-    fi
-}
-
-create_folder() {
-    if [ ! -d ${Clash_data_dir}/confs/config ] ; then
-        if [ ! "${use_config}" == "false" ]; then
-            echo $date_log"info: folder /confs/config tidak ditentukan。" >> ${CFM_logs_file}
-            echo $date_log"info: create folder /confs/config。" >> ${CFM_logs_file}
-            mkdir -p ${Clash_data_dir}/confs/config
-        fi
-    fi
-}
 use_clash() {
     if [ "${use_premium}" == "true" ]; then
         if [ -f "${Clash_bin_path}" ] ; then
-            echo $date_log"info: Using Clash Premium。" >> ${CFM_logs_file}
+            echo $date_log"info: select Clash Premium。" >> ${CFM_logs_file}
         else
-            echo $date_log"err: Core not detected ${Clash_bin_path}" >> ${CFM_logs_file}
+            echo $date_log"err: kernel not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
         fi
     else
         if [ -f "${Clash_bin_path}" ] ; then
-            echo $date_log"info: Using Clash Meta。" >> ${CFM_logs_file}
+            echo $date_log"info: select Clash Meta。" >> ${CFM_logs_file}
         else
-            echo $date_log"err: Core not detected ${Clash_bin_path}" >> ${CFM_logs_file}
+            echo $date_log"err: kernel not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
         fi
     fi
 }
 
 temporary_config_file() {
-    if [ -f "${temporary_config_file}" ] ; then
-        rm -rf ${temporary_config_file}
-        echo $date_log"info: refresh ${temporary_config_file}。" >> ${CFM_logs_file}
-    fi
-
     if [ -f "${Clash_dns}" ] ; then
         if [ -f "${Clash_config_file}" ] ; then
            cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
@@ -154,18 +83,11 @@ temporary_config_file() {
 }
 
 crontab_sec() {
-        if [ ! "${auto_ping}" == "false" ]; then
-            echo "*/1 * * * * ${scripts_dir}/clash.tool -t" > ${Clash_run_path}/root \
-            && echo $date_log"info: schedule auto-ping: [${auto_ping}]" >> ${CFM_logs_file}
+        if [ ! "${schedule_update_kernel}" == "false" ]; then
+            echo "${schedule_update_kernel} ${scripts_dir}/clash.tool -e" >> ${Clash_run_path}/root \
+            && echo $date_log"info: schedule update-kernel (${schedule_update_kernel})" >> ${CFM_logs_file}
         else
-            echo $date_log"info: schedule auto-ping not active。" >> ${CFM_logs_file}
-        fi
-
-        if [ ! "${schedule_update_core}" == "false" ]; then
-            echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" >> ${Clash_run_path}/root \
-            && echo $date_log"info: schedule update-Core (${schedule_update_core})" >> ${CFM_logs_file}
-        else
-            echo $date_log"info: schedule update-Core not active。" >> ${CFM_logs_file}
+            echo $date_log"info: schedule update-kernel not active。" >> ${CFM_logs_file}
         fi
 
         if [ ! "${update_interval}" == "false" ]; then
@@ -176,59 +98,39 @@ crontab_sec() {
             echo $date_log"info: schedule update-GeoX & Subs not active。" >> ${CFM_logs_file}
         fi
 
-        if [ ! "${static_dns}" == "false" ]; then
-            echo "*/1 * * * * ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-            && echo $date_log"warn: set static dns: ${static_dns}。" >> ${CFM_logs_file}
-            echo $date_log"info: static dns: ${static_dns}。" >> ${CFM_logs_file}
-        else
-            echo $date_log"info: static dns: ${static_dns}。" >> ${CFM_logs_file}
-        fi
-
         sed -i '/^[  ]*$/d' ${CFM_logs_file}
         if [ "${filter_local}" == "true" ] && [ "${Clash_tun_status}" == "false" ] ; then
             clash_cron="${scripts_dir}/clash.tool -a"
             echo "*/1 * * * * ${clash_cron}" >> ${Clash_run_path}/root && echo $date_log"warn: local Ip auto bypass is turn on。" >> ${CFM_logs_file}
         else
-            echo $date_log"info: local Ip auto bypass is turn off。" >> ${CFM_logs_file}
+            echo ""
         fi
 }
 
 run_clash() {
-            if (${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1) ; then
+            if (${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/config.logs 2>&1) ; then
                 ulimit -SHn 1000000
                 nohup /data/adb/magisk/busybox setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null  2>&1 &
-                # nohup /data/adb/magisk/busybox setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /data/clash/run/DEBUG.`date`.log 2>&1 &
                 echo -n $! > ${Clash_pid_file}
-                echo $date_log"info: tcp-concurrent:${Clash_tcp_concurrent}" >> ${CFM_logs_file}
 
-                if [ "${Cgroup_memory}" == "true" ] ; then
-                    if ! (${scripts_dir}/clash.tool -l) ; then
-                        echo -n ""
-                    fi
-                else
-                    echo $date_log"info: Cgroup | status: ${Cgroup_memory}" >> ${CFM_logs_file}
-                fi
-                sleep 0.5
-                # echo "$line_log" >> ${CFM_logs_file}
                 sed -i s/.*msg=// ${Clash_run_path}/config.logs
                 sed -i 's/configuration file*//' /data/clash/run/config.logs
                 while read p; do
                     echo ${date_log}"info:" "$p" >> ${CFM_logs_file}
                 done <${Clash_run_path}/config.logs
-                # echo "$line_log" >> ${CFM_logs_file}
             else
-                # echo "$line_log" >> ${CFM_logs_file}
+                echo $date_log"err: ${Clash_config_file} failed" >> ${CFM_logs_file}
                 sed -i s/.*msg=// ${Clash_run_path}/config.logs
                 sed -i 's/fatal msg=*//' /data/clash/run/config.logs
                 sed -i 's/configuration file*//' /data/clash/run/config.logs
                 while read p; do
                     echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
                 done <${Clash_run_path}/config.logs
-                # echo "$line_log" >> ${CFM_logs_file}
+
                 if [ "${use_config}" == "false" ]; then
                     mv ${temporary_config_file} ${Clash_data_dir}/config.yaml
                 else
-                    mv ${temporary_config_file} ${Clash_data_dir}/confs/config/${use_config}
+                    mv ${temporary_config_file} ${Clash_data_dir}/${use_config}
                 fi
                 echo $date_log"err: recheck ${Clash_config_file} & template。" >> ${CFM_logs_file}
                 exit 1
@@ -239,40 +141,34 @@ start_clash() {
     cmd_crond
     dow_config
     date_clash
-    replace_core
+    replace_kernel
 
     if [ -f "/data/adb/modules/ClashForMagisk/disable" ]; then
         echo ""
     else
         ${Clash_bin_path} -v >> ${CFM_logs_file}
     fi
-
-    echo "$line_log" >> ${CFM_logs_file}
-
-    if ! [ "${auto_updateGeoX}" == "false" ] ; then
-        check_version
-        replace_core
-    else
-        echo "" #$date_log"info: deteksi pembaruan kernel dimatikan" >> ${CFM_logs_file}
-    fi
-
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
     if [ "${ipv6}" == "false" ] ; then
         echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
         echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+
         echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
         echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+
         echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
         echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
     else
         echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
         echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+
         echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
         echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+
         echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
         echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    fi
+    fi 
 
-    create_folder
     use_clash
 
     echo $date_log"info: config ${Clash_config_file}。" >> ${CFM_logs_file}
@@ -283,46 +179,34 @@ start_clash() {
         ${scripts_dir}/clash.iptables -s
         exit 1
     else
-        echo $date_log"info: Executed Clash service。" >> ${CFM_logs_file}
+        echo $date_log"info: run Clash service。" >> ${CFM_logs_file}
     fi
 
     if [ "${Clash_tun_status}" == "true" ] ; then
         mkdir -p /dev/net
         [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-        echo $date_log"info: using [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
+        echo $date_log"info: select [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
         echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
-        if [ "${Clash_stack_mode}" == "gvisor'" ] ; then
-            sed -i 's/listen:.*/listen: ""/' /data/clash/template
-        fi
-        sed -i 's/tproxy-port:.*/tproxy-port: 0/' /data/clash/template
     else
-        echo $date_log"info: using [tproxy] mode。" >> ${CFM_logs_file}
-        sed -i 's/listen:.*/listen: 0.0.0.0:1053/' /data/clash/template
-        sed -i 's/tproxy-port:.*/tproxy-port: 9898/' /data/clash/template
+        echo $date_log"info: select [tproxy] mode。" >> ${CFM_logs_file}
     fi
-
     temporary_config_file
-
     if [ -f "${Clash_bin_path}" ] ; then
-        chown ${Clash_user_group} ${Clash_bin_path}
-        chown ${Clash_user_group} ${temporary_config_file}
+        chown root:net_admin ${Clash_bin_path}
+        chown root:net_admin ${temporary_config_file}
         chmod 6755 ${Clash_bin_path}
         chmod 0644 ${temporary_config_file}
         setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-
+        # crontab
         /data/adb/magisk/busybox crontab -c /data/clash/run -r
         touch /data/clash/run/root
         chmod 0600 /data/clash/run/root
-
         crontab_sec
     else
         echo $date_log"err: Clash kernel ${Clash_bin_path} not found !!!。" >> ${CFM_logs_file}
         exit 1
     fi
-
     if [ -f ${temporary_config_file} ] ; then
-        ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/config.logs \
-        && echo "" || echo $date_log"err: ${Clash_config_file} failed" >> ${CFM_logs_file}
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
             run_clash
         else
@@ -333,7 +217,7 @@ start_clash() {
         echo $date_log"err: ${Clash_config_file} not found。" >> ${CFM_logs_file}
         exit 1
     fi
-
+    sleep 0.5
     if [ "${port_detect}" == "true" ]; then
         if ! (${scripts_dir}/clash.tool -p) ; then
             exit 0
@@ -381,21 +265,32 @@ stop_clash() {
     kill_clash
     kill_crond
     ceks_conflicts
-
     if [ -f /data/clash/run/appuid.list ]; then
         rm -rf /data/clash/run/appuid.list
     fi
-
     rm -rf ${Clash_pid_file}
+}
+
+cgroup_limit() {
+    if [ "${Cgroup_memory_limit}" == "" ]; then
+        return
+    fi
+    if [ "${Cgroup_memory_path}" == "" ]; then
+        Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
+    fi
+    mkdir -p "${Cgroup_memory_path}/clash"
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs"
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
 }
 
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-            stop_clash && start_clash
+            stop_clash &> $logs_service && start_clash &>> $logs_service
+            cgroup_limit &> /data/clash/run/cgroup.log
             ;;
         k)
-            stop_clash
+            stop_clash &>> $logs_service
             ;;
         ?)
             echo ""

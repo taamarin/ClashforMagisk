@@ -11,18 +11,15 @@ bin_path="/system/bin/"
 dns_path="/system/etc"
 clash_adb_dir="/data/adb"
 clash_service_dir="/data/adb/service.d"
-sdcard_dir="/sdcard/Download"
 busybox_data_dir="/data/adb/magisk/busybox"
 ca_path="${dns_path}/security/cacerts"
-clash_data_dir_core="${clash_data_dir}/core"
-CPFM_mode_dir="${modules_dir}/clash_premium"
+clash_data_dir_kernel="${clash_data_dir}/kernel"
 clash_data_sc="${clash_data_dir}/scripts"
 mod_config="${clash_data_sc}/clash.config"
-geoip_file_path="${clash_data_dir}/Country.mmdb"
 yacd_dir="${clash_data_dir}/dashboard"
 
 if [ $BOOTMODE ! = true ] ; then
-  abort "Error: silahkan install di magisk manager"
+  abort "error: silahkan install di magisk manager"
 fi
 
 if [ -d "${clash_data_dir}" ] ; then
@@ -35,15 +32,15 @@ if [ -d "${clash_data_dir}" ] ; then
 fi
 
 ui_print "- prepare clash execute environment"
-ui_print "- Create folder Clash."
+ui_print "- create folder Clash."
 mkdir -p ${clash_data_dir}
-mkdir -p ${clash_data_dir_core}
+mkdir -p ${clash_data_dir_kernel}
 mkdir -p ${MODPATH}${ca_path}
 mkdir -p ${clash_data_dir}/dashboard
 mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
-mkdir -p ${clash_data_dir}/confs/config
+mkdir -p ${clash_data_dir}/proxy-provider
 
 case "${ARCH}" in
     arm)
@@ -77,7 +74,7 @@ ui_print "- move Cert & Geo"
 mv ${clash_data_dir}/scripts/cacert.pem ${MODPATH}${ca_path}
 mv ${MODPATH}/GeoX/* ${clash_data_dir}/
 
-ui_print "- Konfigurasi folder service"
+ui_print "- konfigurasi folder service"
 if [ ! -d /data/adb/service.d ] ; then
     mkdir -p /data/adb/service.d
 fi
@@ -94,7 +91,7 @@ if [ ! -f "${clash_data_dir}/scripts/packages.list" ] ; then
     touch ${clash_data_dir}/packages.list
 fi
 
-ui_print "- Execute ZipFile"
+ui_print "- execute zipfile"
 if [ ! -f "${MODPATH}/service.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 fi
@@ -107,18 +104,19 @@ if [ ! -f "${clash_service_dir}/clash_service.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'clash_service.sh' -d ${clash_service_dir} >&2
 fi
 
-ui_print "- Proses Core $ARCH execute files"
-tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${clash_data_dir_core}/&& echo "- extar Core Succes" || echo "- extar Core gagal"
-mv ${clash_data_dir_core}/setcap ${MODPATH}${bin_path}/
-mv ${clash_data_dir_core}/getpcaps ${MODPATH}${bin_path}/
-mv ${clash_data_dir_core}/getcap ${MODPATH}${bin_path}/
+ui_print "- proses kernel $ARCH execute files"
+tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${clash_data_dir_kernel}/&& echo "- extar kernel Succes" || echo "- extar kernel gagal"
+mv ${clash_data_dir_kernel}/setcap ${MODPATH}${bin_path}/
+mv ${clash_data_dir_kernel}/getpcaps ${MODPATH}${bin_path}/
+mv ${clash_data_dir_kernel}/getcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir}/scripts/config.yaml ${clash_data_dir}/
 mv ${clash_data_dir}/scripts/clash.config ${clash_data_dir}/
-mv ${clash_data_dir}/scripts/clash.yaml ${clash_data_dir}/confs/
+mv ${clash_data_dir}/scripts/proxy-provider ${clash_data_dir}/
+
 if [ ! -f "${bin_path}/ss" ] ; then
-    mv ${clash_data_dir_core}/ss ${MODPATH}${bin_path}/
+    mv ${clash_data_dir_kernel}/ss ${MODPATH}${bin_path}/
 else
-    rm -rf ${clash_data_dir_core}/ss
+    rm -rf ${clash_data_dir_kernel}/ss
 fi
 
 rm -rf ${MODPATH}/dashboard.zip
@@ -127,24 +125,15 @@ rm -rf ${MODPATH}/GeoX
 rm -rf ${MODPATH}/binary
 rm -rf ${MODPATH}/clash_service.sh
 rm -rf ${clash_data_dir}/scripts/config.yaml
-sleep 1
 
-ui_print "- Create module.prop"
-rm -rf ${MODPATH}/module.prop
-touch ${MODPATH}/module.prop
-echo "id=ClashForMagisk" > ${MODPATH}/module.prop
-echo "name=Clash For Magisk" >> ${MODPATH}/module.prop
-echo "version=v1.12.6" >> ${MODPATH}/module.prop
-echo "versionCode=20220627" >> ${MODPATH}/module.prop
-echo "author=t@amarin" >> ${MODPATH}/module.prop
-echo "description= Use iptables to support Clash's transparent proxy. Hey, damn half-crippled Android!!!" >> ${MODPATH}/module.prop
+sleep 1
 
 ui_print "- Mengatur Permissons"
 set_perm_recursive ${MODPATH} 0 0 0755 0644
 set_perm_recursive ${clash_service_dir} 0 0 0755 0755
 set_perm_recursive ${clash_data_dir} ${uid} ${gid} 0755 0644
 set_perm_recursive ${clash_data_dir}/scripts ${uid} ${gid} 0755 0755
-set_perm_recursive ${clash_data_dir}/core ${uid} ${gid} 0755 0755
+set_perm_recursive ${clash_data_dir}/kernel ${uid} ${gid} 0755 0755
 set_perm_recursive ${clash_data_dir}/dashboard ${uid} ${gid} 0755 0644
 set_perm  ${MODPATH}/service.sh  0  0  0755
 set_perm  ${MODPATH}/uninstall.sh  0  0  0755

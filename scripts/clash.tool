@@ -94,33 +94,10 @@ find_packages_uid() {
     fi
 }
 
-cgroup_limit() {
-    if [ "${Cgroup_memory_limit}" == "" ]; then
-        return
-    fi
-    if [ "${Cgroup_memory_path}" == "" ]; then
-        Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
-    fi
-
-    mkdir -p "${Cgroup_memory_path}/clash" && echo $date_log"info: Cgroup memory limit: ${Cgroup_memory_limit}" >> ${CFM_logs_file} || echo $date_log"warn: failed, kernel tidak mendukung memory Cgroup" >> ${CFM_logs_file}
-
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo $date_log"info: create ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo $date_log"warn: can't create  ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
-
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo $date_log"info: create ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo $date_log"warn: can't create  ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
-
-    if [ -d "${Cgroup_memory_path}/clash" ]; then
-        echo $date_log"info: Clash cgroup activated | status: [${Cgroup_memory}]" >> ${CFM_logs_file}
-    elif [ ! -d "${Cgroup_memory_path}/clash" ]; then
-        echo $date_log"warn: Cgroup failed" >> ${CFM_logs_file}
-    fi
-}
-
 restart_clash() {
     ${scripts_dir}/clash.service -k && ${scripts_dir}/clash.iptables -k
-
     echo -n "disable" > /data/clash/run/root
     sleep 0.5
-
     ${scripts_dir}/clash.service -s && ${scripts_dir}/clash.iptables -s
     if [ "$?" == "0" ]; then
         echo $date_log"warn: Clash berhasil dimulai ulang." >>${CFM_logs_file}
@@ -133,16 +110,13 @@ update_file() {
         file="$1"
         file_bak="${file}.bak"
         update_url="$2"
-
         if [ -f ${file} ]; then
             mv -f ${file} ${file_bak}
             # echo $date_log"warn: backup file ${file_bak}" >> ${CFM_logs_file}
         fi
         echo "curl -k --insecure -L -A 'clash' ${update_url} -o ${file}"
         curl -k --insecure -L -A 'clash' ${update_url} -o ${file} 2>&1
-
         sleep 0.5
-
         if [ -f "${file}" ] ; then
             echo "" # $date_log"info: `date` Update ${file} done." >> ${CFM_logs_file}
         else
@@ -207,24 +181,8 @@ config_online() {
     fi
 }
 
-keep_dns() {
-    local_dns=`getprop net.dns1`
-
-    if [ "${local_dns}" != "${static_dns}" ] ; then
-        for count in $(seq 1 $(getprop | grep dns | wc -l)); do
-            setprop net.dns${count} ${static_dns}
-        done
-    fi
-
-    if [ $(sysctl net.ipv4.ip_forward) != "1" ] ; then
-        sysctl -w net.ipv4.ip_forward=1
-    fi
-
-    unset local_dns
-    exit 0
-}
-
 port_detection() {
+    sleep 2.5
     clash_pid=`cat ${Clash_pid_file}`
     match_count=0
     
@@ -280,26 +238,26 @@ i=0
     exit 0
 }
 
-update_core() {
+update_kernel() {
     if [ "${use_premium}" == "false" ]; then
         if [ "${meta_alpha}" == "false" ]; then
             tag_meta=$(curl -fsSL ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
-            filename="${file_core}-${platform}-${arch}-${tag_meta}"
-            update_file /data/clash/${file_core}.gz ${url_meta}/download/${tag_meta}/${filename}.gz > /dev/null 2>&1
+            filename="${file_kernel}-${platform}-${arch}-${tag_meta}"
+            update_file /data/clash/${file_kernel}.gz ${url_meta}/download/${tag_meta}/${filename}.gz > /dev/null 2>&1
                 if [ "$?" = "0" ]; then
                     flag=false
                 fi
         else
             tag_meta=$(curl -fsSL ${url_meta} | grep -oE "${tag_name}" | head -1)
-            filename="${file_core}-${platform}-${arch}-${tag_meta}"
-            update_file /data/clash/${file_core}.gz ${url_meta}/download/${tag}/${filename}.gz > /dev/null 2>&1
+            filename="${file_kernel}-${platform}-${arch}-${tag_meta}"
+            update_file /data/clash/${file_kernel}.gz ${url_meta}/download/${tag}/${filename}.gz > /dev/null 2>&1
                 if [ "$?" = "0" ]; then
                     flag=false
                 fi
         fi
     else
         filename=$(curl -fsSL ${url_premium}/tag/premium | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
-        update_file /data/clash/"${file_core}".gz ${url_premium}/download/premium/${filename}.gz > /dev/null 2>&1
+        update_file /data/clash/"${file_kernel}".gz ${url_premium}/download/premium/${filename}.gz > /dev/null 2>&1
             if [ "$?" = "0" ]; then
                 flag=false
             fi
@@ -307,16 +265,16 @@ update_core() {
 
     if [ ${flag} == false ]; then
         if (gunzip --help > /dev/null 2>&1) ; then
-           if [ -f /data/clash/"${file_core}".gz ]; then
-                if (gunzip /data/clash/"${file_core}".gz) ; then
+           if [ -f /data/clash/"${file_kernel}".gz ]; then
+                if (gunzip /data/clash/"${file_kernel}".gz) ; then
                     echo ""
                 else
-                    echo $date_log"err: gunzip ${file_core}.gz failed"  > ${CFM_logs_file}
+                    echo $date_log"err: gunzip ${file_kernel}.gz failed"  > ${CFM_logs_file}
                     echo $date_log"warn: periksa kembali url" >> ${CFM_logs_file}
-                    if [ -f /data/clash/"${file_core}".gz.bak ]; then
-                        rm -rf /data/clash/"${file_core}".gz.bak
+                    if [ -f /data/clash/"${file_kernel}".gz.bak ]; then
+                        rm -rf /data/clash/"${file_kernel}".gz.bak
                     else
-                        rm -rf /data/clash/"${file_core}".gz
+                        rm -rf /data/clash/"${file_kernel}".gz
                     fi
                     if [ -f /data/clash/run/clash.pid ]; then
                         echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
@@ -325,9 +283,8 @@ update_core() {
                     exit 1
                 fi
            else
-                echo $date_log"warn: gunzip ${file_core}.gz failed"  >> ${CFM_logs_file}
+                echo $date_log"warn: gunzip ${file_kernel}.gz failed"  >> ${CFM_logs_file}
                 echo $date_log"warn: pastikan ada koneksi internet"  >> ${CFM_logs_file}
-                echo $date_log"warn: use default core"  >> ${CFM_logs_file}
                 exit 1
             fi
         else
@@ -336,7 +293,7 @@ update_core() {
         fi
     fi
 
-    mv -f /data/clash/"${file_core}" /data/clash/core/lib
+    mv -f /data/clash/"${file_kernel}" /data/clash/kernel/lib
 
     if [ "$?" = "0" ]; then
         flag=true
@@ -345,19 +302,11 @@ update_core() {
     if [ -f "${Clash_pid_file}" ] && [ ${flag} == true ]; then
         restart_clash
     else
-       echo "" # $date_log"warn: Clash tidak dimulai ulang" >> ${CFM_logs_file}
-    fi
-}
-
-auto_ping() {
-    if [ -f "${Clash_pid_file}" ]; then
-        echo "${date_day}" > /data/clash/run/ping.log
-        ping -c 10 8.8.8.8 >> /data/clash/run/ping.log
+       echo $date_log"warn: Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
 }
 
 update_dashboard() {
-#    url_dashboard="https://github.com/haishanh/yacd/archive/refs/heads/gh-pages.zip"
     url_dashboard="https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip"
     file_dasboard="/data/clash/dashboard.zip"
     rm -rf /data/clash/dashboard/dist
@@ -368,20 +317,13 @@ update_dashboard() {
     rm -rf ${file_dasboard}
 }
 
-while getopts ":afklmupoxcedt" signal ; do
+while getopts ":afmupoxced" signal ; do
     case ${signal} in
         a)
             clash_cron
             ;;
         f)
             find_packages_uid
-            ;;
-        k)
-            keep_dns
-            ;;
-        l)
-            sleep 0.5
-            cgroup_limit
             ;;
         m)
             if [ "${mode}" = "blacklist" ] && [ -f "${Clash_pid_file}" ] ; then
@@ -405,7 +347,6 @@ while getopts ":afklmupoxcedt" signal ; do
             exit 1
             ;;
         p)
-            sleep 0.5
             port_detection
             ;;
         o)
@@ -420,13 +361,10 @@ while getopts ":afklmupoxcedt" signal ; do
             ;;
         e)
             echo "proses download"
-            update_core
+            update_kernel
             ;;
         d)
             update_dashboard
-            ;;
-        t)
-            auto_ping
             ;;
         ?)
             echo ""
