@@ -248,7 +248,7 @@ update_kernel() {
                     flag=false
                 fi
         else
-            tag_meta=$(curl -fsSL ${url_meta} | grep -oE "${tag_name}" | head -1)
+            tag_meta=$(curl -fsSL ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
             filename="${file_kernel}-${platform}-${arch}-${tag_meta}"
             update_file /data/clash/${file_kernel}.gz ${url_meta}/download/${tag}/${filename}.gz > /dev/null 2>&1
                 if [ "$?" = "0" ]; then
@@ -256,11 +256,11 @@ update_kernel() {
                 fi
         fi
     else
-        filename=$(curl -fsSL ${url_premium}/tag/premium | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
+        filename=$(curl -fsSL ${url_premium}/expanded_assets/premium | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
         update_file /data/clash/"${file_kernel}".gz ${url_premium}/download/premium/${filename}.gz > /dev/null 2>&1
-            if [ "$?" = "0" ]; then
-                flag=false
-            fi
+        if [ "$?" = "0" ]; then
+            flag=false
+        fi
     fi
 
     if [ ${flag} == false ]; then

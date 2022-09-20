@@ -4,16 +4,13 @@ scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
 . /data/clash/clash.config
 
-logs_service="/data/clash/run/service.log"
-
 cmd_crond() {
-    nohup /data/adb/magisk/busybox crond -c /data/clash/run > /dev/null 2>&1 &
-    # touch /data/clash/run/cmdRunning
+    nohup ${busybox_path} crond -c ${Clash_run_path} > /dev/null 2>&1 &
 }
 
 dow_config() {
     if [ "${config_online}" == "true" ] ; then
-        if ! [ "$(head -1 /data/clash/run/root)" == "disable" ] ; then
+        if ! [ "$(head -1 ${Clash_run_path}/root)" == "disable" ] ; then
             if ! (${scripts_dir}/clash.tool -o) ; then
                 echo $date_log"err: failed to download config, make sure you are connected to the internet。" >> ${CFM_logs_file}
                 exit 1
@@ -83,9 +80,9 @@ temporary_config_file() {
 }
 
 crontab_sec() {
-        if [ ! "${schedule_update_kernel}" == "false" ]; then
-            echo "${schedule_update_kernel} ${scripts_dir}/clash.tool -e" >> ${Clash_run_path}/root \
-            && echo $date_log"info: schedule update-kernel (${schedule_update_kernel})" >> ${CFM_logs_file}
+        if [ ! "${schedule_update_core}" == "false" ]; then
+            echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" >> ${Clash_run_path}/root \
+            && echo $date_log"info: schedule update-kernel (${schedule_update_core})" >> ${CFM_logs_file}
         else
             echo $date_log"info: schedule update-kernel not active。" >> ${CFM_logs_file}
         fi
@@ -110,19 +107,19 @@ crontab_sec() {
 run_clash() {
             if (${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/config.logs 2>&1) ; then
                 ulimit -SHn 1000000
-                nohup /data/adb/magisk/busybox setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null  2>&1 &
+                nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null  2>&1 &
                 echo -n $! > ${Clash_pid_file}
 
                 sed -i s/.*msg=// ${Clash_run_path}/config.logs
-                sed -i 's/configuration file*//' /data/clash/run/config.logs
+                sed -i 's/configuration file*//' ${Clash_run_path}/config.logs
                 while read p; do
                     echo ${date_log}"info:" "$p" >> ${CFM_logs_file}
                 done <${Clash_run_path}/config.logs
             else
                 echo $date_log"err: ${Clash_config_file} failed" >> ${CFM_logs_file}
                 sed -i s/.*msg=// ${Clash_run_path}/config.logs
-                sed -i 's/fatal msg=*//' /data/clash/run/config.logs
-                sed -i 's/configuration file*//' /data/clash/run/config.logs
+                sed -i 's/fatal msg=*//' ${Clash_run_path}/config.logs
+                sed -i 's/configuration file*//' ${Clash_run_path}/config.logs
                 while read p; do
                     echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
                 done <${Clash_run_path}/config.logs
@@ -197,10 +194,10 @@ start_clash() {
         chmod 6755 ${Clash_bin_path}
         chmod 0644 ${temporary_config_file}
         setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-        # crontab
-        /data/adb/magisk/busybox crontab -c /data/clash/run -r
-        touch /data/clash/run/root
-        chmod 0600 /data/clash/run/root
+  
+        ${busybox_path} crontab -c ${Clash_run_path} -r
+        touch ${Clash_run_path}/root
+        chmod 0600 ${Clash_run_path}/root
         crontab_sec
     else
         echo $date_log"err: Clash kernel ${Clash_bin_path} not found !!!。" >> ${CFM_logs_file}
@@ -229,7 +226,7 @@ start_clash() {
 
 kill_clash() {
     if (ps -ef > /dev/null 2>&1) ; then
-        clashkill=$(ps -ef | grep root | grep "clash -d /data/clash" | /data/adb/magisk/busybox awk '{ print $2 }' | sort -u)
+        clashkill=$(ps -ef | grep root | grep "clash -d /data/clash" | ${busybox_path} awk '{ print $2 }' | sort -u)
         for clashkil in ${clashkill[*]} ; do
            if [ "${Clash_tun_status}" == "true" ] ; then
               kill -9 ${clashkil}
@@ -244,7 +241,7 @@ kill_clash() {
 }
 
 kill_crond() {
-    cronkill=$(ps -ef | grep root | grep "crond -c /data/clash/" | /data/adb/magisk/busybox awk '{ print $2 }' | sort -u)
+    cronkill=$(ps -ef | grep root | grep "crond -c /data/clash/" | ${busybox_path} awk '{ print $2 }' | sort -u)
     for cronkil in ${cronkill[*]} ; do
        kill -15 ${cronkil}
     done
@@ -265,8 +262,8 @@ stop_clash() {
     kill_clash
     kill_crond
     ceks_conflicts
-    if [ -f /data/clash/run/appuid.list ]; then
-        rm -rf /data/clash/run/appuid.list
+    if [ -f ${Clash_run_path}/appuid.list ]; then
+        rm -rf ${Clash_run_path}/appuid.list
     fi
     rm -rf ${Clash_pid_file}
 }
@@ -287,7 +284,7 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
             stop_clash &> $logs_service && start_clash &>> $logs_service
-            cgroup_limit &> /data/clash/run/cgroup.log
+            cgroup_limit &>> $logs_service
             ;;
         k)
             stop_clash &>> $logs_service
