@@ -1,6 +1,7 @@
 id=ClashForMagisk
 name=Clash for Magisk
 version=v1.13.1
-versionCode=20220724
-author=t@amarin
-description=Clash core with service scripts for Android
+versionCode=20220920
+author=t🍀amarin
+description= Use iptables to support Clash's transparent proxy. Hey, damn half-crippled Android!!!
+updateJson=https://github.com/taamarin/ClashforMagisk/raw/master/update.json

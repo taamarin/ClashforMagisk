@@ -19,20 +19,19 @@ mod_config="${clash_data_sc}/clash.config"
 yacd_dir="${clash_data_dir}/dashboard"
 
 if [ $BOOTMODE ! = true ] ; then
-  abort "error: silahkan install di magisk manager"
+  abort "error: please install in magisk manager"
 fi
 
 if [ -d "${clash_data_dir}" ] ; then
-    ui_print "- folder Clash di temukan, Membuat Backup"
-    if [ -d "${clash_data_dir}/clash.old" ] ; then
-        rm -rf ${clash_data_dir}/clash.old
+    ui_print "- Clash folder found, Backup Clash"
+    if [ -d "${clash_data_dir}/clash.backup" ] ; then
+        rm -rf ${clash_data_dir}/clash.backup
     fi
-    mkdir -p ${clash_data_dir}/clash.old
-    mv ${clash_data_dir}/* ${clash_data_dir}/clash.old/
+    mkdir -p ${clash_data_dir}/clash.backup
+    mv ${clash_data_dir}/* ${clash_data_dir}/clash.backup/
 fi
 
-ui_print "- prepare clash execute environment"
-ui_print "- create folder Clash."
+ui_print "- Create folder Clash."
 mkdir -p ${clash_data_dir}
 mkdir -p ${clash_data_dir_kernel}
 mkdir -p ${MODPATH}${ca_path}
@@ -59,23 +58,23 @@ esac
 
 unzip -o "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH >&2
 
-ui_print "- unzip dashboard"
+ui_print "- Unzip file Dashboard"
 if [ ! -d /data/dashboard ] ; then
     rm -rf "${clash_data_dir}/dashboard/*"
 fi
 unzip -o ${MODPATH}/dashboard.zip -d ${clash_data_dir}/dashboard/ >&2
 
-ui_print "- move Scripts Clash"
+ui_print "- Move Scripts Clash"
 rm -rf "${clash_data_dir}/scripts/*"
 mv ${MODPATH}/scripts/* ${clash_data_dir}/scripts/
 mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
 
-ui_print "- move Cert & Geo"
+ui_print "- Move Cert & Geo"
 mv ${clash_data_dir}/scripts/cacert.pem ${MODPATH}${ca_path}
 mv ${MODPATH}/GeoX/* ${clash_data_dir}/
 
-ui_print "- konfigurasi folder service"
 if [ ! -d /data/adb/service.d ] ; then
+    ui_print "- Make folder service"
     mkdir -p /data/adb/service.d
 fi
 
@@ -91,7 +90,7 @@ if [ ! -f "${clash_data_dir}/scripts/packages.list" ] ; then
     touch ${clash_data_dir}/packages.list
 fi
 
-ui_print "- execute zipfile"
+ui_print "- Execute Zipfile"
 if [ ! -f "${MODPATH}/service.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 fi
@@ -104,7 +103,7 @@ if [ ! -f "${clash_service_dir}/clash_service.sh" ] ; then
     unzip -j -o "${ZIPFILE}" 'clash_service.sh' -d ${clash_service_dir} >&2
 fi
 
-ui_print "- proses kernel $ARCH execute files"
+ui_print "- Unzip $ARCH Execute files"
 tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${clash_data_dir_kernel}/&& echo "- extar kernel Succes" || echo "- extar kernel gagal"
 mv ${clash_data_dir_kernel}/setcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir_kernel}/getpcaps ${MODPATH}${bin_path}/
@@ -128,7 +127,7 @@ rm -rf ${clash_data_dir}/scripts/config.yaml
 
 sleep 1
 
-ui_print "- Mengatur Permissons"
+ui_print "- Arrange Permissons"
 set_perm_recursive ${MODPATH} 0 0 0755 0644
 set_perm_recursive ${clash_service_dir} 0 0 0755 0755
 set_perm_recursive ${clash_data_dir} ${uid} ${gid} 0755 0644
