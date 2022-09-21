@@ -40,6 +40,7 @@ mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
 mkdir -p ${clash_data_dir}/proxy-provider
+mkdir -p ${clash_data_dir}/mosdns
 
 case "${ARCH}" in
     arm)

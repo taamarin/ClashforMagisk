@@ -104,6 +104,43 @@ crontab_sec() {
         fi
 }
 
+run_mosdns() {
+start_mosdns () {
+    if [ -f ${mosdns_config_file} ] ; then
+        if [ "${run_mode}" == "1" ]; then
+           nohup ${mosdns_bin_path} start -d ${mosdns_data_dir} > ${Clash_run_path}/mosdns.log 2>&1 &
+           echo -n $! > ${Clash_run_path}/mosdns.pid
+           local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
+
+           if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
+              echo ${date_log}"info: mosdns has been activated." >> ${CFM_logs_file}
+           else
+              echo ${date_log}"error: mosdns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
+              echo "$(cat /data/clash/run/mosdns.log | grep Error)" >> ${CFM_logs_file}
+              exit 1
+           fi
+        fi
+    else
+        echo ${date_log}"info: mosdns Configuration file is missing." >> ${cfm_logs_file}
+        exit 1
+    fi
+}
+
+    if ! [ -f "/data/clash/mosdns/mosdns" ] ; then
+      echo ${date_log}"err: mosdns kernel is missing." >> ${CFM_logs_file}
+      exit 1
+    fi
+
+    if [ "${run_mode}" == "1" ]; then
+        local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
+        if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
+            echo ${date_log}"err: Detected that mosdns has been started, this time will not start." >> ${cfm_logs_file}
+        else
+            start_mosdns
+        fi
+    fi
+}
+
 run_clash() {
             if (${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/config.logs 2>&1) ; then
                 ulimit -SHn 1000000
@@ -145,6 +182,7 @@ start_clash() {
     else
         ${Clash_bin_path} -v >> ${CFM_logs_file}
     fi
+
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
     if [ "${ipv6}" == "false" ] ; then
         echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
@@ -203,6 +241,9 @@ start_clash() {
         echo $date_log"err: Clash kernel ${Clash_bin_path} not found !!!。" >> ${CFM_logs_file}
         exit 1
     fi
+
+    run_mosdns
+
     if [ -f ${temporary_config_file} ] ; then
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
             run_clash
@@ -265,6 +306,11 @@ stop_clash() {
     if [ -f ${Clash_run_path}/appuid.list ]; then
         rm -rf ${Clash_run_path}/appuid.list
     fi
+
+    if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
+        rm -rf ${Clash_run_path}/mosdns.pid
+    fi
+
     rm -rf ${Clash_pid_file}
 }
 
