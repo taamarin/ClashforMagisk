@@ -1,3 +1,5 @@
+tproxy-port: 9898
+socks-port: 7890
 mode: rule
 allow-lan: true
 unified-delay: true
@@ -57,6 +59,7 @@ dns:
   fake-ip-filter: [
     "*.local",
     "*.localhost",
+    "*.stun.twilio.com",
     "*.twilio.com",
     "*.*.twilio.com"
   ]
@@ -91,4 +94,3 @@ hosts: {
   "ota-cache1.googlezip.net": "127.0.0.1",
   "ota-cache2.googlezip.net": "127.0.0.1"
 }
-tproxy-port: 9898

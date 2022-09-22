@@ -306,6 +306,18 @@ update_kernel() {
     fi
 }
 
+cgroup_limit() {
+    if [ "${Cgroup_memory_limit}" == "" ]; then
+        return
+    fi
+    if [ "${Cgroup_memory_path}" == "" ]; then
+        Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
+    fi
+    mkdir -p "${Cgroup_memory_path}/clash"
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs"
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
+}
+
 update_dashboard() {
     url_dashboard="https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip"
     file_dasboard="/data/clash/dashboard.zip"
@@ -317,7 +329,7 @@ update_dashboard() {
     rm -rf ${file_dasboard}
 }
 
-while getopts ":afmupoxced" signal ; do
+while getopts ":afmupoxceld" signal ; do
     case ${signal} in
         a)
             clash_cron
@@ -327,7 +339,7 @@ while getopts ":afmupoxced" signal ; do
             ;;
         m)
             if [ "${mode}" = "blacklist" ] && [ -f "${Clash_pid_file}" ] ; then
-                monitor_local_ipv4 &>> $CFM_logs_service
+                monitor_local_ipv4 &>> $logs_service
             else
                 exit 0
             fi
@@ -352,6 +364,9 @@ while getopts ":afmupoxced" signal ; do
         o)
             sleep 0.5
             config_online
+            ;;
+        l)
+            cgroup_limit &>> /data/clash/run/service.log
             ;;
         x)
             file_start

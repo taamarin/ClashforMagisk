@@ -109,9 +109,9 @@ tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${clash_data_dir_kernel}/&& echo "
 mv ${clash_data_dir_kernel}/setcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir_kernel}/getpcaps ${MODPATH}${bin_path}/
 mv ${clash_data_dir_kernel}/getcap ${MODPATH}${bin_path}/
-mv ${clash_data_dir}/scripts/config.yaml ${clash_data_dir}/
 mv ${clash_data_dir}/scripts/clash.config ${clash_data_dir}/
-mv ${clash_data_dir}/scripts/proxy-provider ${clash_data_dir}/
+mv ${clash_data_dir}/scripts/mosdns ${clash_data_dir}/
+mv ${clash_data_dir}/mosdns/mosdns ${clash_data_dir_kernel}/
 
 if [ ! -f "${bin_path}/ss" ] ; then
     mv ${clash_data_dir_kernel}/ss ${MODPATH}${bin_path}/

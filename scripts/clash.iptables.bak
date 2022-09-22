@@ -451,43 +451,42 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               flush_rule_rules && flush_rules &>> /data/clash/run/service.log
+               flush_rule_rules && flush_rules &>> $logs_service
                echo $date_log"warn: scripts refresh Iptables tproxy" >> ${CFM_logs_file}
                sleep 0.5
-               create_rule_rules && apply_rules &>> /data/clash/run/service.log
+               create_rule_rules && apply_rules &>> $logs_service
                echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
                rm -rf /data/clash/run/lastwifi
                rm -rf /data/clash/run/lastmobile
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                    stop_tun_portabel &>> /data/clash/run/service.log
+                    stop_tun_portabel &>> $logs_service
                     echo $date_log"warn: refresh tun diterapkan" >> ${CFM_logs_file}
                     sleep 0.5
-                    start_tun_portabel &>> /data/clash/run/service.log
+                    start_tun_portabel &>> $logs_service
                     echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
                else
-                  stop_tun &>> /data/clash/run/service.log
+                  stop_tun &>> $logs_service
                   echo $date_log"warn: refresh scripts Iptables tun" >> ${CFM_logs_file}
                   sleep 0.5
-                  start_tun &>> /data/clash/run/service.log
+                  start_tun &>> $logs_service
                   echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
            rm -rf /data/clash/run/config.logs
-           rm -rf /data/clash/run/cmdRunning
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            echo $date_log"info: Connect" >> ${CFM_logs_file}
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                flush_rule_rules && flush_rules &>> /data/clash/run/service.log
+                flush_rule_rules && flush_rules &>> $logs_service
                 echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             else
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                    stop_tun_portabel &>> /data/clash/run/service.log
+                    stop_tun_portabel &>> $logs_service
                     echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
                 else
-                    stop_tun &>> /data/clash/run/service.log
+                    stop_tun &>> $logs_service
                     echo $date_log"warn: scripts Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi

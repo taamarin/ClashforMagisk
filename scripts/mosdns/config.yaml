@@ -1,0 +1,126 @@
+log:
+  level: debug
+  file: /data/clash/run/mosdns.txt
+
+data_providers:
+  - tag: geosite
+    file: ./geosite.dat
+    auto_reload: false
+  - tag: geoip
+    file: ./geoip.dat
+    auto_reload: false
+  - tag: hosts
+    file: ./hosts.txt
+
+plugins:
+
+  - tag: hosts
+    type: hosts
+    args:
+      hosts:
+        - "provider:hosts"
+
+  - tag: proxy
+    type: fast_forward
+    args:
+      upstream:
+        - addr: https://8.8.4.4/dns-query
+          idle_timeout: 86400
+          socks5: 127.0.0.1:7890
+        - addr: https://1.0.0.1/dns-query
+          idle_timeout: 86400
+          socks5: 127.0.0.1:7890
+
+  - tag: cache
+    type: cache
+    args:
+      size: 65536
+      lazy_cache_ttl: 86400
+      lazy_cache_reply_ttl: 15
+      cache_everything: true
+
+  - tag: ttl
+    type: ttl
+    args:
+      minimal_ttl: 600
+      maximum_ttl: 3600
+
+  - tag: direct
+    type: fast_forward
+    args:
+      upstream:
+        - addr: https://120.53.53.53/dns-query
+          idle_timeout: 86400
+          trusted: true
+        - addr: https://223.5.5.5/dns-query
+          idle_timeout: 86400
+
+  - tag: direct_domain
+    type: query_matcher
+    args:
+      domain:
+        - provider:geosite:geolocation-cn
+
+  - tag: direct_ip
+    type: response_matcher
+    args:
+      ip:
+        - provider:geoip:cn
+
+  - tag: clash
+    type: fast_forward
+    args:
+      upstream:
+        - addr: 127.0.0.1:1053
+          idle_timeout: 86400
+          trusted: true
+
+  - tag: query_is_ad_domain
+    type: query_matcher
+    args:
+      domain:
+        - 'provider:geosite:category-ads-all'
+
+  - tag: entrance_clash
+    type: sequence
+    args:
+      exec:
+        - hosts
+        - _misc_optm
+        - cache
+        - _pad_query
+        - if: direct_domain
+          exec:
+            - direct
+            - _return
+          else_exec:
+            - proxy
+            - if: (! direct_ip)
+              exec:
+                - _return
+              else_exec:
+                - direct
+                - _return
+        - ttl
+
+  - tag: entrance
+    type: sequence
+    args:
+      exec:
+        - if: query_is_ad_domain
+          exec:
+            - _new_nxdomain_response
+            - _return
+        - clash
+        - _return
+
+servers:
+  - exec: entrance
+    listeners:
+      - protocol: udp
+        addr: localhost:2053
+
+  - exec: entrance_clash
+    listeners:
+      - protocol: udp
+        addr: localhost:3053

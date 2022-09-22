@@ -21,18 +21,18 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.1" > /dev/null
+    echo "Clash for Magisk v1.13.2" >> ${CFM_logs_file}
 }
 
 replace_kernel() {
-    chmod 0755 /data/clash/kernel/lib/*
-    rm -rf /data/clash/kernel/clash
+    chmod 0755 ${Clash_lib}/*
+    rm -rf ${Clash_bin}/clash
     err="failed to replace kernel。"
     if [ "${use_premium}" == "true" ]; then
-        cp -f ${Clash_Premium} /data/clash/kernel/clash \
+        cp -f ${Clash_Premium} ${Clash_bin}/clash \
         && echo "" || echo $date_log"err: ${err}" >> ${CFM_logs_file}
     else
-        cp -f ${Clash_Meta} /data/clash/kernel/clash \
+        cp -f ${Clash_Meta} ${Clash_bin}/clash \
         && echo "" || echo $date_log"err: ${err}" >> ${CFM_logs_file}
     fi
 }
@@ -56,9 +56,9 @@ use_clash() {
 }
 
 temporary_config_file() {
-    if [ -f "${Clash_dns}" ] ; then
+    if [ -f "${Clash_template}" ] ; then
         if [ -f "${Clash_config_file}" ] ; then
-           cp -f ${Clash_dns} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
+           cp -f ${Clash_template} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
            sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
            sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
         else
@@ -66,7 +66,7 @@ temporary_config_file() {
            exit 1
         fi
     else
-        echo $date_log"err: files ${Clash_dns} not found !!!" >> ${CFM_logs_file}
+        echo $date_log"err: files ${Clash_template} not found !!!" >> ${CFM_logs_file}
         exit 1
     fi
 
@@ -126,7 +126,7 @@ start_mosdns () {
     fi
 }
 
-    if ! [ -f "/data/clash/mosdns/mosdns" ] ; then
+    if ! [ -f $mosdns_bin_path ] ; then
       echo ${date_log}"err: mosdns kernel is missing." >> ${CFM_logs_file}
       exit 1
     fi
@@ -184,28 +184,27 @@ start_clash() {
     fi
 
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
+    directory_net="/proc/sys/net/ipv6/conf"
     if [ "${ipv6}" == "false" ] ; then
-        echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
-        echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+        echo 1 > ${directory_net}/lo/disable_ipv6
+        echo 1 > ${directory_net}/default/disable_ipv6
 
-        echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
-        echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+        echo 0 > ${directory_net}/all/accept_ra
+        echo 0 > ${directory_net}/wlan0/accept_ra
 
-        echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
-        echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+        echo 1 > ${directory_net}/all/disable_ipv6
+        echo 1 > ${directory_net}/wlan0/disable_ipv6
     else
-        echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
-        echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+        echo 0 > ${directory_net}/lo/disable_ipv6
+        echo 0 > ${directory_net}/default/disable_ipv6
 
-        echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
-        echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+        echo 1 > ${directory_net}/all/accept_ra
+        echo 1 > ${directory_net}/wlan0/accept_ra
 
-        echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
-        echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
-    fi 
-
+        echo 0 > ${directory_net}/all/disable_ipv6
+        echo 0 > ${directory_net}/wlan0/disable_ipv6
+    fi
     use_clash
-
     echo $date_log"info: config ${Clash_config_file}。" >> ${CFM_logs_file}
     echo $date_log"info: Status ipv6: ${ipv6}" >> ${CFM_logs_file}
 
@@ -241,12 +240,18 @@ start_clash() {
         echo $date_log"err: Clash kernel ${Clash_bin_path} not found !!!。" >> ${CFM_logs_file}
         exit 1
     fi
-
-    run_mosdns
-
+    if [ "${run_mode}" == "1" ]; then
+        run_mosdns
+    fi
     if [ -f ${temporary_config_file} ] ; then
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
             run_clash
+            # cgroup_limit
+            if [ "${Cgroup_memory}" == "true" ] ; then
+                if ! (${scripts_dir}/clash.tool -l) ; then
+                    echo -n ""
+                fi
+            fi
         else
             echo $date_log"err: kernel CFM error/broken/not supported ">> ${CFM_logs_file}
             exit 1
@@ -255,6 +260,7 @@ start_clash() {
         echo $date_log"err: ${Clash_config_file} not found。" >> ${CFM_logs_file}
         exit 1
     fi
+    # RUN PORT DETEC
     sleep 0.5
     if [ "${port_detect}" == "true" ]; then
         if ! (${scripts_dir}/clash.tool -p) ; then
@@ -314,23 +320,10 @@ stop_clash() {
     rm -rf ${Clash_pid_file}
 }
 
-cgroup_limit() {
-    if [ "${Cgroup_memory_limit}" == "" ]; then
-        return
-    fi
-    if [ "${Cgroup_memory_path}" == "" ]; then
-        Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
-    fi
-    mkdir -p "${Cgroup_memory_path}/clash"
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs"
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
-}
-
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
             stop_clash &> $logs_service && start_clash &>> $logs_service
-            cgroup_limit &>> $logs_service
             ;;
         k)
             stop_clash &>> $logs_service
