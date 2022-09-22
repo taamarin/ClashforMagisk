@@ -111,12 +111,17 @@ start_mosdns () {
            nohup ${mosdns_bin_path} start -d ${mosdns_data_dir} > ${Clash_run_path}/mosdns.log 2>&1 &
            echo -n $! > ${Clash_run_path}/mosdns.pid
            local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
-
+           sleep 1
            if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
               echo ${date_log}"info: mosdns has been activated." >> ${CFM_logs_file}
            else
-              echo ${date_log}"error: mosdns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
-              echo "$(cat /data/clash/run/mosdns.log | grep Error)" >> ${CFM_logs_file}
+              echo ${date_log}"err: mosdns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
+              sed -i s/.*Error// ${Clash_run_path}/mosdns.log
+              sed -i 's/mosdns*//' ${Clash_run_path}/mosdns.log
+              while read p; do
+                 echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
+              done <${Clash_run_path}/mosdns.log
+              rm -rf ${Clash_run_path}/mosdns.pid
               exit 1
            fi
         fi
@@ -221,7 +226,10 @@ start_clash() {
         [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
         echo $date_log"info: select [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
         echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
+        # auto set tproxy-port 0
+        sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
     else
+        sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
         echo $date_log"info: select [tproxy] mode。" >> ${CFM_logs_file}
     fi
     temporary_config_file
@@ -242,6 +250,8 @@ start_clash() {
     fi
     if [ "${run_mode}" == "1" ]; then
         run_mosdns
+    else
+        rm -rf ${Clash_run_path}/mosdns.pid
     fi
     if [ -f ${temporary_config_file} ] ; then
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
@@ -249,7 +259,9 @@ start_clash() {
             # cgroup_limit
             if [ "${Cgroup_memory}" == "true" ] ; then
                 if ! (${scripts_dir}/clash.tool -l) ; then
-                    echo -n ""
+                    echo $date_log"warn: kernel does not support cgroup">> ${CFM_logs_file}
+                else
+                    echo $date_log"info: cgroup_limit: $Cgroup_memory_limit">> ${CFM_logs_file}
                 fi
             fi
         else
@@ -305,17 +317,22 @@ ceks_conflicts() {
     fi
 }
 
+stop_mosdns() {
+    if (kill -15 cat ${Clash_run_path}/mosdns.pid); then
+        rm -rf ${Clash_run_path}/mosdns.pid
+        echo $date_log"warn: mosdns stopped。" >> ${CFM_logs_file}
+    fi
+}
 stop_clash() {
     kill_clash
     kill_crond
     ceks_conflicts
+    stop_mosdns
+
     if [ -f ${Clash_run_path}/appuid.list ]; then
         rm -rf ${Clash_run_path}/appuid.list
     fi
 
-    if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
-        rm -rf ${Clash_run_path}/mosdns.pid
-    fi
 
     rm -rf ${Clash_pid_file}
 }

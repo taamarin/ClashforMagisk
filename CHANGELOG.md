@@ -1,10 +1,9 @@
 ## Changelog v1.13.2
-- fix: if failed 'cgroup_limit', can't run iptables, rebase scripts
+- fix: if failed `cgroup_limit`, can't run iptables, rebase scripts
+- using `TUN` auto change `proxy-port: 0`, if using `IPTABLES-TPROXY` auto change `tproxy-port: 9898`
+- display cgroup info
 - add: mosdns
 
 [![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19)
 [![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg)](https://github.com/taamarin/ClashforMagisk/releases)
 [![TELEGRAM](https://img.shields.io/badge/Telegram%20-Join%20Channel%20-blue)](https://t.me/nothing_taamarin)
-
-### Tutorial Clash For Magisk
-  > Tutorial [Tap Here](https://telegra.ph/%F0%9D%93%92%F0%9D%93%B5%F0%9D%93%AA%F0%9D%93%BC%F0%9D%93%B1%F0%9D%93%95%F0%9D%93%B8%F0%9D%93%BB%F0%9D%93%9C%F0%9D%93%AA%F0%9D%93%B0%F0%9D%93%B2%F0%9D%93%BC%F0%9D%93%B4-11-28)
