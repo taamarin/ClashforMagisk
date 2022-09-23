@@ -55,6 +55,20 @@ use_clash() {
     fi
 }
 
+tun_tproxy() {
+    if [ "${Clash_tun_status}" == "true" ] ; then
+        mkdir -p /dev/net
+        [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
+        echo $date_log"info: select [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
+        echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
+        # AUTO SET tproxy-port 0
+        sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
+    else
+        sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
+        echo $date_log"info: select [tproxy] mode。" >> ${CFM_logs_file}
+    fi
+}
+
 temporary_config_file() {
     if [ -f "${Clash_template}" ] ; then
         if [ -f "${Clash_config_file}" ] ; then
@@ -147,24 +161,25 @@ start_mosdns () {
 }
 
 run_clash() {
-            if (${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/config.logs 2>&1) ; then
+            ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/err.log
+            if [ "$?" = "0" ] ; then
                 ulimit -SHn 1000000
-                nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null  2>&1 &
+                nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
                 echo -n $! > ${Clash_pid_file}
-
-                sed -i s/.*msg=// ${Clash_run_path}/config.logs
-                sed -i 's/configuration file*//' ${Clash_run_path}/config.logs
+                # LOG
+                sed -i s/.*msg=// ${Clash_run_path}/err.log
+                sed -i 's/configuration file*//' ${Clash_run_path}/err.log
                 while read p; do
                     echo ${date_log}"info:" "$p" >> ${CFM_logs_file}
-                done <${Clash_run_path}/config.logs
+                done <${Clash_run_path}/err.log
             else
                 echo $date_log"err: ${Clash_config_file} failed" >> ${CFM_logs_file}
-                sed -i s/.*msg=// ${Clash_run_path}/config.logs
-                sed -i 's/fatal msg=*//' ${Clash_run_path}/config.logs
-                sed -i 's/configuration file*//' ${Clash_run_path}/config.logs
+                sed -i s/.*msg=// ${Clash_run_path}/err.log
+                sed -i 's/fatal msg=*//' ${Clash_run_path}/err.log
+                sed -i 's/configuration file*//' ${Clash_run_path}/err.log
                 while read p; do
                     echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
-                done <${Clash_run_path}/config.logs
+                done <${Clash_run_path}/err.log
 
                 if [ "${use_config}" == "false" ]; then
                     mv ${temporary_config_file} ${Clash_data_dir}/config.yaml
@@ -174,6 +189,17 @@ run_clash() {
                 echo $date_log"err: recheck ${Clash_config_file} & template。" >> ${CFM_logs_file}
                 exit 1
             fi
+            rm -rf ${Clash_run_path}/err.log
+}
+
+cgroup_limit() {
+            if [ "${Cgroup_memory}" == "true" ] ; then
+                if ! (${scripts_dir}/clash.tool -l) ; then
+                    echo $date_log"warn: kernel does not support cgroup">> ${CFM_logs_file}
+                else
+                    echo $date_log"info: cgroup_limit: $Cgroup_memory_limit">> ${CFM_logs_file}
+                fi
+            fi
 }
 
 start_clash() {
@@ -181,13 +207,7 @@ start_clash() {
     dow_config
     date_clash
     replace_kernel
-
-    if [ -f "/data/adb/modules/ClashForMagisk/disable" ]; then
-        echo ""
-    else
-        ${Clash_bin_path} -v >> ${CFM_logs_file}
-    fi
-
+    ${Clash_bin_path} -v >> ${CFM_logs_file}
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
     directory_net="/proc/sys/net/ipv6/conf"
     if [ "${ipv6}" == "false" ] ; then
@@ -220,18 +240,7 @@ start_clash() {
     else
         echo $date_log"info: run Clash service。" >> ${CFM_logs_file}
     fi
-
-    if [ "${Clash_tun_status}" == "true" ] ; then
-        mkdir -p /dev/net
-        [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-        echo $date_log"info: select [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
-        echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
-        # auto set tproxy-port 0
-        sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
-    else
-        sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
-        echo $date_log"info: select [tproxy] mode。" >> ${CFM_logs_file}
-    fi
+    tun_tproxy
     temporary_config_file
     if [ -f "${Clash_bin_path}" ] ; then
         chown root:net_admin ${Clash_bin_path}
@@ -251,19 +260,12 @@ start_clash() {
     if [ "${run_mode}" == "1" ]; then
         run_mosdns
     else
-        rm -rf ${Clash_run_path}/mosdns.pid
+        rm -rf ${Clash_run_path}/mosdns.log
     fi
     if [ -f ${temporary_config_file} ] ; then
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
             run_clash
-            # cgroup_limit
-            if [ "${Cgroup_memory}" == "true" ] ; then
-                if ! (${scripts_dir}/clash.tool -l) ; then
-                    echo $date_log"warn: kernel does not support cgroup">> ${CFM_logs_file}
-                else
-                    echo $date_log"info: cgroup_limit: $Cgroup_memory_limit">> ${CFM_logs_file}
-                fi
-            fi
+            cgroup_limit
         else
             echo $date_log"err: kernel CFM error/broken/not supported ">> ${CFM_logs_file}
             exit 1
@@ -271,15 +273,6 @@ start_clash() {
     else
         echo $date_log"err: ${Clash_config_file} not found。" >> ${CFM_logs_file}
         exit 1
-    fi
-    # RUN PORT DETEC
-    sleep 0.5
-    if [ "${port_detect}" == "true" ]; then
-        if ! (${scripts_dir}/clash.tool -p) ; then
-            exit 0
-        fi
-    else
-        echo $date_log"warn: skip port detected。" >> ${CFM_logs_file}
     fi
 }
 
@@ -306,6 +299,17 @@ kill_crond() {
     done
 }
 
+kill_mosdns() {
+    if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
+        rm -rf ${Clash_run_path}/mosdns.pid
+        echo $date_log"warn: mosdns stopped。" >> ${CFM_logs_file}
+    fi
+
+    if [ -f ${Clash_run_path}/appuid.list ]; then
+        rm -rf ${Clash_run_path}/appuid.list
+    fi
+}
+
 ceks_conflicts() {
     local PIDs=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${PIDs}/cmdline | grep -q ${Clash_bin_name}) ; then
@@ -317,30 +321,20 @@ ceks_conflicts() {
     fi
 }
 
-stop_mosdns() {
-    if (kill -15 cat ${Clash_run_path}/mosdns.pid); then
-        rm -rf ${Clash_run_path}/mosdns.pid
-        echo $date_log"warn: mosdns stopped。" >> ${CFM_logs_file}
-    fi
-}
 stop_clash() {
     kill_clash
     kill_crond
     ceks_conflicts
-    stop_mosdns
-
-    if [ -f ${Clash_run_path}/appuid.list ]; then
-        rm -rf ${Clash_run_path}/appuid.list
-    fi
-
-
+    kill_mosdns
+    # DELETE PID 
     rm -rf ${Clash_pid_file}
 }
 
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-            stop_clash &> $logs_service && start_clash &>> $logs_service
+            stop_clash &> $logs_service
+            start_clash &>> $logs_service
             ;;
         k)
             stop_clash &>> $logs_service

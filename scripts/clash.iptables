@@ -346,7 +346,18 @@ start_tun_portabel(){
         fi
 }
 
-log_service="/data/clash/run/service.log"
+detected_port() {
+    sleep 1
+    if [ "${port_detect}" == "true" ]; then
+        if ! (${scripts_dir}/clash.tool -p) ; then
+            exit 0
+        fi
+    else
+        echo $date_log"info: Skip!! port detected。" >> ${CFM_logs_file}
+    fi
+}
+
+log_service="$Clash_run_path/service.log"
 
 while getopts ":sk" signal ; do
     case ${signal} in
@@ -371,7 +382,7 @@ while getopts ":sk" signal ; do
                   echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
-           rm -rf /data/clash/run/config.logs
+           detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            echo $date_log"info: Connect" >> ${CFM_logs_file}
 

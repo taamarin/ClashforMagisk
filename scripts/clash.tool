@@ -89,8 +89,8 @@ find_packages_uid() {
             fi
         done
     else
-        echo $date_log"warn: bypass apps turn off" >> ${CFM_logs_file}
-        echo $date_log"warn: set [redir-host] to activate bypass apps (no recommend)" >> ${CFM_logs_file}
+        echo $date_log"info: bypass apps not active  " >> ${CFM_logs_file}
+        echo $date_log"info: enhanced-mode: $Clash_enhanced_mode " >> ${CFM_logs_file}
     fi
 }
 
@@ -154,8 +154,6 @@ auto_update() {
         if [ "${restart_clash}" == "true" ] ; then
             restart_clash
         fi
-    else
-        echo "" # $date_log"warn: Clash tidak dimulai ulang" >> ${CFM_logs_file}
     fi
 }
 
@@ -182,7 +180,6 @@ config_online() {
 }
 
 port_detection() {
-    sleep 2.5
     clash_pid=`cat ${Clash_pid_file}`
     match_count=0
     
@@ -195,7 +192,7 @@ port_detection() {
 
     echo -n $date_log"info: port detected: " >> ${CFM_logs_file}
     for sub_port in ${clash_port[*]} ; do
-        sleep 1
+        sleep 0.5
         echo -n "${sub_port} " >> ${CFM_logs_file}
     done
         echo "" >> ${CFM_logs_file} 
@@ -210,7 +207,7 @@ file_start() {
 
     php_bin_path="/data/data/com.termux/files/usr/bin/php"
     if [ -f ${php_bin_path} ] ; then
-        chown 0:3005 /data/data/com.termux/files/usr/bin/php
+        chown root:net_admin /data/data/com.termux/files/usr/bin/php
         chmod 0755 /data/data/com.termux/files/usr/bin/php
         nohup ${busybox_path} setuidgid 0:3005 /data/data/com.termux/files/usr/bin/php -S 0.0.0.0:9999 -t /data/clash > /dev/null 2>&1 &
         echo -n $! > /data/clash/run/filemanager.pid
