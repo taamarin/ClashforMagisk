@@ -19,12 +19,11 @@ create_run() {
 service_control() {
     if [ "${monitor_file}" = "disable" ] ; then
         if [ "${events}" = "d" ] ; then
-            ${service_path} -s && ${iptables_path} -s
+            ${service_path} -s &> ${logs_service} && ${iptables_path} -s &>> ${logs_service} &
         elif [ "${events}" = "n" ] ; then
-            ${service_path} -k && ${iptables_path} -k
+            ${service_path} -k &>> ${logs_service} && ${iptables_path} -k &>> ${logs_service} &
         fi
     fi
 }
-
 create_run
 service_control

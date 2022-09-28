@@ -1,5 +1,3 @@
-tproxy-port: 9898
-socks-port: 7890
 mode: rule
 allow-lan: true
 unified-delay: true
@@ -9,30 +7,20 @@ ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: dashboard/dist
-tcp-concurrent: false
+tcp-concurrent: true
 interface-name: ""
 enable-process: false
 geodata-loader: memconservative
-inbound-tfo: false
+inbound-tfo: true
 secret: ""
+# geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb",geoip: "https://github.com/v2fly/geoip/releases/latest/download/geoip-only-cn-private.dat",geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
 profile:
   store-selected: true
   store-fake-ip: false
 experimental: {
-    sniff-tls-sni: false, # featured CLASH.PREMIUM
+    sniff-tls-sni: false,
     fingerprint: ""
 }
-#auto-redir:
-#      enable: false, # featured CLASH.PREMIUM
-#      auto-route: false
-tun:
-  enable: false
-  device: Meta
-  stack: system
-  dns-hijack:
-    - any:53
-  auto-route: false
-  auto-detect-interface: false
 sniffer:
   enable: false
   sniffing:
@@ -45,52 +33,42 @@ sniffer:
   port-whitelist:
     - 443
     - 80
-dns:
-  enable: true
-  ipv6: true
-  prefer-h3: false # start DOH to use http/3 first
-  default-nameserver:
-    - 9.9.9.9
-    - 8.8.8.8
-  listen: 0.0.0.0:1053
-  use-hosts: true
-  enhanced-mode: fake-ip
-  fake-ip-range: 198.18.0.1/16
-  fake-ip-filter: [
-    "*.local",
-    "*.localhost",
-    "*.stun.twilio.com",
-    "*.twilio.com",
-    "*.*.twilio.com"
-  ]
-  nameserver:
-    - 1.1.1.1
-    - 149.112.112.112
-    - 94.140.14.14
-  fallback: [
-#     https://dns.google/dns-query,
-#     tls://dns.adguard-dns.com,
-#     https://1.1.1.1/dns-query,
-#     quic://dns.adguard-dns.com,
-#     tls://dns.google
-     ]
-  fallback-filter:
-    geoip: false
-    geoip-code: "!ID"
-    geosite: [
-#       GFW
-    ]
-    ipcidr: [
-#       240.0.0.0/4
-    ]
-    domain: [
-#        '+.google.com',
-#        '+.facebook.com',
-#        '+.youtube.com'
-    ]
 hosts: {
   "cacerts.digicert.com": "104.21.21.147",
   "ota.googlezip.net": "127.0.0.1",
   "ota-cache1.googlezip.net": "127.0.0.1",
   "ota-cache2.googlezip.net": "127.0.0.1"
 }
+tun:
+  enable: false
+  device: Meta
+  stack: system
+  dns-hijack:
+    - any:53
+  auto-route: false
+  auto-detect-interface: false
+dns:
+  enable: true
+  ipv6: true
+  prefer-h3: false
+  default-nameserver:
+    - 8.8.8.8
+  listen: 0.0.0.0:1053
+  use-hosts: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 28.0.0.1/8
+  fake-ip-filter: [
+    "*.local",
+    "*.localhost",
+  ]
+  nameserver:
+    - 1.1.1.1
+  fallback: []
+  fallback-filter:
+    geoip: false
+    geoip-code: "!ID"
+    geosite: [GFW]
+    ipcidr: []
+    domain: ['+.google.com','+.facebook.com','+.youtube.com']
+tproxy-port: 9898
+mixed-port: 7890

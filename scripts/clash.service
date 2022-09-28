@@ -55,6 +55,16 @@ use_clash() {
     fi
 }
 
+ceks_clash() {
+    local PID=`cat ${Clash_pid_file} 2> /dev/null`
+    if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name}) ; then
+        ${scripts_dir}/clash.iptables -s
+        exit 1
+    else
+        echo $date_log"info: run Clash service。" >> ${CFM_logs_file}
+    fi
+}
+
 tun_tproxy() {
     if [ "${Clash_tun_status}" == "true" ] ; then
         mkdir -p /dev/net
@@ -95,26 +105,18 @@ temporary_config_file() {
 
 crontab_sec() {
         if [ ! "${schedule_update_core}" == "false" ]; then
-            echo "${schedule_update_core} ${scripts_dir}/clash.tool -e" >> ${Clash_run_path}/root \
+            echo "${schedule_update_core} ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
             && echo $date_log"info: schedule update-kernel (${schedule_update_core})" >> ${CFM_logs_file}
         else
             echo $date_log"info: schedule update-kernel not active。" >> ${CFM_logs_file}
         fi
 
         if [ ! "${update_interval}" == "false" ]; then
-            echo "${update_interval} ${scripts_dir}/clash.tool -u" >> ${Clash_run_path}/root \
+            echo "${update_interval} ${scripts_dir}/clash.tool -s" >> ${Clash_run_path}/root \
             && echo $date_log"info: schedule update-GeoX & SubScription (${update_interval})。" >> ${CFM_logs_file}
             echo $date_log"info: Geo status: [${auto_updateGeoX}] | Subs status: [${auto_updateSubcript}]。" >> ${CFM_logs_file}
         else
             echo $date_log"info: schedule update-GeoX & Subs not active。" >> ${CFM_logs_file}
-        fi
-
-        sed -i '/^[  ]*$/d' ${CFM_logs_file}
-        if [ "${filter_local}" == "true" ] && [ "${Clash_tun_status}" == "false" ] ; then
-            clash_cron="${scripts_dir}/clash.tool -a"
-            echo "*/1 * * * * ${clash_cron}" >> ${Clash_run_path}/root && echo $date_log"warn: local Ip auto bypass is turn on。" >> ${CFM_logs_file}
-        else
-            echo ""
         fi
 }
 
@@ -140,7 +142,7 @@ start_mosdns () {
            fi
         fi
     else
-        echo ${date_log}"info: mosdns Configuration file is missing." >> ${cfm_logs_file}
+        echo ${date_log}"info: mosdns Configuration file is missing." >> ${CFM_logs_file}
         exit 1
     fi
 }
@@ -153,7 +155,7 @@ start_mosdns () {
     if [ "${run_mode}" == "1" ]; then
         local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
         if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
-            echo ${date_log}"err: Detected that mosdns has been started, this time will not start." >> ${cfm_logs_file}
+            echo ${date_log}"err: Detected that mosdns has been started, this time will not start." >> ${CFM_logs_file}
         else
             start_mosdns
         fi
@@ -166,7 +168,6 @@ run_clash() {
                 ulimit -SHn 1000000
                 nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
                 echo -n $! > ${Clash_pid_file}
-                # LOG
                 sed -i s/.*msg=// ${Clash_run_path}/err.log
                 sed -i 's/configuration file*//' ${Clash_run_path}/err.log
                 while read p; do
@@ -232,14 +233,7 @@ start_clash() {
     use_clash
     echo $date_log"info: config ${Clash_config_file}。" >> ${CFM_logs_file}
     echo $date_log"info: Status ipv6: ${ipv6}" >> ${CFM_logs_file}
-
-    local PID=`cat ${Clash_pid_file} 2> /dev/null`
-    if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name}) ; then
-        ${scripts_dir}/clash.iptables -s
-        exit 1
-    else
-        echo $date_log"info: run Clash service。" >> ${CFM_logs_file}
-    fi
+    ceks_clash
     tun_tproxy
     temporary_config_file
     if [ -f "${Clash_bin_path}" ] ; then
@@ -248,7 +242,7 @@ start_clash() {
         chmod 6755 ${Clash_bin_path}
         chmod 0644 ${temporary_config_file}
         setcap 'cap_net_admin,cap_net_raw+ep' ${Clash_bin_path}
-  
+        # crontab
         ${busybox_path} crontab -c ${Clash_run_path} -r
         touch ${Clash_run_path}/root
         chmod 0600 ${Clash_run_path}/root
@@ -267,7 +261,7 @@ start_clash() {
             run_clash
             cgroup_limit
         else
-            echo $date_log"err: kernel CFM error/broken/not supported ">> ${CFM_logs_file}
+            echo $date_log"err: kernel Clash error/broken/not supported ">> ${CFM_logs_file}
             exit 1
         fi
     else
@@ -310,34 +304,22 @@ kill_mosdns() {
     fi
 }
 
-ceks_conflicts() {
-    local PIDs=`cat ${Clash_pid_file} 2> /dev/null`
-    if (cat /proc/${PIDs}/cmdline | grep -q ${Clash_bin_name}) ; then
-        echo $date_log"err: clash conflicts, failed to stop Clash。" >> ${CFM_logs_file}
-        ${scripts_dir}/clash.iptables -s
-        exit 1
-    else
-        echo $date_log"warn: Clash has stopped。" >> ${CFM_logs_file}
-    fi
-}
-
 stop_clash() {
     kill_clash
     kill_crond
-    ceks_conflicts
     kill_mosdns
-    # DELETE PID 
     rm -rf ${Clash_pid_file}
+    echo $date_log"warn: Clash stopped。" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-            stop_clash &> $logs_service
-            start_clash &>> $logs_service
+            stop_clash
+            start_clash
             ;;
         k)
-            stop_clash &>> $logs_service
+            stop_clash
             ;;
         ?)
             echo ""

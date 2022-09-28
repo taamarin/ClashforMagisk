@@ -6,7 +6,6 @@ scripts_dir=`dirname ${scripts}`
 
 start_tproxy() {
     ip rule add fwmark ${mark_id} table ${mark_id}
-    # ip rule add fwmark ${mark_id} lookup ${mark_id}
     ip route add local default dev lo table ${mark_id}
     if [ "${ipv6}" == "true" ]; then
         ip -6 rule add fwmark ${mark_id} table ${mark_id}
@@ -63,7 +62,7 @@ start_tproxy() {
         done
     fi
 
-    # echo $date_log"info: filter/bypass mode: (${mode}). " >> ${CFM_logs_file}
+    # bypass apps
     ${scripts_dir}/clash.tool -f
     AID=`cat ${appuid_file} | sort -u`
     for appuid in ${AID[*]} ; do
@@ -357,41 +356,31 @@ detected_port() {
     fi
 }
 
-log_service="$Clash_run_path/service.log"
-
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               stop_tproxy &>> $log_service
-               echo $date_log"info: scripts refresh Iptables tproxy" >> ${CFM_logs_file}
-               sleep 0.5
-               start_tproxy &>> $log_service
+               stop_tproxy
+               start_tproxy
                echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
                if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                   stop_tun_portabel &>> $log_service
-                   echo $date_log"info: refresh tun diterapkan" >> ${CFM_logs_file}
-                   start_tun_portabel &>> $log_service
+                   stop_tun_portabel && start_tun_portabel
                    echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
                else
-                  sleep 0.5
-                  stop_tun &>> $log_service
-                  echo $date_log"info: refresh scripts Iptables tun" >> ${CFM_logs_file}
-                  start_tun &>> $log_service
+                  stop_tun
+                  start_tun
                   echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
                fi
            fi
            detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
-           echo $date_log"info: Connect" >> ${CFM_logs_file}
-
            # svc data disable && sleep 2
            # svc data enable
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
-                stop_tproxy &>> $log_service
+                stop_tproxy
                 echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             else
                 if [ "${Clash_auto_detect_interface}" == "true" ]; then
@@ -402,7 +391,6 @@ while getopts ":sk" signal ; do
                     echo $date_log"warn: scripts Iptables tun dihapus," >> ${CFM_logs_file}
                 fi
             fi
-            echo $date_log"warn: disConnect" >> ${CFM_logs_file}
             ;;
         ?)
             echo ""
