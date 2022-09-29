@@ -1,7 +1,7 @@
 ## Changelog v1.13.3
 - fix: schedule update **GeoX & SubScription**
 ### notes:
-command: 
+manual command : 
 ```shell
 su -c /data/clash/scripts/clash.tool -s
 ```
