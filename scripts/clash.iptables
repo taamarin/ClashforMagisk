@@ -222,112 +222,7 @@ stop_tproxy() {
     fi
 }
 
-start_tun() {
-    ip rule add fwmark ${mark_id} table ${mark_id}
-    ip route add default dev ${tun_device} table ${mark_id}
-
-    if [ "${ipv6}" == "true" ] ; then
-        ip -6 rule add fwmark ${mark_id} table ${mark_id}
-        ip -6 route add default dev ${tun_device} table ${mark_id}
-    fi
-
-    ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
-    ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-
-    ${iptables_wait} -t mangle -N CLASH_EXTERNAL
-    ${iptables_wait} -t mangle -N CLASH_LOCAL
-
-    for subnet in ${reserved_ip[*]} ; do
-        ${iptables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
-    done
-
-    # echo $date_log"info: filter/bypass mode: (${mode})" >> ${CFM_logs_file}
-    ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-    ${scripts_dir}/clash.tool -f
-    AID=`cat ${appuid_file} | sort -u`
-        for appuid in ${AID[*]} ; do
-            ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-        done
-
-    ${iptables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
-    ${iptables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
-
-    if [ "${ipv6}" == "true" ] ; then
-        ${ip6tables_wait} -I FORWARD -o ${tun_device} -j ACCEPT	
-        ${ip6tables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
-
-        ${ip6tables_wait} -t mangle -N CLASH_EXTERNAL
-        ${ip6tables_wait} -t mangle -N CLASH_LOCAL
-
-        for subnet in ${reserved_ip6[*]} ; do
-            ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
-        done
-
-        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner 3005 -j RETURN
-        AID=`cat ${appuid_file} | sort -u`
-        for appuid in ${AID[*]} ; do
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --gid-owner ${appuid} -j RETURN
-        done
-
-        ${ip6tables_wait} -t mangle -A CLASH_EXTERNAL -j MARK --set-xmark ${mark_id}
-        ${ip6tables_wait} -t mangle -I PREROUTING -j CLASH_EXTERNAL
-    fi
-
-    for subnet in ${reserved_ip[*]} ; do
-        ${iptables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
-    done
-
-    ${iptables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-    ${iptables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
-    ${iptables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
-
-    if [ "${ipv6}" == "true" ] ; then
-        for subnet in ${reserved_ip6[*]} ; do
-            ${ip6tables_wait} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
-        done
-
-        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-        ${ip6tables_wait} -t mangle -A CLASH_LOCAL -j MARK --set-xmark ${mark_id}
-        ${ip6tables_wait} -t mangle -I OUTPUT -j CLASH_LOCAL
-    fi
-}
-
-stop_tun() {
-    ip rule del fwmark ${mark_id} table ${mark_id}
-    #ip rule del fwmark ${mark_id} lookup ${mark_id}
-    ip route del default dev ${tun_device} table ${mark_id}
-    if [ "${ipv6}" == "true" ] ; then
-        ip -6 rule del fwmark ${mark_id} lookup ${mark_id}
-        ip -6 route del default dev ${tun_device} table ${mark_id}
-    fi
-
-    ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-    ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-    if [ "${ipv6}" == "true" ] ; then
-        ${ip6tables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
-        ${ip6tables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
-    fi
-
-    ${iptables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
-    ${iptables_wait} -t mangle -F CLASH_LOCAL
-    ${iptables_wait} -t mangle -X CLASH_LOCAL
-    if [ "${ipv6}" == "true" ] ; then
-        ${ip6tables_wait} -t mangle -D OUTPUT -j CLASH_LOCAL
-        ${ip6tables_wait} -t mangle -F CLASH_LOCAL
-        ${ip6tables_wait} -t mangle -X CLASH_LOCAL
-    fi
-    
-    ${iptables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
-    ${iptables_wait} -t mangle -F CLASH_EXTERNAL
-    ${iptables_wait} -t mangle -X CLASH_EXTERNAL
-    if [ "${ipv6}" == "true" ] ; then
-        ${ip6tables_wait} -t mangle -D PREROUTING -j CLASH_EXTERNAL
-        ${ip6tables_wait} -t mangle -F CLASH_EXTERNAL
-        ${ip6tables_wait} -t mangle -X CLASH_EXTERNAL
-    fi
-}
-
-stop_tun_portabel(){
+stop_tun(){
     ${iptables_wait} -D FORWARD -o ${tun_device} -j ACCEPT
     ${iptables_wait} -D FORWARD -i ${tun_device} -j ACCEPT
         if [ "${ipv6}" = "true" ] ; then
@@ -336,7 +231,7 @@ stop_tun_portabel(){
         fi
 }
 
-start_tun_portabel(){
+start_tun(){
     ${iptables_wait} -I FORWARD -o ${tun_device} -j ACCEPT
     ${iptables_wait} -I FORWARD -i ${tun_device} -j ACCEPT
         if [ "${ipv6}" = "true" ] ; then
@@ -360,18 +255,12 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               stop_tproxy
-               start_tproxy
+               stop_tproxy && start_tproxy
                echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
-               if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                   stop_tun_portabel && start_tun_portabel
-                   echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
-               else
-                  stop_tun
-                  start_tun
-                  echo $date_log"info: scripts Iptables tun diterapkan" >> ${CFM_logs_file}
-               fi
+               stop_tun
+               start_tun
+               echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
            fi
            detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
@@ -383,13 +272,8 @@ while getopts ":sk" signal ; do
                 stop_tproxy
                 echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
             else
-                if [ "${Clash_auto_detect_interface}" == "true" ]; then
-                    stop_tun_portabel
-                    echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
-                else
-                    stop_tun
-                    echo $date_log"warn: scripts Iptables tun dihapus," >> ${CFM_logs_file}
-                fi
+                stop_tun
+                echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
             fi
             ;;
         ?)

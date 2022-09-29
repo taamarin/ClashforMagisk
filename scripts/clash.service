@@ -72,8 +72,12 @@ tun_tproxy() {
         echo $date_log"info: select [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
         echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
         # AUTO SET tproxy-port 0
+        sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' $Clash_template
+        sed -i 's/auto-route:.*/auto-route: true/' $Clash_template
         sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
     else
+        sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' $Clash_template
+        sed -i 's/auto-route:.*/auto-route: false/' $Clash_template
         sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
         echo $date_log"info: select [tproxy] mode。" >> ${CFM_logs_file}
     fi
