@@ -19,14 +19,23 @@ mod_config="${clash_data_sc}/clash.config"
 yacd_dir="${clash_data_dir}/dashboard"
 latest=$(date +%Y%m%d%H%M)
 
-if [ $BOOTMODE ! = true ] ; then
-  abort "error: please install in magisk manager"
+if [ $BOOTMODE = false ]; then
+	ui_print "- Installing through TWRP Not supported"
+	ui_print "- Intsall this module via Magisk Manager"
+	abort "- ! Aborting installation !"
 fi
 
+ui_print "- Installing Clash for Magisk"
+
 if [ -d "${clash_data_dir}" ] ; then
-    ui_print "- Clash folder found, Backup Clash"
+    ui_print "- Backup Clash"
     mkdir -p ${clash_data_dir}/${latest}
     mv ${clash_data_dir}/* ${clash_data_dir}/${latest}/
+fi
+
+if [ -f ${clash_data_dir}/${latest}/*.yaml ] ; then
+    ui_print "- Restore config.yaml"
+    cp ${clash_data_dir}/${latest}/*.yaml ${clash_data_dir}/
 fi
 
 ui_print "- Create folder Clash."
@@ -56,14 +65,14 @@ esac
 
 unzip -o "${ZIPFILE}" -x 'META-INF/*' -d $MODPATH >&2
 
-ui_print "- Unzip Dashboard"
+ui_print "- Extract Dashboard"
 unzip -o ${MODPATH}/dashboard.zip -d ${clash_data_dir}/dashboard/ >&2
 
 ui_print "- Move Scripts Clash"
 mv ${MODPATH}/scripts/* ${clash_data_dir}/scripts/
 mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
 
-ui_print "- Move Cert & Geo"
+ui_print "- Move Cert&Geo"
 mv ${clash_data_dir}/scripts/cacert.pem ${MODPATH}${ca_path}
 mv ${MODPATH}/GeoX/* ${clash_data_dir}/
 
@@ -81,6 +90,7 @@ if [ ! -f "${dns_path}/resolv.conf" ] ; then
     echo nameserver 149.112.112.112 >> ${MODPATH}${dns_path}/resolv.conf
 fi
 
+ui_print "- Make packages.list"
 if [ ! -f "${clash_data_dir}/scripts/packages.list" ] ; then
     touch ${clash_data_dir}/packages.list
 fi
@@ -89,7 +99,7 @@ unzip -j -o "${ZIPFILE}" 'service.sh' -d ${MODPATH} >&2
 unzip -j -o "${ZIPFILE}" 'uninstall.sh' -d ${MODPATH} >&2
 unzip -j -o "${ZIPFILE}" 'clash_service.sh' -d ${clash_service_dir} >&2
 
-ui_print "- Unzip $ARCH Execute files"
+ui_print "- Extract binary-$ARCH "
 tar -xjf ${MODPATH}/binary/${ARCH}.tar.bz2 -C ${clash_data_dir_kernel}/&& echo "- extar kernel Succes" || echo "- extar kernel gagal"
 mv ${clash_data_dir_kernel}/setcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir_kernel}/getpcaps ${MODPATH}${bin_path}/
@@ -138,3 +148,5 @@ set_perm  ${clash_data_dir}/scripts/clash.cron 0  0  0755
 set_perm  ${clash_data_dir}/scripts/start.sh 0  0  0755
 set_perm  ${clash_data_dir}/clash.config ${uid} ${gid} 0755
 set_perm  ${clash_service_dir}/clash_service.sh  0  0  0755
+sleep 1
+ui_print "- Installation is complete, reboot your device"
