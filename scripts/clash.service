@@ -21,7 +21,7 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.3" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.13.4" >> ${CFM_logs_file}
 }
 
 replace_kernel() {

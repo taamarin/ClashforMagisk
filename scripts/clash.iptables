@@ -255,7 +255,8 @@ while getopts ":sk" signal ; do
     case ${signal} in
         s)
            if [ "${Clash_tun_status}" == "false" ]; then
-               stop_tproxy && start_tproxy
+               stop_tproxy
+               start_tproxy
                echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
            else
                stop_tun
