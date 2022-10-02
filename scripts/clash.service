@@ -58,10 +58,9 @@ use_clash() {
 ceks_clash() {
     local PID=`cat ${Clash_pid_file} 2> /dev/null`
     if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name}) ; then
+        echo $date_log"warn: Clash service still started" >> ${CFM_logs_file}
         ${scripts_dir}/clash.iptables -s
         exit 1
-    else
-        echo $date_log"info: run Clash service。" >> ${CFM_logs_file}
     fi
 }
 
@@ -288,6 +287,7 @@ kill_clash() {
         echo $date_log"warn: hard kill Clash" >> ${CFM_logs_file}
         kill -9 `cat ${Clash_pid_file}`
     fi
+    kill -15 `cat ${Clash_pid_file}`
 }
 
 kill_crond() {
@@ -302,7 +302,6 @@ kill_mosdns() {
         rm -rf ${Clash_run_path}/mosdns.pid
         echo $date_log"warn: mosdns stopped。" >> ${CFM_logs_file}
     fi
-
     if [ -f ${Clash_run_path}/appuid.list ]; then
         rm -rf ${Clash_run_path}/appuid.list
     fi
@@ -310,6 +309,7 @@ kill_mosdns() {
 
 stop_clash() {
     kill_clash
+    ceks_clash
     kill_crond
     kill_mosdns
     rm -rf ${Clash_pid_file}
