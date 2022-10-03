@@ -21,7 +21,7 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.6-beta" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.13.6" >> ${CFM_logs_file}
 }
 
 replace_kernel() {
@@ -128,14 +128,14 @@ crontab_sec() {
         fi
 }
 
-run_mosdns() {
+mosdns() {
     if ! [ -f $mosdns_bin_path ] ; then
       echo ${date_log}"err: mosdns kernel is missing." >> ${CFM_logs_file}
       exit 1
     fi
 
     if [ -f ${mosdns_config_file} ] ; then
-        if [ "${run_mode}" == "1" ]; then
+        if [ "${run_mosdns}" == "1" ]; then
            nohup ${mosdns_bin_path} start -d ${mosdns_data_dir} > ${Clash_run_path}/mosdns.log 2>&1 &
            echo -n $! > ${Clash_run_path}/mosdns.pid
            sleep 1
@@ -252,7 +252,7 @@ start_clash() {
     fi
 
     if [ "${run_mosdns}" == "1" ]; then
-        run_mosdns
+        mosdns
     else
         echo $date_log"info: mosdns is disabled" >> ${CFM_logs_file}
         rm -rf ${Clash_run_path}/mosdns.log

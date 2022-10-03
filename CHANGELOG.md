@@ -1,4 +1,7 @@
-## ⟳ Changelog v1.13.5
+## ⟳ Changelog v1.13.6
+- add: dns-client for v2rayDNS [TUTORIAL](https://t.me/taamarin/29983)
+
+#### ⟳ Changelog v1.13.5
 - [Fix, can't stop CFM on old version of 'phone/android'](https://t.me/taamarin/28926)
 
 #### ⟳ Changelog v1.13.4
@@ -7,14 +10,8 @@
   - enable: true
   - auto-route: true
   - auto-detect-interface: true
-#### ⟳ Changelog v1.13.3
-- fix: schedule update **GeoX & SubScription**
-- ##### NOTES:
-    - *`/data/clash/scripts/clash.tool -s`*
-    - **auto_updateSubcript** *clash.config line 31*
-    - **Subcript_url** *clash.config line 33*
-    - **auto_updateGeoX** *clash.config line 118*
-    - or use [APK](https://github.com/taamarin/ClashforMagisk/releases/download/v1.13.2/ClashforMagisk-v1.6.0.apk)
+
+[FULL CHANGELOG......](https://github.com/taamarin/ClashforMagisk/releases)
 
 [![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg)](https://github.com/taamarin/ClashforMagisk/releases)
 [![TELEGRAM](https://img.shields.io/badge/Telegram%20-Join%20Channel%20-blue)](https://t.me/nothing_taamarin)
