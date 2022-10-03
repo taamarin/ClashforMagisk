@@ -148,6 +148,8 @@ set_perm  ${clash_data_dir}/scripts/clash.service 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.cron 0  0  0755
 set_perm  ${clash_data_dir}/scripts/start.sh 0  0  0755
 set_perm  ${clash_data_dir}/clash.config ${uid} ${gid} 0755
+set_perm  ${clash_data_dir}/kernel/mosdns  0  0  0755
+set_perm  ${clash_data_dir}/kernel/v2dns  0  0  0755
 set_perm  ${clash_service_dir}/clash_service.sh  0  0  0755
 sleep 1
 ui_print "- Installation is complete, reboot your device"

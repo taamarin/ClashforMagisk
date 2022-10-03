@@ -5,12 +5,16 @@
 </h1>
 <h4 align="center">Proxy Transparan for android.</h4>
 
-![Watchers](https://img.shields.io/github/watchers/taamarin/ClashforMagisk) 
-[![MAGISK](https://img.shields.io/badge/Magisk%20-v20.4+-brightgreen)](https://github.com/topjohnwu/Magisk)
-[![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19)
+
+<div align="center">
+
 [![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg)](https://github.com/taamarin/ClashforMagisk/releases)
 [![TELEGRAM](https://img.shields.io/badge/Telegram%20-Channel%20-blue)](https://t.me/nothing_taamarin)
+[![MAGISK](https://img.shields.io/badge/Magisk%20-v20.4+-brightgreen)](https://github.com/topjohnwu/Magisk)
+[![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19)
 ![Vistors](https://visitor-badge.laobi.icu/badge?page_id=taamarin.ClashforMagisk) 
+
+</div>
 
 A fork of [ClashForMagisk](https://github.com/kalasutra/Clash_For_Magisk)
 

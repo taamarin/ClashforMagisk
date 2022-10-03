@@ -271,7 +271,7 @@ cgroup_limit() {
     echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
 }
 
-update_dashboard() {
+up_dashboard() {
     url_dashboard="https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip"
     file_dasboard="${Clash_data_dir}/dashboard.zip"
     rm -rf ${Clash_data_dir}/dashboard/dist
@@ -289,13 +289,14 @@ v2dns() {
                nohup /data/clash/kernel/v2dns -udp ${dns_for_v2dns}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
                echo -n $! > ${Clash_run_path}/v2dns.pid
 
-               sleep 1
+               sleep 0.75
                local v2dns_pid=`cat ${Clash_run_path}/v2dns.pid 2> /dev/null`
-               if (cat /proc/${v2dns_pid}/cmdline | grep -q v2dns); then
+               if (cat /proc/${v2dns_pid}/cmdline | grep -q v2dns) ; then
                   echo ${date_log}"info: v2dns is enable." >> ${CFM_logs_file}
                else
-                  echo ${date_log}"err: v2dns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
-                  exit 1
+                  echo ${date_log}"err: v2dns The configuration is incorrect," >> ${CFM_logs_file}
+                  echo ${date_log}"err: the startup fails, and the following is the error" >> ${CFM_logs_file}
+                  kill -15 `cat ${Clash_run_path}/v2dns.pid`
                fi
             else
                 echo ${date_log}"warn: v2dns tidak aktif,"  >> ${CFM_logs_file}
@@ -339,7 +340,7 @@ while getopts ":fmspokldv" signal ; do
             update_kernel
             ;;
         d)
-            update_dashboard
+            up_dashboard
             ;;
         v)
             v2dns
