@@ -66,14 +66,19 @@ ceks_clash() {
 
 tun_tproxy() {
     if [ "${Clash_tun_status}" == "true" ] ; then
-        mkdir -p /dev/net
-        [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-        echo $date_log"info: turn on TUN mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
-        echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
+        if [ ${arm} == "aarch64" ] ; then
+            mkdir -p /dev/net
+            [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
+            echo $date_log"info: turn on TUN mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
+            echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
         # AUTO SET tproxy-port 0
-        sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' $Clash_template
-        sed -i 's/auto-route:.*/auto-route: true/' $Clash_template
-        sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
+            sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' $Clash_template
+            sed -i 's/auto-route:.*/auto-route: true/' $Clash_template
+            sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
+        else
+            echo $date_log"err: TUN only for ARM64/ARMv8。" >> ${CFM_logs_file}
+            exit 1
+        fi
     else
         sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' $Clash_template
         sed -i 's/auto-route:.*/auto-route: false/' $Clash_template
@@ -171,6 +176,7 @@ run_clash() {
                 ulimit -SHn 1000000
                 nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
                 echo -n $! > ${Clash_pid_file}
+
                 sed -i s/.*msg=// ${Clash_run_path}/err.log
                 sed -i 's/configuration file*//' ${Clash_run_path}/err.log
                 while read p; do
@@ -213,7 +219,7 @@ start_clash() {
     date_clash
     replace_kernel
     ${Clash_bin_path} -v >> ${CFM_logs_file}
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
     directory_net="/proc/sys/net/ipv6/conf"
     if [ "${ipv6}" == "false" ] ; then
         echo 1 > ${directory_net}/lo/disable_ipv6
