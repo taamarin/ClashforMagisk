@@ -352,6 +352,7 @@ while getopts ":sk" signal ; do
                echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
            fi
            detected_port
+           ${scripts_dir}/clash.tool -v
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            # svc data disable && sleep 2
            # svc data enable

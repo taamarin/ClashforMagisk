@@ -21,7 +21,7 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.5" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.13.6-beta" >> ${CFM_logs_file}
 }
 
 replace_kernel() {
@@ -94,11 +94,11 @@ temporary_config_file() {
            sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
            sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
         else
-           echo $date_log"err: files ${Clash_config_file} not found !!!" >> ${CFM_logs_file}
+           echo $date_log"err: ${Clash_config_file} file is missing!!!" >> ${CFM_logs_file}
            exit 1
         fi
     else
-        echo $date_log"err: files ${Clash_template} not found !!!" >> ${CFM_logs_file}
+        echo $date_log"err: ${Clash_template} file is missing !!!" >> ${CFM_logs_file}
         exit 1
     fi
 
@@ -106,7 +106,7 @@ temporary_config_file() {
     && echo $date_log"info: merge files ${Clash_config_file} & template Succes。" >> ${CFM_logs_file} || echo $date_log"err: merge files ${Clash_config_file} & template failed !!!" >> ${CFM_logs_file}
 
     if [ ! -f "${temporary_config_file}" ] ; then
-       echo $date_log"err: ${temporary_config_file} not found !!!。" >> ${CFM_logs_file}
+       echo $date_log"err: ${temporary_config_file} file is missing !!!。" >> ${CFM_logs_file}
        exit 1
     fi
 }
@@ -129,13 +129,18 @@ crontab_sec() {
 }
 
 run_mosdns() {
-start_mosdns () {
+    if ! [ -f $mosdns_bin_path ] ; then
+      echo ${date_log}"err: mosdns kernel is missing." >> ${CFM_logs_file}
+      exit 1
+    fi
+
     if [ -f ${mosdns_config_file} ] ; then
         if [ "${run_mode}" == "1" ]; then
            nohup ${mosdns_bin_path} start -d ${mosdns_data_dir} > ${Clash_run_path}/mosdns.log 2>&1 &
            echo -n $! > ${Clash_run_path}/mosdns.pid
-           local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
            sleep 1
+
+           local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
            if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
               echo ${date_log}"info: mosdns is enable." >> ${CFM_logs_file}
            else
@@ -145,28 +150,12 @@ start_mosdns () {
               while read p; do
                  echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
               done <${Clash_run_path}/mosdns.log
-              rm -rf ${Clash_run_path}/mosdns.pid
               exit 1
            fi
         fi
     else
         echo ${date_log}"info: mosdns Configuration file is missing." >> ${CFM_logs_file}
         exit 1
-    fi
-}
-
-    if ! [ -f $mosdns_bin_path ] ; then
-      echo ${date_log}"err: mosdns kernel is missing." >> ${CFM_logs_file}
-      exit 1
-    fi
-
-    if [ "${run_mode}" == "1" ]; then
-        local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
-        if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
-            echo ${date_log}"warn: It was detected that mosdns has been activated, this time will not start." >> ${CFM_logs_file}
-        else
-            start_mosdns
-        fi
     fi
 }
 
@@ -258,15 +247,17 @@ start_clash() {
         chmod 0600 ${Clash_run_path}/root
         crontab_sec
     else
-        echo $date_log"err: Clash kernel ${Clash_bin_path} not found !!!。" >> ${CFM_logs_file}
+        echo $date_log"err: Clash kernel ${Clash_bin_path} file is missing !!!。" >> ${CFM_logs_file}
         exit 1
     fi
-    if [ "${run_mode}" == "1" ]; then
+
+    if [ "${run_mosdns}" == "1" ]; then
         run_mosdns
     else
         echo $date_log"info: mosdns is disabled" >> ${CFM_logs_file}
         rm -rf ${Clash_run_path}/mosdns.log
     fi
+
     if [ -f ${temporary_config_file} ] ; then
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
             run_clash
@@ -276,7 +267,7 @@ start_clash() {
             exit 1
         fi
     else
-        echo $date_log"err: ${Clash_config_file} not found。" >> ${CFM_logs_file}
+        echo $date_log"err: ${Clash_config_file} file is missing。" >> ${CFM_logs_file}
         exit 1
     fi
 }
@@ -311,17 +302,30 @@ kill_mosdns() {
     fi
 }
 
+kil_v2dns() {
+    if (kill -15 `cat ${Clash_run_path}/v2dns.pid`); then
+        v2dnskill=$(ps -ef | grep root | grep "/data/clash/kernel/v2dns" | ${busybox_path} awk '{ print $2 }' | sort -u)
+        for v2kil in ${v2dnskill[*]} ; do
+           kill -15 ${v2kil}
+        done
+        rm -rf ${Clash_run_path}/v2dns.pid
+        echo $date_log"warn: v2dns Stopped。" >> ${CFM_logs_file}
+    fi
+}
+
 stop_clash() {
     kill_clash
     ceks_clash
     kill_crond
     kill_mosdns
+    kil_v2dns
+
     rm -rf ${Clash_pid_file}
     rm -rf ${Clash_run_path}/appuid.list
     echo $date_log"warn: Clash Stopped。" >> ${CFM_logs_file}
 }
 
-while getopts ":sk" signal ; do
+while getopts ":skv" signal ; do
     case ${signal} in
         s)
             stop_clash

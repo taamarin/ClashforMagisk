@@ -282,7 +282,34 @@ update_dashboard() {
     rm -rf ${file_dasboard}
 }
 
-while getopts ":fmspokld" signal ; do
+v2dns() {
+    if [ "${run_v2dns}" == "1" ]; then
+        if [ -f /data/clash/kernel/v2dns ]; then
+            if [ ! ${nsdomain} == "" ] && [ ! ${pubkey} == "" ]; then
+               nohup /data/clash/kernel/v2dns -udp ${dns_for_v2dns}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
+               echo -n $! > ${Clash_run_path}/v2dns.pid
+
+               sleep 1
+               local v2dns_pid=`cat ${Clash_run_path}/v2dns.pid 2> /dev/null`
+               if (cat /proc/${v2dns_pid}/cmdline | grep -q v2dns); then
+                  echo ${date_log}"info: v2dns is enable." >> ${CFM_logs_file}
+               else
+                  echo ${date_log}"err: v2dns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
+                  exit 1
+               fi
+            else
+                echo ${date_log}"warn: v2dns tidak aktif,"  >> ${CFM_logs_file}
+                echo ${date_log}"warn: 'nsdomain' & 'pubkey' kosong,"  >> ${CFM_logs_file}
+            fi
+        else
+            echo ${date_log}"err: kernel v2dns tidak ada." >> ${CFM_logs_file}
+        fi
+    else
+        echo ${date_log}"info: v2dns is disable." >> ${CFM_logs_file}
+    fi
+}
+
+while getopts ":fmspokldv" signal ; do
     case ${signal} in
         f)
             find_packages_uid
@@ -313,6 +340,9 @@ while getopts ":fmspokld" signal ; do
             ;;
         d)
             update_dashboard
+            ;;
+        v)
+            v2dns
             ;;
         ?)
             echo ""
