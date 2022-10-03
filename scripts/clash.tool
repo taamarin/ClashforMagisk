@@ -87,7 +87,7 @@ find_packages_uid() {
             fi
         done
     else
-        echo $date_log"info: bypass apps not active  " >> ${CFM_logs_file}
+        echo $date_log"info: app filter/bypass not enabled" >> ${CFM_logs_file}
         echo $date_log"info: enhanced-mode: $Clash_enhanced_mode " >> ${CFM_logs_file}
     fi
 }
@@ -167,7 +167,7 @@ config_online() {
         echo $date_log"info: download succes." >> ${CFM_logs_file}
         exit 0
     else
-        echo $date_log"err: download failed, pastikan Url Tidak kosong" >> ${CFM_logs_file}
+        echo $date_log"err: download failed, Make sure the Url is not empty" >> ${CFM_logs_file}
         exit 1
     fi
 }
@@ -210,7 +210,7 @@ update_kernel() {
         fi
     else
         filename=$(curl -fsSL ${url_premium}/expanded_assets/premium | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
-        update_file ${Clash_data_dir}/"${file_kernel}".gz ${url_premium}/download/premium/${filename}.gz #> /dev/null 2>&1
+        update_file ${Clash_data_dir}/"${file_kernel}".gz ${url_premium}/download/premium/${filename}.gz
         if [ "$?" = "0" ]; then
             flag=false
         fi

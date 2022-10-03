@@ -19,7 +19,7 @@ mod_config="${clash_data_sc}/clash.config"
 yacd_dir="${clash_data_dir}/dashboard"
 latest=$(date +%Y%m%d%H%M)
 
-if [ $BOOTMODE = false ]; then
+if [ $BOOTMODE ! = true ] ; then
 	ui_print "- Installing through TWRP Not supported"
 	ui_print "- Intsall this module via Magisk Manager"
 	abort "- ! Aborting installation !"

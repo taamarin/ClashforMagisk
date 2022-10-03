@@ -40,14 +40,14 @@ replace_kernel() {
 use_clash() {
     if [ "${use_premium}" == "true" ]; then
         if [ -f "${Clash_bin_path}" ] ; then
-            echo $date_log"info: select Clash Premium。" >> ${CFM_logs_file}
+            echo $date_log"info: Clash Premium is enable。" >> ${CFM_logs_file}
         else
             echo $date_log"err: kernel not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
         fi
     else
         if [ -f "${Clash_bin_path}" ] ; then
-            echo $date_log"info: select Clash Meta。" >> ${CFM_logs_file}
+            echo $date_log"info: Clash Meta is enable。" >> ${CFM_logs_file}
         else
             echo $date_log"err: kernel not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
@@ -68,7 +68,7 @@ tun_tproxy() {
     if [ "${Clash_tun_status}" == "true" ] ; then
         mkdir -p /dev/net
         [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-        echo $date_log"info: select [tun] mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
+        echo $date_log"info: turn on TUN mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
         echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
         # AUTO SET tproxy-port 0
         sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' $Clash_template
@@ -78,7 +78,7 @@ tun_tproxy() {
         sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' $Clash_template
         sed -i 's/auto-route:.*/auto-route: false/' $Clash_template
         sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
-        echo $date_log"info: select [tproxy] mode。" >> ${CFM_logs_file}
+        echo $date_log"info: turn on TPROXY mode。" >> ${CFM_logs_file}
     fi
 }
 
@@ -109,17 +109,17 @@ temporary_config_file() {
 crontab_sec() {
         if [ ! "${schedule_update_core}" == "false" ]; then
             echo "${schedule_update_core} ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-            && echo $date_log"info: schedule update-kernel (${schedule_update_core})" >> ${CFM_logs_file}
+            && echo $date_log"info: schedule Update-kernel enable, (${schedule_update_core})" >> ${CFM_logs_file}
         else
-            echo $date_log"info: schedule update-kernel not active。" >> ${CFM_logs_file}
+            echo $date_log"info: schedule Update-kernel disable。" >> ${CFM_logs_file}
         fi
 
         if [ ! "${update_interval}" == "false" ]; then
             echo "${update_interval} ${scripts_dir}/clash.tool -s" >> ${Clash_run_path}/root \
-            && echo $date_log"info: schedule update-GeoX & SubScription (${update_interval})。" >> ${CFM_logs_file}
+            && echo $date_log"info: schedule Update-GeoX & SubScription (${update_interval})。" >> ${CFM_logs_file}
             echo $date_log"info: Geo status: [${auto_updateGeoX}] | Subs status: [${auto_updateSubcript}]。" >> ${CFM_logs_file}
         else
-            echo $date_log"info: schedule update-GeoX & Subs not active。" >> ${CFM_logs_file}
+            echo $date_log"info: schedule Update-GeoX & Subs disable" >> ${CFM_logs_file}
         fi
 }
 
@@ -132,7 +132,7 @@ start_mosdns () {
            local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
            sleep 1
            if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
-              echo ${date_log}"info: mosdns has been activated." >> ${CFM_logs_file}
+              echo ${date_log}"info: mosdns is enable." >> ${CFM_logs_file}
            else
               echo ${date_log}"err: mosdns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
               sed -i s/.*Error// ${Clash_run_path}/mosdns.log
@@ -158,7 +158,7 @@ start_mosdns () {
     if [ "${run_mode}" == "1" ]; then
         local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
         if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
-            echo ${date_log}"err: Detected that mosdns has been started, this time will not start." >> ${CFM_logs_file}
+            echo ${date_log}"warn: It was detected that mosdns has been activated, this time will not start." >> ${CFM_logs_file}
         else
             start_mosdns
         fi
@@ -200,8 +200,9 @@ cgroup_limit() {
             if [ "${Cgroup_memory}" == "true" ] ; then
                 if ! (${scripts_dir}/clash.tool -l) ; then
                     echo $date_log"warn: kernel does not support cgroup">> ${CFM_logs_file}
+                    echo $date_log"warn: will not affect Clash">> ${CFM_logs_file}
                 else
-                    echo $date_log"info: cgroup_limit: $Cgroup_memory_limit">> ${CFM_logs_file}
+                    echo $date_log"info: Cgroup limit: $Cgroup_memory_limit">> ${CFM_logs_file}
                 fi
             fi
 }
@@ -257,6 +258,7 @@ start_clash() {
     if [ "${run_mode}" == "1" ]; then
         run_mosdns
     else
+        echo $date_log"info: mosdns is disabled" >> ${CFM_logs_file}
         rm -rf ${Clash_run_path}/mosdns.log
     fi
     if [ -f ${temporary_config_file} ] ; then
@@ -284,7 +286,6 @@ kill_clash() {
            fi
         done
     else
-        echo $date_log"warn: hard kill Clash" >> ${CFM_logs_file}
         kill -9 `cat ${Clash_pid_file}`
     fi
     kill -15 `cat ${Clash_pid_file}`
@@ -300,10 +301,7 @@ kill_crond() {
 kill_mosdns() {
     if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
         rm -rf ${Clash_run_path}/mosdns.pid
-        echo $date_log"warn: mosdns stopped。" >> ${CFM_logs_file}
-    fi
-    if [ -f ${Clash_run_path}/appuid.list ]; then
-        rm -rf ${Clash_run_path}/appuid.list
+        echo $date_log"warn: Mosdns Stopped。" >> ${CFM_logs_file}
     fi
 }
 
@@ -313,7 +311,8 @@ stop_clash() {
     kill_crond
     kill_mosdns
     rm -rf ${Clash_pid_file}
-    echo $date_log"warn: Clash stopped。" >> ${CFM_logs_file}
+    rm -rf ${Clash_run_path}/appuid.list
+    echo $date_log"warn: Clash Stopped。" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do
