@@ -107,6 +107,7 @@ mv ${clash_data_dir_kernel}/getcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir}/scripts/clash.config ${clash_data_dir}/
 mv ${clash_data_dir}/scripts/mosdns ${clash_data_dir}/
 mv ${clash_data_dir}/mosdns/mosdns ${clash_data_dir_kernel}/
+mv ${clash_data_dir}/mosdns/v2dns ${clash_data_dir_kernel}/
 
 if [ ! -f "${bin_path}/ss" ] ; then
     mv ${clash_data_dir_kernel}/ss ${MODPATH}${bin_path}/

@@ -1,4 +1,7 @@
-## ⟳ Changelog v1.13.5
+## ⟳ Changelog v1.13.6
+- add: dns-client for v2rayDNS [TUTORIAL](https://t.me/taamarin)
+
+#### ⟳ Changelog v1.13.5
 - [Fix, can't stop CFM on old version of 'phone/android'](https://t.me/taamarin/28926)
 
 #### ⟳ Changelog v1.13.4
