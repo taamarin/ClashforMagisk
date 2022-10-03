@@ -1,10 +1,13 @@
-## • Changelog v1.13.4
+## ⟳ Changelog v1.13.5
+- [FIX](https://t.me/taamarin/28926)
+
+#### ⟳ Changelog v1.13.4
 - Remove iptables TUN, and when enable/use TUN, `auto-route` & `auto-detect-interface` will be set to `true`
 - tun:
   - enable: true
   - auto-route: true
   - auto-detect-interface: true
-#### • Changelog v1.13.3
+#### ⟳ Changelog v1.13.3
 - fix: schedule update **GeoX & SubScription**
 - ##### NOTES:
     - *`/data/clash/scripts/clash.tool -s`*
