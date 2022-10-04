@@ -1,4 +1,7 @@
-## ⟳ Changelog v1.13.6
+## ⟳ Changelog v1.13.7
+- adjust scripts
+
+#### ⟳ Changelog v1.13.6
 - add: dns-client for v2rayDNS(Hotfix) [TUTORIAL](https://t.me/taamarin/29983)
 
 #### ⟳ Changelog v1.13.5
