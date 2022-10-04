@@ -266,9 +266,12 @@ cgroup_limit() {
     if [ "${Cgroup_memory_path}" == "" ]; then
         Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
     fi
+
     mkdir -p "${Cgroup_memory_path}/clash"
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs"
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes"
+
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo $date_log"info: ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo ""
+ 
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo $date_log"info: ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo ""
 }
 
 up_dashboard() {
@@ -285,6 +288,7 @@ up_dashboard() {
 v2dns() {
     if [ "${run_v2dns}" == "1" ]; then
         if [ -f /data/clash/kernel/v2dns ]; then
+            chmod 755 /data/clash/kernel/v2dns
             if [ ! ${nsdomain} == "" ] && [ ! ${pubkey} == "" ]; then
                nohup /data/clash/kernel/v2dns -udp ${dns_for_v2dns}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
                echo -n $! > ${Clash_run_path}/v2dns.pid

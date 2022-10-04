@@ -88,6 +88,7 @@ tun_tproxy() {
 }
 
 temporary_config_file() {
+    sed -i '/^[  ]*$/d' ${Clash_template}
     if [ -f "${Clash_template}" ] ; then
         if [ -f "${Clash_config_file}" ] ; then
            cp -f ${Clash_template} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
@@ -122,9 +123,10 @@ crontab_sec() {
         if [ ! "${update_interval}" == "false" ]; then
             echo "${update_interval} ${scripts_dir}/clash.tool -s" >> ${Clash_run_path}/root \
             && echo $date_log"info: schedule Update-GeoX & SubScription (${update_interval})。" >> ${CFM_logs_file}
-            echo $date_log"info: Geo status: [${auto_updateGeoX}] | Subs status: [${auto_updateSubcript}]。" >> ${CFM_logs_file}
+            echo $date_log"info: GeoX status: ${auto_updateGeoX}。" >> ${CFM_logs_file}
+            echo $date_log"info: Subscription status: ${auto_updateSubcript}。" >> ${CFM_logs_file}
         else
-            echo $date_log"info: schedule Update-GeoX & Subs disable" >> ${CFM_logs_file}
+            echo $date_log"info: schedule Update-GeoX & Subscription disable" >> ${CFM_logs_file}
         fi
 }
 
@@ -254,7 +256,7 @@ start_clash() {
     if [ "${run_mosdns}" == "1" ]; then
         mosdns
     else
-        # echo $date_log"info: mosdns is disabled" >> ${CFM_logs_file}
+        echo $date_log"info: mosdns is disabled" >> ${CFM_logs_file}
         rm -rf ${Clash_run_path}/mosdns.log
     fi
 
@@ -298,7 +300,7 @@ kill_crond() {
 kill_mosdns() {
     if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
         rm -rf ${Clash_run_path}/mosdns.pid
-        echo $date_log"warn: Mosdns Stopped。" >> ${CFM_logs_file}
+        echo $date_log"warn: mosdns terminated。" >> ${CFM_logs_file}
     fi
 }
 
@@ -321,10 +323,10 @@ stop_clash() {
     kil_v2dns
 
     rm -rf ${Clash_pid_file} && rm -rf ${Clash_run_path}/appuid.list
-    echo $date_log"warn: Clash Stopped。" >> ${CFM_logs_file}
+    echo $date_log"warn: Clash terminated。" >> ${CFM_logs_file}
 }
 
-while getopts ":skv" signal ; do
+while getopts ":sk" signal ; do
     case ${signal} in
         s)
             stop_clash

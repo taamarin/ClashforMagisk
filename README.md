@@ -13,6 +13,9 @@
 [![MAGISK](https://img.shields.io/badge/Magisk%20-v20.4+-brightgreen)](https://github.com/topjohnwu/Magisk)
 [![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19)
 ![Vistors](https://visitor-badge.laobi.icu/badge?page_id=taamarin.ClashforMagisk) 
+  <a href="https://github.com/taamarin/ClashforMagisk/releases">
+    <img src="https://img.shields.io/github/release/taamarin/ClashforMagisk/all.svg">
+  </a>
 
 </div>
 

@@ -263,8 +263,7 @@ while getopts ":sk" signal ; do
                start_tun
                echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
            fi
-           ${scripts_dir}/clash.tool -v
-           detected_port
+           ${scripts_dir}/clash.tool -v && detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            ;;
         k)
