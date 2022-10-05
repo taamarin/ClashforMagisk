@@ -257,7 +257,7 @@ start_clash() {
     if [ "${run_mosdns}" == "1" ]; then
         mosdns
     else
-        echo $date_log"info: mosdns is disabled" >> ${CFM_logs_file}
+        echo $date_log"info: mos-dns is disabled" >> ${CFM_logs_file}
         rm -rf ${Clash_run_path}/mosdns.log
     fi
 
@@ -305,14 +305,14 @@ kill_mosdns() {
     fi
 }
 
-kil_v2dns() {
-    if (kill -15 `cat ${Clash_run_path}/v2dns.pid`); then
-        v2dnskill=$(ps -ef | grep root | grep "/data/clash/kernel/v2dns" | ${busybox_path} awk '{ print $2 }')
-        for v2kill in ${v2dnskill[*]} ; do
-           kill -15 ${v2kill}
+kil_dnstt() {
+    if (kill -15 `cat ${Clash_run_path}/dnstt.pid`); then
+        dnsttkill=$(ps -ef | grep root | grep "$dnstt_client_bin" | ${busybox_path} awk '{ print $2 }')
+        for dnskill in ${dnsttkill[*]} ; do
+           kill -15 ${dnskill}
         done
-        rm -rf ${Clash_run_path}/v2dns.pid
-        echo $date_log"warn: v2dns terminated。" >> ${CFM_logs_file}
+        rm -rf ${Clash_run_path}/dnstt.pid
+        echo $date_log"warn: $dnstt_bin_name terminated。" >> ${CFM_logs_file}
     fi
 }
 
@@ -321,7 +321,7 @@ stop_clash() {
     ceks_clash
     kill_crond
     kill_mosdns
-    kil_v2dns
+    kil_dnstt
 
     rm -rf ${Clash_pid_file} && rm -rf ${Clash_run_path}/appuid.list
     echo $date_log"warn: Clash terminated。" >> ${CFM_logs_file}

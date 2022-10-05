@@ -285,32 +285,33 @@ up_dashboard() {
     rm -rf ${file_dasboard}
 }
 
-v2dns() {
-    if [ "${run_v2dns}" == "1" ]; then
-        if [ -f /data/clash/kernel/v2dns ]; then
-            chmod 755 /data/clash/kernel/v2dns
+dnstt_client() {
+    if [ "${run_dnstt}" == "1" ]; then
+        if [ -f $dnstt_client_bin ]; then
+            chmod 0755 $dnstt_client_bin
+            chown root:net_admin ${dnstt_client_bin}
             if [ ! ${nsdomain} == "" ] && [ ! ${pubkey} == "" ]; then
-               nohup /data/clash/kernel/v2dns -udp ${dns_for_v2dns}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
-               echo -n $! > ${Clash_run_path}/v2dns.pid
+               nohup $dnstt_client_bin -udp ${dns_for_dnstt}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
+               echo -n $! > ${Clash_run_path}/dnstt.pid
 
                sleep 0.75
-               local v2dns_pid=`cat ${Clash_run_path}/v2dns.pid 2> /dev/null`
-               if (cat /proc/${v2dns_pid}/cmdline | grep -q v2dns) ; then
-                  echo ${date_log}"info: v2dns is enable." >> ${CFM_logs_file}
+               local dnstt_pid=`cat ${Clash_run_path}/dnstt.pid 2> /dev/null`
+               if (cat /proc/"$dnstt_pid"/cmdline | grep -q $dnstt_bin_name) ; then
+                  echo ${date_log}"info: $dnstt_bin_name is enable." >> ${CFM_logs_file}
                else
-                  echo ${date_log}"err: v2dns The configuration is incorrect," >> ${CFM_logs_file}
+                  echo ${date_log}"err: $dnstt_bin_name The configuration is incorrect," >> ${CFM_logs_file}
                   echo ${date_log}"err: the startup fails, and the following is the error" >> ${CFM_logs_file}
-                  kill -15 `cat ${Clash_run_path}/v2dns.pid`
+                  kill -15 `cat ${Clash_run_path}/dnstt.pid`
                fi
             else
-                echo ${date_log}"warn: v2dns tidak aktif,"  >> ${CFM_logs_file}
+                echo ${date_log}"warn: $dnstt_bin_name tidak aktif,"  >> ${CFM_logs_file}
                 echo ${date_log}"warn: 'nsdomain' & 'pubkey' kosong,"  >> ${CFM_logs_file}
             fi
         else
-            echo ${date_log}"err: kernel v2dns tidak ada." >> ${CFM_logs_file}
+            echo ${date_log}"err: kernel $dnstt_bin_name tidak ada." >> ${CFM_logs_file}
         fi
     else
-        echo "" #${date_log}"info: v2dns is disable." >> ${CFM_logs_file}
+        echo $date_log"info: $dnstt_bin_name is disabled" >> ${CFM_logs_file}
     fi
 }
 
@@ -363,7 +364,7 @@ while getopts ":fmspokldvg" signal ; do
             up_dashboard
             ;;
         v)
-            v2dns
+            dnstt_client
             ;;
         g)
             getmemory
