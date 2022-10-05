@@ -1,18 +1,7 @@
-## ⟳ Changelog v1.13.7
-- adjust scripts
-
-#### ⟳ Changelog v1.13.6
-- add: dns-client for v2rayDNS(Hotfix) [TUTORIAL](https://t.me/taamarin/29983)
-
-#### ⟳ Changelog v1.13.5
-- [Fix, can't stop CFM on old version of 'phone/android'](https://t.me/taamarin/28926)
-
-#### ⟳ Changelog v1.13.4
-- Remove iptables TUN, and when enable/use TUN, `auto-route` & `auto-detect-interface` will be set to `true`
-- tun:
-  - enable: true
-  - auto-route: true
-  - auto-detect-interface: true
+## ⟳ Changelog v1.13.8
+- `v2dns` to `dnstt-client`
+- display CPU & RES usage in log
+- Update [APK](https://github.com/taamarin/ClashforMagisk/releases/download/v1.13.8/Clash4Magisk_Manager-v1.6.3.apk)
 
 [FULL CHANGELOG......](https://github.com/taamarin/ClashforMagisk/releases)
 

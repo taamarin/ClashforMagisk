@@ -1,13 +1,13 @@
 log:
   level: debug
-  file: /data/clash/run/mosdns.txt
+  file: /data/clash/run/mosdns.log
 
 data_providers:
   - tag: geosite
-    file: ./geosite.dat
+    file: ../GeoSite.dat
     auto_reload: false
   - tag: geoip
-    file: ./geoip.dat
+    file: ../GeoIP.dat
     auto_reload: false
   - tag: hosts
     file: ./hosts.txt
