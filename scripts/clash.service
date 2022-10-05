@@ -21,7 +21,7 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.6" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.13.7" >> ${CFM_logs_file}
 }
 
 replace_kernel() {
@@ -128,6 +128,7 @@ crontab_sec() {
         else
             echo $date_log"info: schedule Update-GeoX & Subscription disable" >> ${CFM_logs_file}
         fi
+        echo "*/10 * * * * ${scripts_dir}/clash.tool -g" >> ${Clash_run_path}/root
 }
 
 mosdns() {

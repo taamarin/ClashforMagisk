@@ -354,6 +354,8 @@ while getopts ":sk" signal ; do
            ${scripts_dir}/clash.tool -v
            detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
+           echo $date_log"info: CPU:" >> $CFM_logs_file
+           ${scripts_dir}/clash.tool -g
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then

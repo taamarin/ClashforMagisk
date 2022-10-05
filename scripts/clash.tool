@@ -98,7 +98,8 @@ restart_clash() {
     sleep 0.5
     ${scripts_dir}/clash.service -s && ${scripts_dir}/clash.iptables -s
     if [ "$?" == "0" ]; then
-        echo $date_log"info: Clash restart [`date`] " >>${CFM_logs_file}
+        echo -n $date_log"info: `date` , " >>${CFM_logs_file}
+        echo "Clash restart" >>${CFM_logs_file}
     else
         echo $date_log"err: Clash Failed to restart." >>${CFM_logs_file}
     fi
@@ -266,12 +267,11 @@ cgroup_limit() {
     if [ "${Cgroup_memory_path}" == "" ]; then
         Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
     fi
-
     mkdir -p "${Cgroup_memory_path}/clash"
-
-    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && echo $date_log"info: ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file} || echo ""
- 
-    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && echo $date_log"info: ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file} || echo ""
+    echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" \
+    && echo $date_log"info: ${Cgroup_memory_path}/clash/cgroup.procs" >> ${CFM_logs_file}
+    echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" \
+    && echo $date_log"info: ${Cgroup_memory_path}/clash/memory.limit_in_bytes" >> ${CFM_logs_file}
 }
 
 up_dashboard() {
@@ -310,11 +310,27 @@ v2dns() {
             echo ${date_log}"err: kernel v2dns tidak ada." >> ${CFM_logs_file}
         fi
     else
-        echo ${date_log}"info: v2dns is disable." >> ${CFM_logs_file}
+        echo "" #${date_log}"info: v2dns is disable." >> ${CFM_logs_file}
     fi
 }
 
-while getopts ":fmspokldv" signal ; do
+getmemory(){
+  clashpid=$(cat ${Clash_pid_file})
+  clashres1=`grep VmRSS /proc/${clashpid}/status | awk -F':' '{print $2}' | awk '{print $1}'`
+  if [ ${clashres1} -ge 1024 ]
+  then
+    clashres="`expr ${clashres1} / 1024`mb"
+  else
+    clashres="${clashres1}kb"
+  fi
+  clashcpu=`ps -p ${clashpid} -o pcpu | grep -v %CPU | awk '{print $1}' `%
+  # echo -e "\033[36mclash  CPU: ${clashcpu} | RES: ${clashres}\033[0m"
+  logres="CPU: ${clashcpu} | RES: ${clashres}" 
+  # read -p "Please enter the corresponding number > " num
+  sed -i "s/CPU:.*/$logres/" $CFM_logs_file
+}
+
+while getopts ":fmspokldvg" signal ; do
     case ${signal} in
         f)
             find_packages_uid
@@ -348,6 +364,9 @@ while getopts ":fmspokldv" signal ; do
             ;;
         v)
             v2dns
+            ;;
+        g)
+            getmemory
             ;;
         ?)
             echo ""
