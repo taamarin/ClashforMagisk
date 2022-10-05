@@ -8,13 +8,14 @@
 
 <div align="center">
 
-[![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg)](https://github.com/taamarin/ClashforMagisk/releases)
-[![TELEGRAM](https://img.shields.io/badge/Telegram%20-Channel%20-blue)](https://t.me/nothing_taamarin)
-[![MAGISK](https://img.shields.io/badge/Magisk%20-v20.4+-brightgreen)](https://github.com/topjohnwu/Magisk)
-[![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=19)
-![Vistors](https://visitor-badge.laobi.icu/badge?page_id=taamarin.ClashforMagisk) 
+[![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg?style=for-the-badge)](https://github.com/taamarin/ClashforMagisk/releases)
+[![ANDROID](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)]()
+[![TELEGRAM CHANNEL](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/nothing_taamarin)
+[![TELEGRAM](https://img.shields.io/badge/Telegram%20-Grups%20-blue?style=for-the-badge)](https://t.me/taamarin)
+[![MAGISK](https://img.shields.io/badge/Magisk%20-v20.4+-brightgreen?style=for-the-badge)](https://github.com/topjohnwu/Magisk)
+[![API](https://img.shields.io/badge/API-19%2B-brightgreen.svg?style=for-the-badge)](https://android-arsenal.com/api?level=19)
   <a href="https://github.com/taamarin/ClashforMagisk/releases">
-    <img src="https://img.shields.io/github/release/taamarin/ClashforMagisk/all.svg">
+    <img src="https://img.shields.io/github/release/taamarin/ClashforMagisk/all.svg?style=for-the-badge">
   </a>
 
 </div>
