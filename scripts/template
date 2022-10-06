@@ -2,7 +2,7 @@ mode: rule
 allow-lan: true
 unified-delay: true
 bind-address: '*'
-log-level: silent
+log-level: warning
 ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
@@ -13,7 +13,7 @@ enable-process: false
 geodata-loader: memconservative
 inbound-tfo: true
 secret: ""
-# geox-url: {mmdb: "https://cdn.jsdelivr.net/gh/Dreamacro/maxmind-geoip@release/Country.mmdb",geoip: "https://github.com/v2fly/geoip/releases/latest/download/geoip-only-cn-private.dat",geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
+geox-url: {mmdb: "", geoip: "", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
 profile:
   store-selected: true
   store-fake-ip: false

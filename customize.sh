@@ -47,6 +47,7 @@ mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
 mkdir -p ${clash_data_dir}/mosdns
+mkdir -p ${clash_data_dir}/assets
 
 case "${ARCH}" in
     arm)
@@ -147,6 +148,7 @@ set_perm  ${clash_data_dir}/scripts/clash.inotify 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.service 0  0  0755
 set_perm  ${clash_data_dir}/scripts/clash.cron 0  0  0755
 set_perm  ${clash_data_dir}/scripts/start.sh 0  0  0755
+set_perm  ${clash_data_dir}/scripts/usage.sh 0  0  0755
 set_perm  ${clash_data_dir}/clash.config ${uid} ${gid} 0755
 set_perm  ${clash_data_dir}/kernel/mosdns  0  0  0755
 set_perm  ${clash_data_dir}/kernel/dnstt-client  0  0  0755

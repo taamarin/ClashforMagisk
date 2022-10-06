@@ -291,17 +291,17 @@ dnstt_client() {
             chmod 0755 $dnstt_client_bin
             chown root:net_admin ${dnstt_client_bin}
             if [ ! ${nsdomain} == "" ] && [ ! ${pubkey} == "" ]; then
-               nohup $dnstt_client_bin -udp ${dns_for_dnstt}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
+               nohup ${busybox_path} setuidgid 0:3005 $dnstt_client_bin -udp ${dns_for_dnstt}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
                echo -n $! > ${Clash_run_path}/dnstt.pid
 
-               sleep 0.75
+               sleep 1
                local dnstt_pid=`cat ${Clash_run_path}/dnstt.pid 2> /dev/null`
                if (cat /proc/"$dnstt_pid"/cmdline | grep -q $dnstt_bin_name) ; then
                   echo ${date_log}"info: $dnstt_bin_name is enable." >> ${CFM_logs_file}
                else
                   echo ${date_log}"err: $dnstt_bin_name The configuration is incorrect," >> ${CFM_logs_file}
                   echo ${date_log}"err: the startup fails, and the following is the error" >> ${CFM_logs_file}
-                  kill -15 `cat ${Clash_run_path}/dnstt.pid`
+                  kill -9 `cat ${Clash_run_path}/dnstt.pid`
                fi
             else
                 echo ${date_log}"warn: $dnstt_bin_name tidak aktif,"  >> ${CFM_logs_file}
@@ -313,22 +313,6 @@ dnstt_client() {
     else
         echo $date_log"info: $dnstt_bin_name is disabled" >> ${CFM_logs_file}
     fi
-}
-
-getmemory(){
-  clashpid=$(cat ${Clash_pid_file})
-  clashres1=`grep VmRSS /proc/${clashpid}/status | awk -F':' '{print $2}' | awk '{print $1}'`
-  if [ ${clashres1} -ge 1024 ]
-  then
-    clashres="`expr ${clashres1} / 1024`mb"
-  else
-    clashres="${clashres1}kb"
-  fi
-  clashcpu=`ps -p ${clashpid} -o pcpu | grep -v %CPU | awk '{print $1}' `%
-  # echo -e "\033[36mclash  CPU: ${clashcpu} | RES: ${clashres}\033[0m"
-  logres="CPU: ${clashcpu} | RES: ${clashres}" 
-  # read -p "Please enter the corresponding number > " num
-  sed -i "s/CPU:.*/$logres/" $CFM_logs_file
 }
 
 while getopts ":fmspokldvg" signal ; do
@@ -365,9 +349,6 @@ while getopts ":fmspokldvg" signal ; do
             ;;
         v)
             dnstt_client
-            ;;
-        g)
-            getmemory
             ;;
         ?)
             echo ""

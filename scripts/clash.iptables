@@ -257,25 +257,22 @@ while getopts ":sk" signal ; do
            if [ "${Clash_tun_status}" == "false" ]; then
                stop_tproxy
                start_tproxy
-               echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
+               echo $date_log"info: apply rules Iptables" >> ${CFM_logs_file}
            else
                stop_tun
                start_tun
-               echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
+               echo $date_log"info: apply rules Tun" >> ${CFM_logs_file}
            fi
-           ${scripts_dir}/clash.tool -v
-           detected_port
+           ${scripts_dir}/clash.tool -v && detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
-           echo $date_log"info: CPU:" >> $CFM_logs_file
-           ${scripts_dir}/clash.tool -g
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
                 stop_tproxy
-                echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
+                echo $date_log"warn: flush rules Iptables" >> ${CFM_logs_file}
             else
                 stop_tun
-                echo $date_log"warn: tun dihapus," >> ${CFM_logs_file}
+                echo $date_log"warn: flush rules Tun," >> ${CFM_logs_file}
             fi
             ;;
         ?)

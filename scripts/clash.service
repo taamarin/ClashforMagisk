@@ -115,20 +115,19 @@ temporary_config_file() {
 crontab_sec() {
         if [ ! "${schedule_update_core}" == "false" ]; then
             echo "${schedule_update_core} ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
-            && echo $date_log"info: schedule Update-kernel enable, (${schedule_update_core})" >> ${CFM_logs_file}
+            && echo $date_log"info: Crontab Update kernel (${schedule_update_core})" >> ${CFM_logs_file}
         else
-            echo $date_log"info: schedule Update-kernel disable。" >> ${CFM_logs_file}
+            echo $date_log"info: Update kernel is disable。" >> ${CFM_logs_file}
         fi
-
+        # echo "*/1 * * * * ${scripts_dir}/clash.tool -g" >> ${Clash_run_path}/root
         if [ ! "${update_interval}" == "false" ]; then
             echo "${update_interval} ${scripts_dir}/clash.tool -s" >> ${Clash_run_path}/root \
-            && echo $date_log"info: schedule Update-GeoX & SubScription (${update_interval})。" >> ${CFM_logs_file}
-            echo $date_log"info: GeoX status: ${auto_updateGeoX}。" >> ${CFM_logs_file}
-            echo $date_log"info: Subscription status: ${auto_updateSubcript}。" >> ${CFM_logs_file}
+            && echo $date_log"info: Crontab 'Geo' and 'Subscription' (${update_interval})。" >> ${CFM_logs_file}
+            echo $date_log"info: Geox (${auto_updateGeoX})。" >> ${CFM_logs_file}
+            echo $date_log"info: Subscription (${auto_updateSubcript})。" >> ${CFM_logs_file}
         else
-            echo $date_log"info: schedule Update-GeoX & Subscription disable" >> ${CFM_logs_file}
+            echo $date_log"info: Crontab GeoX & Subscription is disable" >> ${CFM_logs_file}
         fi
-        echo "*/10 * * * * ${scripts_dir}/clash.tool -g" >> ${Clash_run_path}/root
 }
 
 mosdns() {
@@ -166,7 +165,7 @@ run_clash() {
             ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/err.log
             if [ "$?" = "0" ] ; then
                 ulimit -SHn 1000000
-                nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > /dev/null 2>&1 &
+                nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/warn.log 2>&1 &
                 echo -n $! > ${Clash_pid_file}
 
                 sed -i s/.*msg=// ${Clash_run_path}/err.log
@@ -211,6 +210,7 @@ start_clash() {
     date_clash
     replace_kernel
     echo "$(${Clash_bin_path} -v)" >> ${CFM_logs_file}
+    echo "CPU: % | RES: kb" >> $CFM_logs_file
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
     directory_net="/proc/sys/net/ipv6/conf"
     if [ "${ipv6}" == "false" ] ; then
@@ -264,6 +264,8 @@ start_clash() {
     if [ -f ${temporary_config_file} ] ; then
         if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
             run_clash
+            nohup sh ${scripts_dir}/usage.sh > /dev/null 2>&1 &
+            # echo -n $! > ${Clash_run_path}/usage.pid
             cgroup_limit
         else
             echo $date_log"err: kernel Clash error/broken/not supported ">> ${CFM_logs_file}
@@ -301,16 +303,12 @@ kill_crond() {
 kill_mosdns() {
     if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
         rm -rf ${Clash_run_path}/mosdns.pid
-        echo $date_log"warn: mosdns terminated。" >> ${CFM_logs_file}
+        echo $date_log"warn: mos-dns terminated。" >> ${CFM_logs_file}
     fi
 }
 
 kil_dnstt() {
     if (kill -15 `cat ${Clash_run_path}/dnstt.pid`); then
-        dnsttkill=$(ps -ef | grep root | grep "$dnstt_client_bin" | ${busybox_path} awk '{ print $2 }')
-        for dnskill in ${dnsttkill[*]} ; do
-           kill -15 ${dnskill}
-        done
         rm -rf ${Clash_run_path}/dnstt.pid
         echo $date_log"warn: $dnstt_bin_name terminated。" >> ${CFM_logs_file}
     fi
