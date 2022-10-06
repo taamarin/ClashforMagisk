@@ -1,7 +1,7 @@
-## ⟳ Changelog v1.13.8
-- `v2dns` to `dnstt-client`
-- display CPU & RES usage in log
-- Update [APK](https://github.com/taamarin/ClashforMagisk/releases/download/v1.13.8/Clash4Magisk_Manager-v1.6.3.apk)
+## ⟳ Changelog v1.13.9
+- Hotfix
+- chore: adjust scripts
+- Update [APK](https://github.com/taamarin/ClashforMagisk/releases/download/v1.13.9/Clash4Magisk_Manager-v1.6.3.apk)
 
 [FULL CHANGELOG......](https://github.com/taamarin/ClashforMagisk/releases)
 

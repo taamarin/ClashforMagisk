@@ -7,13 +7,13 @@ ipv6: false
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: dashboard/dist
-tcp-concurrent: true
+tcp-concurrent: false
 interface-name: ""
 enable-process: false
 geodata-loader: memconservative
-inbound-tfo: true
+inbound-tfo: false
 secret: ""
-geox-url: {mmdb: "", geoip: "", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
+# geox-url: {mmdb: "", geoip: "", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
 profile:
   store-selected: true
   store-fake-ip: false
