@@ -8,8 +8,8 @@
 
 <div align="center">
 
-[![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg?style=for-the-badge)](https://github.com/taamarin/ClashforMagisk/releases)
 [![ANDROID](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)]()
+[![RELEASES](https://img.shields.io/github/downloads/taamarin/ClashforMagisk/total.svg?style=for-the-badge)](https://github.com/taamarin/ClashforMagisk/releases)
 [![TELEGRAM CHANNEL](https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/nothing_taamarin)
 [![TELEGRAM](https://img.shields.io/badge/Telegram%20-Grups%20-blue?style=for-the-badge)](https://t.me/taamarin)
 [![MAGISK](https://img.shields.io/badge/Magisk%20-v20.4+-brightgreen?style=for-the-badge)](https://github.com/topjohnwu/Magisk)
