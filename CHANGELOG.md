@@ -1,5 +1,6 @@
 ## ⟳ Changelog v1.14
 - optimization and improvement
+- [APK](https://github.com/taamarin/ClashforMagisk/releases/download/v1.14/Clash4Magisk_Manager.-1.6.4.70.apk)
 
 [FULL CHANGELOG......](https://github.com/taamarin/ClashforMagisk/releases)
 
