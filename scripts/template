@@ -1,3 +1,5 @@
+tproxy-port: 9898
+mixed-port: 7890
 mode: rule
 allow-lan: true
 unified-delay: true
@@ -63,12 +65,10 @@ dns:
   ]
   nameserver:
     - 1.1.1.1
-  fallback: []
-  fallback-filter:
-    geoip: false
-    geoip-code: "!ID"
-    geosite: [GFW]
-    ipcidr: []
-    domain: ['+.google.com','+.facebook.com','+.youtube.com']
-tproxy-port: 9898
-mixed-port: 7890
+#  fallback: []
+#  fallback-filter:
+#    geoip: false
+#    geoip-code: "!ID"
+#    geosite: [GFW]
+#    ipcidr: []
+#    domain: ['+.google.com','+.facebook.com','+.youtube.com']

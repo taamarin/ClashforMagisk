@@ -1,7 +1,5 @@
-## ⟳ Changelog v1.13.9
-- Hotfix
-- chore: adjust scripts
-- Update [APK](https://github.com/taamarin/ClashforMagisk/releases/download/v1.13.9/Clash4Magisk_Manager-v1.6.3.apk)
+## ⟳ Changelog v1.14
+- optimization and improvement
 
 [FULL CHANGELOG......](https://github.com/taamarin/ClashforMagisk/releases)
 

@@ -69,7 +69,6 @@ create_mangle_prerouting_filter() {
 }
 
 create_mangle_output_filter() {
-#    echo $date_log"info: filter/bypass (${mode}) turn on" >> ${CFM_logs_file}
     ${scripts_dir}/clash.tool -f
 
     ${iptables_wait} -t mangle -N FILTER_OUT_CLASH
@@ -78,12 +77,9 @@ create_mangle_output_filter() {
         ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -d ${subnet} -j ACCEPT
     done
 
-    if [ "${Clash_enhanced_mode}" == "fake-ip" ]; then
-        mode="blacklist"
-    fi
     apps=`cat ${appuid_file} | sort -u`
     if [ "${mode}" = "blacklist" ] ; then
-        for appuid in  ${apps} ; do
+        for appuid in ${apps} ; do
             ${iptables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j ACCEPT
         done
 
@@ -102,7 +98,7 @@ create_mangle_output_filter() {
         done
 
         if [ "${mode}" = "blacklist" ] ; then
-           for appuid in  ${apps} ; do
+           for appuid in ${apps} ; do
                 ${ip6tables_wait} -t mangle -A FILTER_OUT_CLASH -m owner --uid-owner ${appuid} -j ACCEPT
             done
 
@@ -342,25 +338,27 @@ detected_port() {
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
+           ${scripts_dir}/clash.tool -v && detected_port
            if [ "${Clash_tun_status}" == "false" ]; then
                flush_rule_rules && flush_rules
                create_rule_rules && apply_rules
-               echo $date_log"info: scripts Iptables tproxy diterapkan" >> ${CFM_logs_file}
+               mlog="tproxy"
+               log=$(grep "TProxy" /data/clash/run//warn.log | /data/adb/magisk/busybox awk -F 'TProxy' '{print $2}')
            else
-               rm -rf /data/clash/run/lastwifi && rm -rf /data/clash/run/lastmobile
                stop_tun && start_tun
-               echo $date_log"info: tun diterapkan" >> ${CFM_logs_file}
+              mlog="tun"
+               log=$(grep "TUN" /data/clash/run//warn.log | /data/adb/magisk/busybox awk -F 'TUN' '{print $2}')
            fi
-           ${scripts_dir}/clash.tool -v && detected_port
+           echo $date_log"info: ${mlog} ${log}" >> ${CFM_logs_file}
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            ;;
         k)
             if [ "${Clash_tun_status}" == "false" ]; then
                 flush_rule_rules && flush_rules
-                echo $date_log"warn: scripts Iptables tproxy dihapus" >> ${CFM_logs_file}
+                echo $date_log"warn: flush rules Iptables" >> ${CFM_logs_file}
             else
                 stop_tun
-                echo $date_log"warn: scripts Iptables tun dihapus," >> ${CFM_logs_file}
+                echo $date_log"warn: flush rules Tun," >> ${CFM_logs_file}
             fi
             ;;
         ?)
