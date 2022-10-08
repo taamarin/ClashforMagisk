@@ -11,16 +11,20 @@ monitor_dir=$2
 monitor_file=$3
 
 create_run() {
-    if [ ! -d "/data/clash/run" ] ; then
+    if [ ! -d "/data/clash/run" ]
+    then
         mkdir -p /data/clash/run
     fi
 }
 
 service_control() {
-    if [ "${monitor_file}" = "disable" ] ; then
-        if [ "${events}" = "d" ] ; then
+    if [ "${monitor_file}" = "disable" ]
+    then
+        if [ "${events}" = "d" ]
+        then
             ${service_path} -s &> ${logs_service} && ${iptables_path} -s &>> ${logs_service} &
-        elif [ "${events}" = "n" ] ; then
+        elif [ "${events}" = "n" ]
+        then
             ${service_path} -k &>> ${logs_service} && ${iptables_path} -k &>> ${logs_service} &
         fi
     fi

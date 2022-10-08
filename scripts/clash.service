@@ -9,10 +9,14 @@ cmd_crond() {
 }
 
 dow_config() {
-    if [ "${config_online}" == "true" ] ; then
-        if ! [ "$(head -1 ${Clash_run_path}/root)" == "disable" ] ; then
-            if ! (${scripts_dir}/clash.tool -o) ; then
-                echo $date_log"err: failed to download config, make sure you are connected to the internet。" >> ${CFM_logs_file}
+    if [ "${config_online}" == "true" ]
+    then
+        if ! [ "$(head -1 ${Clash_run_path}/root)" == "disable" ]
+        then
+            if ! (${scripts_dir}/clash.tool -o)
+            then
+                echo $date_log"err: failed to download config,。" >> ${CFM_logs_file}
+                echo $date_log"err: make sure you are connected to the internet。" >> ${CFM_logs_file}
                 exit 1
             fi
         fi
@@ -21,14 +25,15 @@ dow_config() {
 
 date_clash() {
     echo -n "" > ${CFM_logs_file} && echo "${date_day}" >> ${CFM_logs_file}
-    echo "Clash for Magisk v1.13.9" >> ${CFM_logs_file}
+    echo "Clash for Magisk v1.13.9" > /dev/null # ${CFM_logs_file}
 }
 
 replace_kernel() {
     chmod 0755 ${Clash_lib}/*
     rm -rf ${Clash_bin}/clash
     err="failed to replace kernel。"
-    if [ "${use_premium}" == "true" ]; then
+    if [ "${use_premium}" == "true" ]
+    then
         cp -f ${Clash_Premium} ${Clash_bin}/clash \
         && echo "" || echo $date_log"err: ${err}" >> ${CFM_logs_file}
     else
@@ -38,15 +43,18 @@ replace_kernel() {
 }
 
 use_clash() {
-    if [ "${use_premium}" == "true" ]; then
-        if [ -f "${Clash_bin_path}" ] ; then
+    if [ "${use_premium}" == "true" ]
+    then
+        if [ -f "${Clash_bin_path}" ]
+        then
             echo $date_log"info: Clash Premium is enable。" >> ${CFM_logs_file}
         else
             echo $date_log"err: kernel not detected ${Clash_bin_path}" >> ${CFM_logs_file}
             exit 1
         fi
     else
-        if [ -f "${Clash_bin_path}" ] ; then
+        if [ -f "${Clash_bin_path}" ]
+        then
             echo $date_log"info: Clash Meta is enable。" >> ${CFM_logs_file}
         else
             echo $date_log"err: kernel not detected ${Clash_bin_path}" >> ${CFM_logs_file}
@@ -57,7 +65,8 @@ use_clash() {
 
 ceks_clash() {
     local PID=`cat ${Clash_pid_file} 2> /dev/null`
-    if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name}) ; then
+    if (cat /proc/${PID}/cmdline | grep -q ${Clash_bin_name})
+    then
         echo $date_log"warn: Clash service still started" >> ${CFM_logs_file}
         ${scripts_dir}/clash.iptables -s
         exit 1
@@ -65,32 +74,36 @@ ceks_clash() {
 }
 
 tun_tproxy() {
-    if [ "${Clash_tun_status}" == "true" ] ; then
-        if [ ${arm} == "aarch64" ] ; then
+    rm -rf /data/clash/run/lastwifi && rm -rf /data/clash/run/lastmobile
+    if [ "${Clash_tun_status}" == "true" ]
+    then
+        if [ ${arm} == "aarch64" ]
+        then
             mkdir -p /dev/net
             [ ! -L /dev/net/tun ] && ln -sf /dev/tun /dev/net/tun
-            echo $date_log"info: turn on TUN mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
+            echo $date_log"info: turn on tun mode, stack: [${Clash_stack_mode}] " >> ${CFM_logs_file}
             echo $date_log"info: create /dev/net/tun。" >> ${CFM_logs_file}
-        # AUTO SET tproxy-port 0
             sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' $Clash_template
             sed -i 's/auto-route:.*/auto-route: true/' $Clash_template
             sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
         else
-            echo $date_log"err: TUN only for ARM64/ARMv8。" >> ${CFM_logs_file}
+            echo $date_log"err: tun only for arm64/armv8。" >> ${CFM_logs_file}
             exit 1
         fi
     else
         sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' $Clash_template
         sed -i 's/auto-route:.*/auto-route: false/' $Clash_template
         sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
-        echo $date_log"info: turn on TPROXY mode。" >> ${CFM_logs_file}
+        echo $date_log"info: turn on tproxy mode。" >> ${CFM_logs_file}
     fi
 }
 
 temporary_config_file() {
     sed -i '/^[  ]*$/d' ${Clash_template}
-    if [ -f "${Clash_template}" ] ; then
-        if [ -f "${Clash_config_file}" ] ; then
+    if [ -f "${Clash_template}" ]
+    then
+        if [ -f "${Clash_config_file}" ]
+        then
            cp -f ${Clash_template} ${temporary_config_file}.swp && echo "\n" >> ${temporary_config_file}.swp
            sed -n -E '/^proxies:$/,$p' ${Clash_config_file} >> ${temporary_config_file}.swp
            sed -i '/^[  ]*$/d' ${temporary_config_file}.swp
@@ -106,21 +119,23 @@ temporary_config_file() {
     mv ${temporary_config_file}.swp ${temporary_config_file} \
     && echo $date_log"info: merge files ${Clash_config_file} & template Succes。" >> ${CFM_logs_file} || echo $date_log"err: merge files ${Clash_config_file} & template failed !!!" >> ${CFM_logs_file}
 
-    if [ ! -f "${temporary_config_file}" ] ; then
+    if [ ! -f "${temporary_config_file}" ]
+    then
        echo $date_log"err: ${temporary_config_file} file is missing !!!。" >> ${CFM_logs_file}
        exit 1
     fi
 }
 
 crontab_sec() {
-        if [ ! "${schedule_update_core}" == "false" ]; then
+        if [ ! "${schedule_update_core}" == "false" ]
+        then
             echo "${schedule_update_core} ${scripts_dir}/clash.tool -k" >> ${Clash_run_path}/root \
             && echo $date_log"info: Crontab Update kernel (${schedule_update_core})" >> ${CFM_logs_file}
         else
             echo $date_log"info: Update kernel is disable。" >> ${CFM_logs_file}
         fi
-        # echo "*/1 * * * * ${scripts_dir}/clash.tool -g" >> ${Clash_run_path}/root
-        if [ ! "${update_interval}" == "false" ]; then
+        if [ ! "${update_interval}" == "false" ]
+        then
             echo "${update_interval} ${scripts_dir}/clash.tool -s" >> ${Clash_run_path}/root \
             && echo $date_log"info: Crontab 'Geo' and 'Subscription' (${update_interval})。" >> ${CFM_logs_file}
             echo $date_log"info: Geox (${auto_updateGeoX})。" >> ${CFM_logs_file}
@@ -131,25 +146,30 @@ crontab_sec() {
 }
 
 mosdns() {
-    if ! [ -f $mosdns_bin_path ] ; then
+    if ! [ -f $mosdns_bin_path ]
+    then
       echo ${date_log}"err: mosdns kernel is missing." >> ${CFM_logs_file}
       exit 1
     fi
 
-    if [ -f ${mosdns_config_file} ] ; then
-        if [ "${run_mosdns}" == "1" ]; then
+    if [ -f ${mosdns_config_file} ]
+    then
+        if [ "${run_mosdns}" == "1" ]
+        then
            nohup ${mosdns_bin_path} start -d ${mosdns_data_dir} > ${Clash_run_path}/mosdns.log 2>&1 &
            echo -n $! > ${Clash_run_path}/mosdns.pid
            sleep 1
 
            local mosdns_pid=`cat ${Clash_run_path}/mosdns.pid 2> /dev/null`
-           if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns) ; then
+           if (cat /proc/${mosdns_pid}/cmdline | grep -q mosdns)
+           then
               echo ${date_log}"info: mosdns is enable." >> ${CFM_logs_file}
            else
               echo ${date_log}"err: mosdns The configuration is incorrect, the startup fails, and the following is the error" >> ${CFM_logs_file}
               sed -i s/.*Error// ${Clash_run_path}/mosdns.log
               sed -i 's/mosdns*//' ${Clash_run_path}/mosdns.log
-              while read p; do
+              while read p
+              do
                  echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
               done <${Clash_run_path}/mosdns.log
               exit 1
@@ -163,14 +183,16 @@ mosdns() {
 
 run_clash() {
             ${Clash_bin_path} -t -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/err.log
-            if [ "$?" = "0" ] ; then
+            if [ "$?" = "0" ]
+            then
                 ulimit -SHn 1000000
                 nohup ${busybox_path} setuidgid 0:3005 ${Clash_bin_path} -d ${Clash_data_dir} -f ${temporary_config_file} > ${Clash_run_path}/warn.log 2>&1 &
                 echo -n $! > ${Clash_pid_file}
 
                 sed -i s/.*msg=// ${Clash_run_path}/err.log
                 sed -i 's/configuration file*//' ${Clash_run_path}/err.log
-                while read p; do
+                while read p
+                do
                     echo ${date_log}"info:" "$p" >> ${CFM_logs_file}
                 done <${Clash_run_path}/err.log
             else
@@ -178,11 +200,13 @@ run_clash() {
                 sed -i s/.*msg=// ${Clash_run_path}/err.log
                 sed -i 's/fatal msg=*//' ${Clash_run_path}/err.log
                 sed -i 's/configuration file*//' ${Clash_run_path}/err.log
-                while read p; do
+                while read p
+                do
                     echo ${date_log}"err:" "$p" >> ${CFM_logs_file}
                 done <${Clash_run_path}/err.log
 
-                if [ "${use_config}" == "false" ]; then
+                if [ "${use_config}" == "false" ]
+                then
                     mv ${temporary_config_file} ${Clash_data_dir}/config.yaml
                 else
                     mv ${temporary_config_file} ${Clash_data_dir}/${use_config}
@@ -194,8 +218,10 @@ run_clash() {
 }
 
 cgroup_limit() {
-            if [ "${Cgroup_memory}" == "true" ] ; then
-                if ! (${scripts_dir}/clash.tool -l) ; then
+            if [ "${Cgroup_memory}" == "true" ]
+            then
+                if ! (${scripts_dir}/clash.tool -l)
+                then
                     echo $date_log"warn: kernel does not support cgroup">> ${CFM_logs_file}
                     echo $date_log"warn: will not affect Clash">> ${CFM_logs_file}
                 else
@@ -213,7 +239,8 @@ start_clash() {
     echo "CPU: % | RES: kb" >> $CFM_logs_file
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${CFM_logs_file}
     directory_net="/proc/sys/net/ipv6/conf"
-    if [ "${ipv6}" == "false" ] ; then
+    if [ "${ipv6}" == "false" ]
+    then
         echo 1 > ${directory_net}/lo/disable_ipv6
         echo 1 > ${directory_net}/default/disable_ipv6
 
@@ -233,12 +260,13 @@ start_clash() {
         echo 0 > ${directory_net}/wlan0/disable_ipv6
     fi
     use_clash
-    echo $date_log"info: config ${Clash_config_file}。" >> ${CFM_logs_file}
-    echo $date_log"info: Status ipv6: ${ipv6}" >> ${CFM_logs_file}
+    echo $date_log"info: konfigurasi ${Clash_config_file}。" >> ${CFM_logs_file}
+    # echo $date_log"info: Status ipv6: ${ipv6}" >> ${CFM_logs_file}
     ceks_clash
     tun_tproxy
     temporary_config_file
-    if [ -f "${Clash_bin_path}" ] ; then
+    if [ -f "${Clash_bin_path}" ]
+    then
         chown root:net_admin ${Clash_bin_path}
         chown root:net_admin ${temporary_config_file}
         chmod 6755 ${Clash_bin_path}
@@ -254,19 +282,26 @@ start_clash() {
         exit 1
     fi
 
-    if [ "${run_mosdns}" == "1" ]; then
+    if [ "${run_mosdns}" == "1" ]
+    then
         mosdns
     else
         echo $date_log"info: mos-dns is disabled" >> ${CFM_logs_file}
         rm -rf ${Clash_run_path}/mosdns.log
     fi
 
-    if [ -f ${temporary_config_file} ] ; then
-        if (${Clash_bin_path} -v > /dev/null 2>&1) ; then
+    if [ -f ${temporary_config_file} ]
+    then
+        if (${Clash_bin_path} -v > /dev/null 2>&1)
+        then
             run_clash
-            nohup sh ${scripts_dir}/usage.sh > /dev/null 2>&1 &
-            # echo -n $! > ${Clash_run_path}/usage.pid
             cgroup_limit
+            if [ "$run_usage" == "true" ]
+            then
+                nohup ${scripts_dir}/usage.sh > /dev/null 2>&1 &
+            else
+                echo $date_log"info: display Usage ( RES: / CPU: ) is disabled" >> ${CFM_logs_file}
+            fi
         else
             echo $date_log"err: kernel Clash error/broken/not supported ">> ${CFM_logs_file}
             exit 1
@@ -278,51 +313,45 @@ start_clash() {
 }
 
 kill_clash() {
-    if (ps -ef > /dev/null 2>&1) ; then
+    if (ps -ef > /dev/null 2>&1)
+    then
         clashkill=$(ps -ef | grep root | grep "clash -d /data/clash" | ${busybox_path} awk '{ print $2 }' | sort -u)
-        for clashkil in ${clashkill[*]} ; do
-           if [ "${Clash_tun_status}" == "true" ] ; then
-              kill -9 ${clashkil}
-           else
-              kill -15 ${clashkil}
-           fi
+        for clashkil in ${clashkill[*]}
+        do
+              kill ${clashkil}
         done
-    else
-        kill -9 `cat ${Clash_pid_file}`
+        return 0
     fi
-    kill -15 `cat ${Clash_pid_file}`
 }
 
-kill_crond() {
+kill_tool() {
     cronkill=$(ps -ef | grep root | grep "crond -c /data/clash/" | ${busybox_path} awk '{ print $2 }' | sort -u)
-    for cronkil in ${cronkill[*]} ; do
-       kill -15 ${cronkil}
+    for cron in ${cronkill[*]}
+    do
+       kill ${cron}
     done
-}
 
-kill_mosdns() {
-    if (kill -15 `cat ${Clash_run_path}/mosdns.pid`); then
+    if (kill `cat ${Clash_run_path}/mosdns.pid`)
+    then
         rm -rf ${Clash_run_path}/mosdns.pid
         echo $date_log"warn: mos-dns terminated。" >> ${CFM_logs_file}
     fi
-}
 
-kil_dnstt() {
-    if (kill -15 `cat ${Clash_run_path}/dnstt.pid`); then
+    if (kill `cat ${Clash_run_path}/dnstt.pid`)
+    then
         rm -rf ${Clash_run_path}/dnstt.pid
         echo $date_log"warn: $dnstt_bin_name terminated。" >> ${CFM_logs_file}
     fi
 }
 
 stop_clash() {
-    kill_clash
-    ceks_clash
-    kill_crond
-    kill_mosdns
-    kil_dnstt
-
-    rm -rf ${Clash_pid_file} && rm -rf ${Clash_run_path}/appuid.list
-    echo $date_log"warn: Clash terminated。" >> ${CFM_logs_file}
+    if kill_clash
+    then
+        rm -rf ${Clash_pid_file}
+    fi
+    kill_tool
+    rm -rf $Clash_run_path/appuid.list
+    echo $date_log"warn: Clash shutting down。" >> ${CFM_logs_file}
 }
 
 while getopts ":sk" signal ; do

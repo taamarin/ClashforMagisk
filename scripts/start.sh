@@ -1,7 +1,8 @@
 #!/system/bin/sh
 
 moddir="/data/adb/modules/ClashForMagisk"
-if [ -n "$(magisk -v | grep lite)" ]; then
+if [ -n "$(magisk -v | grep lite)" ]
+then
   moddir=/data/adb/lite_modules/ClashForMagisk
 fi
 
@@ -12,24 +13,29 @@ Clash_pid_file="${Clash_run_path}/clash.pid"
 
 start_service() {
     ${scripts_dir}/clash.service -s
-    if [ -f /data/clash/run/clash.pid ] ; then
+    if [ -f /data/clash/run/clash.pid ]
+    then
         ${scripts_dir}/clash.iptables -s
     fi
 }
 
 start_clash() {
-if [ -f ${Clash_pid_file} ] ; then
+if [ -f ${Clash_pid_file} ]
+then
     ${scripts_dir}/clash.service -k && ${scripts_dir}/clash.iptables -k
 fi
 }
 
 start_run() {
-if [ ! -f /data/clash/manual ] ; then
+if [ ! -f /data/clash/manual ]
+then
     echo -n "" > /data/clash/run/service.log
-    if [ ! -f ${moddir}/disable ] ; then
+    if [ ! -f ${moddir}/disable ]
+    then
         start_service
     fi
-    if [ "$?" = 0 ] ; then
+    if [ "$?" = 0 ]
+    then
        ulimit -SHn 1000000
        inotifyd ${scripts_dir}/clash.inotify ${moddir} &>> /dev/null &
        echo -n $! > /data/clash/run/inotifyd.pid

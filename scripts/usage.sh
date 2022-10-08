@@ -1,29 +1,27 @@
 #!/system/bin/sh
 
 getmemory(){
-  Clash_pid_file="/data/clash/run/clash.pid"
-  clashpid=$(cat ${Clash_pid_file})
-  clashres1=`grep VmRSS /proc/${clashpid}/status | awk -F':' '{print $2}' | awk '{print $1}'`
-  if [ ${clashres1} -ge 1024 ]
+  clash_pid=$(cat /data/clash/run/clash.pid)
+  clash_alive=$(grep VmRSS /proc/${clash_pid}/status | /data/adb/magisk/busybox awk -F':' '{print $2}' | /data/adb/magisk/busybox awk '{print $1}')
+  if [ ${clash_alive} -ge 1024 ]
   then
-    clashres="`expr ${clashres1} / 1024`mb"
+    clash_res="$(expr ${clash_alive} / 1024)Mb"
   else
-    clashres="${clashres1}kb"
+    clash_res="${clash_alive}Kb"
   fi
-  clashcpu=`ps -p ${clashpid} -o pcpu | grep -v %CPU | awk '{print $1}' `%
-  logres="CPU: ${clashcpu} | RES: ${clashres}" 
-  sed -i "s/CPU:.*/$logres/" /data/clash/run/run.logs
+  clash_cpu=$(ps -p ${clash_pid} -o pcpu | grep -v %CPU | awk '{print $1}' )%
+  log_usage="CPU: ${clash_cpu} | RES: ${clash_res}" 
+  sed -i "s/CPU:.*/${log_usage}/" /data/clash/run/run.logs
 }
 
 usage() {
-    local PID=`cat /data/clash/run/clash.pid 2> /dev/null`
-    local interval=1
-    while (cat /proc/${PID}/cmdline | grep -q clash)
+    interval="1"
+    while [ -f /data/clash/run/clash.pid ]
     do
         getmemory &> /dev/null
-        ( ! cat /proc/${PID}/cmdline | grep -q clash) && break
-        local now=$(date +%s)
-        sleep $(( interval - now % interval ))
+        [ ! -f /data/clash/run/clash.pid ] && break
+        now=$(date +%s)
+        sleep $(( $interval - $now % $interval ))
     done
 }
 
