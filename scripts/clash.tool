@@ -392,6 +392,9 @@ while getopts ":fmspokldvg" signal ; do
         v)
             dnstt_client
             ;;
+        o)
+            config_online
+            ;;
         ?)
             echo ""
             ;;

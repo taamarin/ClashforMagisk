@@ -15,7 +15,7 @@ enable-process: false
 geodata-loader: memconservative
 inbound-tfo: false
 secret: ""
-# geox-url: {mmdb: "", geoip: "", geosite: "https://github.com/taamarin/v2ray-rules-dat/raw/release/GeoSite.dat"}
+# geox-url: {mmdb: "", geoip: "", geosite: ""}
 profile:
   store-selected: true
   store-fake-ip: false
@@ -58,17 +58,19 @@ dns:
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: fake-ip
-  fake-ip-range: 28.0.0.1/8
+  fake-ip-range: 198.18.0.1/16
   fake-ip-filter: [
     "*.local",
     "*.localhost",
   ]
   nameserver:
-    - 1.1.1.1
+    - '9.9.9.9'               # Quad9
+    - '1.1.1.1'               # Cloudflare
+    - '8.8.4.4'               # Google
 #  fallback: []
 #  fallback-filter:
 #    geoip: false
 #    geoip-code: "!ID"
-#    geosite: [GFW]
+#    geosite: []
 #    ipcidr: []
-#    domain: ['+.google.com','+.facebook.com','+.youtube.com']
+#    domain: []

@@ -338,18 +338,16 @@ detected_port() {
 while getopts ":sk" signal ; do
     case ${signal} in
         s)
-           ${scripts_dir}/clash.tool -v && detected_port
            if [ "${Clash_tun_status}" == "false" ]; then
                flush_rule_rules && flush_rules
                create_rule_rules && apply_rules
-               mlog="tproxy"
-               log=$(grep "TProxy" /data/clash/run//warn.log | /data/adb/magisk/busybox awk -F 'TProxy' '{print $2}')
+               echo $date_log"info: tproxy server listening at: [::]:$Clash_tproxy_port" >> ${CFM_logs_file}
            else
-               stop_tun && start_tun
-              mlog="tun"
-               log=$(grep "TUN" /data/clash/run//warn.log | /data/adb/magisk/busybox awk -F 'TUN' '{print $2}')
+               stop_tun
+               start_tun
+               echo $date_log"info: TUN stack listening" >> ${CFM_logs_file}
            fi
-           echo $date_log"info: ${mlog} ${log}" >> ${CFM_logs_file}
+           ${scripts_dir}/clash.tool -v && detected_port
            echo $date_log"info: Clash service is running (PID: `cat ${Clash_pid_file}`)" >> ${CFM_logs_file}
            ;;
         k)
