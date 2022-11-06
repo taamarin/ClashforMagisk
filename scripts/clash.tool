@@ -50,7 +50,7 @@ update_file() {
     fi
 }
 
-auto_update() {
+update_geo() {
   if [ "${auto_updateGeoX}" == "true" ]; then
      update_file ${Clash_GeoIP_file} ${GeoIP_dat_url}
      update_file ${Clash_GeoSite_file} ${GeoSite_url}
@@ -200,7 +200,7 @@ cgroup_limit() {
   echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && log "[info] ${Cgroup_memory_path}/clash/memory.limit_in_bytes" || return 0
 }
 
-up_dashboard() {
+update_dashboard () {
   url_dashboard="https://github.com/taamarin/yacd/archive/refs/heads/gh-pages.zip"
   file_dasboard="${Clash_data_dir}/dashboard.zip"
   rm -rf ${Clash_data_dir}/dashboard/dist
@@ -242,34 +242,35 @@ dnstt_client() {
   fi
 }
 
-while getopts ":fspokldv" signal ; do
+while getopts ":dfklops" signal ; do
   case ${signal} in
+    d)
+      update_dashboard 
+      ;;
     f)
       find_packages_uid
-      ;;
-    s)
-      auto_update
-      rm -rf ${Clash_data_dir}/*dat.bak
-      exit 1
-      ;;
-    p)
-      port_detection
-      ;;
-    l)
-      cgroup_limit
       ;;
     k)
       update_kernel
       ;;
-    d)
-      up_dashboard
-      ;;
-    v)
-      dnstt_client
+    l)
+      cgroup_limit
       ;;
     o)
       config_online
       ;;
+    p)
+      port_detection
+      ;;
+    s)
+      update_geo
+      rm -rf ${Clash_data_dir}/*dat.bak
+      exit 1
+      ;;
+    v)
+      dnstt_client
+      ;;
+
     ?)
       echo ""
       ;;
