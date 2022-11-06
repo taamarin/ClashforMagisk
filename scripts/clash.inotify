@@ -2,30 +2,27 @@
 
 scripts=`realpath $0`
 scripts_dir=`dirname ${scripts}`
+
 service_path="/data/clash/scripts/clash.service"
 iptables_path="/data/clash/scripts/clash.iptables"
-logs_service="/data/clash/run/service.log"
+log="/data/clash/run/service.log"
 
 events=$1
 monitor_dir=$2
 monitor_file=$3
 
 create_run() {
-    if [ ! -d "/data/clash/run" ]
-    then
+    if [ ! -d "/data/clash/run" ]; then
         mkdir -p /data/clash/run
     fi
 }
 
 service_control() {
-    if [ "${monitor_file}" = "disable" ]
-    then
-        if [ "${events}" = "d" ]
-        then
-            ${service_path} -s &> ${logs_service} && ${iptables_path} -s &>> ${logs_service} &
-        elif [ "${events}" = "n" ]
-        then
-            ${service_path} -k &>> ${logs_service} && ${iptables_path} -k &>> ${logs_service} &
+    if [ "${monitor_file}" = "disable" ]; then
+        if [ "${events}" = "d" ]; then
+            ${service_path} -s &> ${log} && ${iptables_path} -s &>> ${log} &
+        elif [ "${events}" = "n" ]; then
+            ${service_path} -k &>> ${log} && ${iptables_path} -k &>> ${log} &
         fi
     fi
 }

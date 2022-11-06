@@ -6,3 +6,4 @@ rm_data() {
 }
 
 rm_data
+# UNINSTALL 

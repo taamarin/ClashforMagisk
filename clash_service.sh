@@ -8,3 +8,5 @@ done
 chmod 755 /data/clash/scripts/start.sh
 /data/clash/scripts/start.sh
 )&
+
+# Clash Service 

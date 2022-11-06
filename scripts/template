@@ -1,76 +1,69 @@
-tproxy-port: 9898
-mixed-port: 7890
+tproxy-port: 0
+redir-port: 9454
 mode: rule
 allow-lan: true
 unified-delay: true
 bind-address: '*'
-log-level: warning
-ipv6: false
+log-level: error
+ipv6: true
 geodata-mode: true
 external-controller: 0.0.0.0:9090
 external-ui: dashboard/dist
 tcp-concurrent: false
-interface-name: ""
+# interface-name: ""
 enable-process: false
 geodata-loader: memconservative
+# routing-mark: 233
 inbound-tfo: false
 secret: ""
-# geox-url: {mmdb: "", geoip: "", geosite: ""}
+geox-url: {mmdb: "", geoip: "", geosite: ""}
 profile:
   store-selected: true
   store-fake-ip: false
-experimental: {
-    sniff-tls-sni: false,
-    fingerprint: ""
-}
+experimental: {sniff-tls-sni: true, fingerprint: ""}
 sniffer:
   enable: false
-  sniffing:
-    - tls
-    - http
+  sniffing: [tls, http]
   force-domain:
     - '+'
-  skip-domain: 
+  skip-domain:
     - '+.google.com'
-  port-whitelist:
-    - 443
-    - 80
-hosts: {
-  "cacerts.digicert.com": "104.21.21.147",
-  "ota.googlezip.net": "127.0.0.1",
-  "ota-cache1.googlezip.net": "127.0.0.1",
-  "ota-cache2.googlezip.net": "127.0.0.1"
-}
+  port-whitelist: [443, 80]
+  force-dns-mapping: true
+  parse-pure-ip: true
+hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1", "ota-cache1.googlezip.net": "127.0.0.1", "ota-cache2.googlezip.net": "127.0.0.1"}
 tun:
-  enable: false
-  device: Meta
+  enable: true
+  device: tun0
   stack: system
+  mtu: 9000
   dns-hijack:
     - any:53
-  auto-route: false
-  auto-detect-interface: false
+  auto-route: true
+  auto-detect-interface: true
+  strict_route: false
+  inet4_address: 198.18.0.1/16
+  inet6_address: [fdfe:dcba:9876::1/126]
 dns:
   enable: true
-  ipv6: true
+  ipv6: false
   prefer-h3: false
   default-nameserver:
-    - 8.8.8.8
+    - 'tcp://1.0.0.1' # Cloudflare
   listen: 0.0.0.0:1053
   use-hosts: true
-  enhanced-mode: fake-ip
+  enhanced-mode: redir-host
   fake-ip-range: 198.18.0.1/16
-  fake-ip-filter: [
-    "*.local",
-    "*.localhost",
-  ]
+  fake-ip-filter: ["*.local", "*.localhost"]
   nameserver:
-    - '9.9.9.9'               # Quad9
-    - '1.1.1.1'               # Cloudflare
-    - '8.8.4.4'               # Google
-#  fallback: []
-#  fallback-filter:
-#    geoip: false
-#    geoip-code: "!ID"
-#    geosite: []
-#    ipcidr: []
-#    domain: []
+    - 'https://1.1.1.1/dns-query' # Cloudflare
+    - 'https://8.8.8.8/dns-query' # Google
+  proxy-server-nameserver:
+    - 'https://dns.google/dns-query'
+  fallback: []
+  fallback-filter:
+    geoip: false
+    geoip-code: "ID"
+    geosite: []
+    ipcidr: [0.0.0.0/8, 10.0.0.0/8]
+    domain: ['+.google.com', '+.youtube.com']
