@@ -26,7 +26,7 @@ This is a Clash module for Magisk, and includes binaries for arm, arm64, x86, x6
 
 ## Manager Apps CFM
 - [ClashForMagisk_Manager](https://t.me/taamarin/26137) EN
-- [ClashForMagisk_v2](https://github.com/taamarin/ClashforMagisk/releases/download/v1.13.2/ClashforMagisk-v1.6.0.apk)
+- [ClashForMagisk_Manager](https://t.me/MagiskChangeKing/159) CN
 
 ## Install
 You can download the release [installer zip](https://github.com/taamarin/ClashforMagisk/releases) file and install it via the Magisk Manager App.
@@ -47,9 +47,22 @@ You can download the release [installer zip](https://github.com/taamarin/Clashfo
 
 ### Advanced usage
 > MODDIR= "/data/clash"
+
+##### Change proxy mode
+- Clash uses `TPROXY` transparent proxy `TCP + UDP` by default, if it detects that the device does not support `TPROXY`, it will automatically use `REDIRECT` to proxy only `TCP`
+
+- Open `${MODDIR}/scripts/clash.config` file line [17-18](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L17-#L18), modify the value of `network_mode` to `TCP` or `MIXED `to use `REDIRECT` to proxy `TCP`, and `UDP` will not be proxied when `TUN` is not enabled in the Clash kernel
+
+##### Bypass transparent proxy when connected to Wi-Fi or open a hotspot
+Clash default transparent proxy local and hotspot, line [20-23](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L20-#L23)
+
+- Open the `${MODDIR}/scripts/clash.config` file, modify the `ignore_out_list` array and add the `wlan+` element, the transparent proxy will `bypass` the `WLAN`, and the hotspot will not be affected
+
+- Open the `${MODDIR}/scripts/clash.config` file, modify the ap_list array and delete the `wlan+` element to opaque proxy `WLAN` and hotspot (the `MediaTek` model may be `ap+` instead of `wlan+`)
+
 ##### Select which packages to proxy
 - If you expect all Apps proxy by Clash with transparent proxy EXCEPT specific Apps, write down bypass at the first line then these Apps' packages separated as above in file `/data/clash/packages.list`
-- clash.config line [19](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L19)
+- clash.config line [14-15](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L14-#L15)
 - `blacklist` & `whitelits`, not working on `fake-ip`
 
       - dns:
@@ -72,9 +85,10 @@ You can download the release [installer zip](https://github.com/taamarin/Clashfo
     - Stop service :
     > ${MODDIR}/scripts/clash.iptables -k
 
-##### SubScription
+##### subscription
 you can use SubScription
-- open `/data/clash/clash.config` line [33](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L33) & [31](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L31)
+- open `/data/clash/clash.config` line [30-35](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L30-#L35)
+  - update_interval="interval contab"
   - Subcript_url="your_link"
   - auto_updateSubcript="true"
 
@@ -84,7 +98,7 @@ ${MODDIR}/scripts/clash.tool -s
 ```
 
 ##### Config Online
-- **clash.config** line [35](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L35), If true,
+- **clash.config** line [37-38](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L37-#L38), If true,
 - use it to download the subscription configuration, when starting Clash , So no need to type `${MODDIR}/scripts/clash.tool -s` anymore
 
 ##### Change Clash kernel
@@ -94,13 +108,13 @@ You can use Clash.Premium and Clash.Meta
 - Clash Premium 
   - `/data/clash/kernel/lib/Clash.Premium`
 
-you can download the Kernel automatically, for the settings in the **clash.config** line [92](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L92)
+you can download the Kernel automatically, for the settings in the **clash.config** line [85-109](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L85-#L109)
 ```shell
 ${MODDIR}/scripts/clash.tool -k
 ```
 
 ##### GeoSite, GeoIP, and Mmdb
-- settings are in clash.config line [118](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L118)
+- settings are in clash.config line [111-135](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L111-#L135)
 - if true, will be updated every day at 00.00
 - you can change the URL
 
@@ -117,6 +131,7 @@ rm -rf /data/clash && rm -rf /data/adb/service.d/clash_service.sh
 ## Credits
 This is a repo fork
   - [kalasutra/Clash_for_magisk](https://github.com/kalasutra/Clash_For_Magisk)
+  - [CHIZI-0618/box4magisk](https://github.com/CHIZI-0618/box4magisk)
+  - [Asterisk4Magisk/Xray4Magisk](https://github.com/Asterisk4Magisk/Xray4Magisk)
   - [MagiskChangeKing](https://t.me/MagiskChangeKing)
   - [e58695](https://t.me/e58695)
-  - [Xray4Magisk](https://github.com/Asterisk4Magisk/Xray4Magisk)
