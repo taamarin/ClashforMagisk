@@ -16,7 +16,7 @@ geodata-loader: memconservative
 # routing-mark: 233
 inbound-tfo: false
 secret: ""
-geox-url: {mmdb: "", geoip: "", geosite: ""}
+# geox-url: {mmdb: "", geoip: "", geosite: ""}
 profile:
   store-selected: true
   store-fake-ip: false

@@ -48,7 +48,7 @@ start_redirect() {
     if [ "$(cat ${filter_packages_file[@]})" = "" ] ; then
       # Route Everything
       ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
-      log "[info]: transparent proxy for all apps."
+      log "[info] transparent proxy for all apps."
     else
       # Bypass apps
       for appid in $(cat ${appuid_file[@]}) ; do
@@ -56,7 +56,7 @@ start_redirect() {
       done
       # Allow !app
       ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
-      log "[info]: proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -156,7 +156,7 @@ start_tproxy() {
       # Route Everything
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      log "[info]: transparent proxy for all apps."
+      log "[info] transparent proxy for all apps."
     else
       # Bypass apps
       for appid in $(cat ${appuid_file[@]}) ; do
@@ -165,7 +165,7 @@ start_tproxy() {
       # Allow !app
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      log "[info]: proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -275,28 +275,28 @@ while getopts ":sk" signal ; do
       detected_port
       if [ "${network_mode}" = "UDP" ] ; then
         if (zcat /proc/config.gz | grep -q TPROXY) ; then
-          log "[info]: use TPROXY:TCP+UDP."
-          log "[info]: creating iptables transparent proxy rules."
-          start_tproxy && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+          log "[info] use TPROXY:TCP+UDP."
+          log "[info] creating iptables transparent proxy rules."
+          start_tproxy && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
         else
-          log "[warning]: the device does not support TPROXY, please switch network_mode."
-          log "[info]: use REDIRECT:TCP."
-          log "[info]: creating iptables transparent proxy rules."
-          start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+          log "[warning] the device does not support TPROXY, please switch network_mode."
+          log "[info] use REDIRECT:TCP."
+          log "[info] creating iptables transparent proxy rules."
+          start_redirect && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
         fi
       else
-        [ "${network_mode}" = "TCP" ] && log "[info]: use REDIRECT:TCP." || log "[info]: use MIXED:TCP+TUN."
-        log "[info]: creating iptables transparent proxy rules."
-        start_redirect && log "[info]: create iptables transparent proxy rules done." || log "[error]: create iptables transparent proxy rule failed."
+        [ "${network_mode}" = "TCP" ] && log "[info] use REDIRECT:TCP." || log "[info] use MIXED:TCP+TUN."
+        log "[info] creating iptables transparent proxy rules."
+        start_redirect && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
         forward -I
       fi
       ;;
     k)
-      log "[warning]: cleaning up iptables transparent proxy rules."
+      log "[warning] cleaning up iptables transparent proxy rules."
       stop_tproxy
       stop_redirect
       forward -D
-      log "[warning]: clean up iptables transparent proxy rules done."
+      log "[warning] clean up iptables transparent proxy rules done."
       ;;
     ?)
       echo ""
@@ -311,13 +311,13 @@ while getopts ":sk" signal ; do
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
       forward -I
-      log "[info]: mode: ${mode} disable transparent proxy."
+      log "[info] mode: ${mode} disable transparent proxy."
       ;;
     k)
       stop_tproxy
       stop_redirect
       forward -D
-      log "[warning]: cleaning up proxy rules."
+      log "[warning] cleaning up proxy rules."
       ;;
     *)
       echo "$0:  usage: $0 {enable|disable}"
