@@ -1,4 +1,4 @@
-tproxy-port: 0
+tproxy-port: 9898
 redir-port: 9454
 mode: rule
 allow-lan: true
@@ -33,14 +33,14 @@ sniffer:
   parse-pure-ip: true
 hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1", "ota-cache1.googlezip.net": "127.0.0.1", "ota-cache2.googlezip.net": "127.0.0.1"}
 tun:
-  enable: true
+  enable: false
   device: tun0
   stack: system
   mtu: 9000
   dns-hijack:
     - any:53
-  auto-route: true
-  auto-detect-interface: true
+  auto-route: false
+  auto-detect-interface: false
   strict_route: false
   inet4_address: 198.18.0.1/16
   inet6_address: [fdfe:dcba:9876::1/126]
@@ -52,7 +52,7 @@ dns:
     - 'tcp://1.0.0.1' # Cloudflare
   listen: 0.0.0.0:1053
   use-hosts: true
-  enhanced-mode: redir-host
+  enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ["*.local", "*.localhost"]
   nameserver:

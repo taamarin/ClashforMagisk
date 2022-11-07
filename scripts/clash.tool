@@ -17,17 +17,14 @@ find_packages_uid() {
 }
 
 restart_clash() {
-  ${scripts_dir}/clash.service -k
-  ${scripts_dir}/clash.iptables -k
+  ${scripts_dir}/clash.service -k && ${scripts_dir}/clash.iptables -k
   echo -n "disable" > ${Clash_run_path}/root
   sleep 0.5
-  ${scripts_dir}/clash.service -s
-  ${scripts_dir}/clash.iptables -s
+  ${scripts_dir}/clash.service -s && ${scripts_dir}/clash.iptables -s
   if [ "$?" == "0" ]; then
-    echo -n log "[info] $(date), "
-    echo "Clash restart"
+    log "[info] $(date), Clash restart"
   else
-    log "[error] Clash Failed to restart."
+    log "[error] $(date), Clash Failed to restart."
   fi
 }
 
@@ -208,36 +205,35 @@ update_dashboard () {
 
 dnstt_client() {
   if [ "${run_dnstt}" == "1" ]; then
-    if [ -f $dnstt_client_bin ]; then
-      chmod 0755 $dnstt_client_bin
-      chown root:net_admin ${dnstt_client_bin}
+    if [ -f ${dnstt_client_bin} ]; then
+      chmod 0700 ${dnstt_client_bin}
+      chown 0:3005 ${dnstt_client_bin}
       if [ ! ${nsdomain} == "" ] && [ ! ${pubkey} == "" ]; then
-         nohup ${busybox_path} setuidgid 0:3005 $dnstt_client_bin -udp ${dns_for_dnstt}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
+         nohup ${busybox_path} setuidgid 0:3005 ${dnstt_client_bin} -udp ${dns_for_dnstt}:53 -pubkey ${pubkey} ${nsdomain} 127.0.0.1:9553 > /dev/null 2>&1 &
          echo -n $! > ${Clash_run_path}/dnstt.pid
 
          sleep 1
          local dnstt_pid=$(cat ${Clash_run_path}/dnstt.pid 2> /dev/null)
-         if (cat /proc/"$dnstt_pid"/cmdline | grep -q $dnstt_bin_name)
-         then
-          log "[info] $dnstt_bin_name is enable."
+         if (cat /proc/$dnstt_pid/cmdline | grep -q ${dnstt_bin_name}); then
+           log "[info] ${dnstt_bin_name} is enable."
          else
-          log "[error] $dnstt_bin_name The configuration is incorrect,"
-          log "[error] the startup fails, and the following is the error"
-          kill -9 $(cat ${Clash_run_path}/dnstt.pid)
+           log "[error] ${dnstt_bin_name} The configuration is incorrect,"
+           log "[error] the startup fails, and the following is the error"
+           kill -9 $(cat ${Clash_run_path}/dnstt.pid)
          fi
       else
-        log "[warning] $dnstt_bin_name tidak aktif," 
+        log "[warning] ${dnstt_bin_name} tidak aktif," 
         log "[warning] 'nsdomain' & 'pubkey' kosong," 
       fi
     else
-      log "[error] kernel $dnstt_bin_name tidak ada."
+      log "[error] kernel ${dnstt_bin_name} tidak ada."
     fi
   else
-    log "[info] $dnstt_bin_name is disabled"
+    log "[info] ${dnstt_bin_name} is disabled"
   fi
 }
 
-while getopts ":dfklops" signal ; do
+while getopts ":dfklopsv" signal ; do
   case ${signal} in
     d)
       update_dashboard 
@@ -259,8 +255,7 @@ while getopts ":dfklops" signal ; do
       ;;
     s)
       update_geo
-      rm -rf ${Clash_data_dir}/*dat.bak
-      exit 1
+      rm -rf ${Clash_data_dir}/*dat.bak && exit 1
       ;;
     v)
       dnstt_client

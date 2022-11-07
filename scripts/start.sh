@@ -38,7 +38,6 @@ then
     then
        ulimit -SHn 1000000
        inotifyd ${scripts_dir}/clash.inotify ${moddir} &>> /dev/null &
-       echo -n $! > /data/clash/run/inotifyd.pid
     fi
 fi
 }

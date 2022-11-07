@@ -287,6 +287,7 @@ while getopts ":sk" signal ; do
   case ${signal} in
     s)
       ${scripts_dir}/clash.tool -f
+      ${scripts_dir}/clash.tool -v
       stop_tproxy >> /dev/null 2>&1
       stop_redirect >> /dev/null 2>&1
       forward -D >> /dev/null 2>&1
