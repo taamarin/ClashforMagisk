@@ -91,11 +91,6 @@ config_online() {
 }
 
 port_detection() {
-  logs() {
-    export TZ=Asia/Jakarta
-    echo -n "$(date '+%H:%M %z') $*" | tee -a ${CFM_logs_file} >> /dev/null 2>&1
-  }
-
   clash_pid=$(cat ${Clash_pid_file})
   match_count=0
   

@@ -56,7 +56,12 @@ start_redirect() {
       done
       # Allow !app
       ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
-      log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      logs "[info] proxy mode: ${mode} "
+      for package in $(cat ${filter_packages_file[@]}) ; do
+        echo -n "${package} / " >> ${CFM_logs_file}
+      done
+      echo "has no transparent proxy." >> ${CFM_logs_file}
+      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -65,7 +70,12 @@ start_redirect() {
     done
     ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${Clash_redir_port}
     ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${Clash_redir_port}
-    log "proxy mode: ${mode} $(cat ${filter_packages_file[@]}) transparent proxy."
+    logs "[info] proxy mode: ${mode} "
+    for package in $(cat ${filter_packages_file[@]}) ; do
+      echo -n "${package} / " >> ${CFM_logs_file}
+    done
+    echo "transparent proxy." >> ${CFM_logs_file}
+    # log "proxy mode: ${mode} $(cat ${filter_packages_file[@]}) transparent proxy."
   fi
 
   ${iptables_wait} -t nat -I OUTPUT -j BOX_LOCAL
@@ -165,7 +175,12 @@ start_tproxy() {
       # Allow !app
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      logs "[info] proxy mode: ${mode} "
+      for package in $(cat ${filter_packages_file[@]}) ; do
+        echo -n "${package} / " >> ${CFM_logs_file}
+      done
+      echo "has no transparent proxy." >> ${CFM_logs_file}
+    # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -177,7 +192,11 @@ start_tproxy() {
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
-    log "proxy mode: ${mode} $(cat ${filter_packages_file[@]}) transparent proxy."
+    logs "[info] proxy mode: ${mode} "
+    for package in $(cat ${filter_packages_file[@]}) ; do
+      echo -n "${package} / " >> ${CFM_logs_file}
+    done
+    echo "has no transparent proxy." >> ${CFM_logs_file}
   fi
 
   ${iptables_wait} -t mangle -I OUTPUT -j BOX_LOCAL
