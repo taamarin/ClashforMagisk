@@ -1,4 +1,8 @@
-## ⟳ Changelog v2.1
+## ⟳ Changelog v2.2
+- fix `dnstt-client`
+- default setting `Tproxy`, `network_mode:` `UDP`
+
+#### ⟳ Changelog v2.1
 - auto set `network_mode`, if use tproxy or tun
 - customize log view package, `blacklist` and `whitelist`
 
