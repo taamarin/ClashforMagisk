@@ -56,7 +56,6 @@ ceks_clash() {
 }
 
 tun_tproxy() {
-  rm -rf /data/clash/run/lastwifi && rm -rf /data/clash/run/lastmobile
   if [ "${Clash_tun_status}" == "true" ]; then
     if [ ${arm} == "aarch64" ]; then
       mkdir -p /dev/net
@@ -66,14 +65,15 @@ tun_tproxy() {
       sed -i 's/auto-detect-interface:.*/auto-detect-interface: true/' $Clash_template
       sed -i 's/auto-route:.*/auto-route: true/' $Clash_template
       sed -i 's/tproxy-port:.*/tproxy-port: 0/' $Clash_template
+      sed -i 's/network_mode=.*/network_mode="MIXED"/' /data/clash/clash.config
     else
-      log "[error] tun only for arm64/armv8。"
-      exit 1
+      log "[error] tun only for arm64/armv8" && exit 1
     fi
   else
     sed -i 's/auto-detect-interface:.*/auto-detect-interface: false/' $Clash_template
     sed -i 's/auto-route:.*/auto-route: false/' $Clash_template
     sed -i 's/tproxy-port:.*/tproxy-port: 9898/' $Clash_template
+    sed -i 's/network_mode=.*/network_mode="UDP"/' /data/clash/clash.config
     log "[info] turn on tproxy mode。"
   fi
 }
@@ -189,7 +189,7 @@ start_clash() {
   dow_config
   replace_kernel
   echo $(date) > $CFM_logs_file
-  echo "$(${Clash_bin_path} -v)" >> $CFM_logs_file
+  # echo "$(${Clash_bin_path} -v)" >> $CFM_logs_file
   echo "Clash for Magisk v2.0" > /dev/null
   echo "CPU: % | RES: kb" >> $CFM_logs_file
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━" >> $CFM_logs_file
