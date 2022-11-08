@@ -1,4 +1,7 @@
-## ⟳ Changelog v2.2
+## ⟳ Changelog v2.3
+- fix `cgroup_limit`
+
+#### ⟳ Changelog v2.2
 - fix `dnstt-client`
 - default setting `Tproxy`, `network_mode:` `UDP`
 

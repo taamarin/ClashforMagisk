@@ -187,10 +187,10 @@ cgroup_limit() {
 
   mkdir -p "${Cgroup_memory_path}/clash"
   echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" \
-  && log "[info]: ${Cgroup_memory_path}/clash/cgroup.procs"  
+  && log "[info] ${Cgroup_memory_path}/clash/cgroup.procs"  
 
   echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" \
-  && log "[info]: ${Cgroup_memory_path}/clash/memory.limit_in_bytes"
+  && log "[info] ${Cgroup_memory_path}/clash/memory.limit_in_bytes"
 }
 
 update_dashboard () {
