@@ -179,17 +179,18 @@ update_kernel() {
 
 cgroup_limit() {
   if [ "${Cgroup_memory_limit}" == "" ]; then
-    return 0
+    return
   fi
-
   if [ "${Cgroup_memory_path}" == "" ]; then
     Cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
   fi
 
   mkdir -p "${Cgroup_memory_path}/clash"
+  echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" \
+  && log "[info]: ${Cgroup_memory_path}/clash/cgroup.procs"  
 
-  echo $(cat ${Clash_pid_file}) > "${Cgroup_memory_path}/clash/cgroup.procs" && log "[info] ${Cgroup_memory_path}/clash/cgroup.procs"  || return 0
-  echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" && log "[info] ${Cgroup_memory_path}/clash/memory.limit_in_bytes" || return 0
+  echo "${Cgroup_memory_limit}" > "${Cgroup_memory_path}/clash/memory.limit_in_bytes" \
+  && log "[info]: ${Cgroup_memory_path}/clash/memory.limit_in_bytes"
 }
 
 update_dashboard () {

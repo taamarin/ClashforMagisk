@@ -278,7 +278,7 @@ detected_port() {
       return 0
     fi
   else
-    log "info: Skip!! port detected。"
+    log "[info] skip!! port detected。"
   fi
 }
 
