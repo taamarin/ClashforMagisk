@@ -180,7 +180,7 @@ start_tproxy() {
         echo -n "${package} / " >> ${CFM_logs_file}
       done
       echo "has no transparent proxy." >> ${CFM_logs_file}
-    # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
@@ -196,7 +196,7 @@ start_tproxy() {
     for package in $(cat ${filter_packages_file[@]}) ; do
       echo -n "${package} / " >> ${CFM_logs_file}
     done
-    echo "has no transparent proxy." >> ${CFM_logs_file}
+    echo "transparent proxy." >> ${CFM_logs_file}
   fi
 
   ${iptables_wait} -t mangle -I OUTPUT -j BOX_LOCAL
