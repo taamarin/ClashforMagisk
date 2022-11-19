@@ -7,6 +7,10 @@ source /data/clash/clash.config
 forward() {
   ${iptables_wait} $1 FORWARD -o ${tun_device} -j ACCEPT
   ${iptables_wait} $1 FORWARD -i ${tun_device} -j ACCEPT
+  if [ "${ipv6}" = "true" ] ; then
+    ${ip6tables_wait} $1 FORWARD -o ${tun_device} -j ACCEPT
+    ${ip6tables_wait} $1 FORWARD -i ${tun_device} -j ACCEPT
+  fi
 }
 
 start_redirect() {
@@ -15,7 +19,7 @@ start_redirect() {
   ${iptables_wait} -t nat -N BOX_LOCAL
   ${iptables_wait} -t nat -F BOX_LOCAL
 
-  if [ "${Clash_bin_name}" == "clash" ] ; then
+  if [ "${Clash_bin_name}" = "clash" ] ; then
     ${iptables_wait} -t nat -A BOX_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
     ${iptables_wait} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
     ${iptables_wait} -t nat -A BOX_EXTERNAL -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
@@ -97,14 +101,14 @@ stop_redirect() {
 start_tproxy() {
   ip rule add fwmark ${mark_id} lookup ${mark_id}
   ip route add local default dev lo table ${mark_id}
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ip -6 rule add fwmark ${mark_id} lookup ${mark_id}
     ip -6 route add local default dev lo table ${mark_id}
   fi
 
   ${iptables_wait} -t mangle -N BOX_EXTERNAL
   ${iptables_wait} -t mangle -F BOX_EXTERNAL
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -N BOX_EXTERNAL
     ${ip6tables_wait} -t mangle -F BOX_EXTERNAL
   fi
@@ -117,17 +121,17 @@ start_tproxy() {
   # It might need more complicated solution.
   ${iptables_wait} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
   ${iptables_wait} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
-  if [ "${ipv6}" == "true" ] ; then
-    ${iptables_wait} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
-    ${iptables_wait} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
+  if [ "${ipv6}" = "true" ] ; then
+    ${ip6tables_wait} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
+    ${ip6tables_wait} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
   fi
 
   # Bypass reserved_ip
-  if [ "${Clash_bin_name}" == "clash" ] ; then
+  if [ "${Clash_bin_name}" = "clash" ] ; then
     for subnet in ${reserved_ip[@]} ; do
       ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
     done
-    if [ "${ipv6}" == "true" ] ; then
+    if [ "${ipv6}" = "true" ] ; then
       for subnet6 in ${reserved_ip6[@]} ; do
         ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} -j RETURN
       done
@@ -137,7 +141,7 @@ start_tproxy() {
       ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
     done
-    if [ "${ipv6}" == "true" ] ; then
+    if [ "${ipv6}" = "true" ] ; then
       for subnet6 in ${reserved_ip6[@]} ; do
         ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
         ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} ! -p udp -j RETURN
@@ -147,7 +151,7 @@ start_tproxy() {
 
   ${iptables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
   ${iptables_wait} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
     ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
   fi
@@ -158,7 +162,7 @@ start_tproxy() {
     ${iptables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
   done
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     for ap6 in ${ap_list[@]} ; do
       ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap6} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p udp -i ${ap6} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
@@ -169,7 +173,7 @@ start_tproxy() {
 
   ${iptables_wait} -t mangle -N BOX_LOCAL
   ${iptables_wait} -t mangle -F BOX_LOCAL
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -I PREROUTING -j BOX_EXTERNAL
 
     ${ip6tables_wait} -t mangle -N BOX_LOCAL
@@ -179,28 +183,32 @@ start_tproxy() {
   for ignore in ${ignore_out_list[@]} ; do
     ${iptables_wait} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
   done
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     for ignore6 in ${ignore_out_list[@]} ; do
       ${ip6tables_wait} -t mangle -I BOX_LOCAL -o ${ignore6} -j RETURN
     done
   fi
 
   # Bypass reserved_ip
-  if [ "${Clash_bin_name}" == "clash" ] ; then
+  if [ "${Clash_bin_name}" = "clash" ] ; then
+    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
     for subnet in ${reserved_ip[@]} ; do
       ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
     done
-    if [ "${ipv6}" == "true" ] ; then
+    if [ "${ipv6}" = "true" ] ; then
+      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
       for subnet6 in ${reserved_ip6[@]} ; do
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} -j RETURN
       done
     fi
   else
+    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
     for subnet in ${reserved_ip[@]} ; do
       ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
     done
-    if [ "${ipv6}" == "true" ] ; then
+    if [ "${ipv6}" = "true" ] ; then
+      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
       for subnet6 in ${reserved_ip6[@]} ; do
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} ! -p udp -j RETURN
@@ -210,7 +218,7 @@ start_tproxy() {
 
   # Bypass box itself
   ${iptables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
   fi
   # ${iptables_wait} -t mangle -I BOX_LOCAL -j RETURN -m mark --mark ${routing_mark}
@@ -222,7 +230,7 @@ start_tproxy() {
       # Route Everything
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      if [ "${ipv6}" == "true" ] ; then
+      if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
       fi
@@ -232,15 +240,15 @@ start_tproxy() {
       for appid in $(cat ${appuid_file[@]}) ; do
         ${iptables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
       done
-      if [ "${ipv6}" == "true" ] ; then
-        for appid in $(cat ${appuid_file[@]}) ; do
-          ${ip6tables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
+      if [ "${ipv6}" = "true" ] ; then
+        for appid6 in $(cat ${appuid_file[@]}) ; do
+          ${ip6tables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid6} -j RETURN
         done
       fi
       # Allow !app
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      if [ "${ipv6}" == "true" ] ; then
+      if [ "${ipv6}" = "true" ] ; then
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
       fi
@@ -257,17 +265,17 @@ start_tproxy() {
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
     done
-    if [ "${ipv6}" == "true" ] ; then
-      for appid in $(cat ${appuid_file[@]}) ; do
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
+    if [ "${ipv6}" = "true" ] ; then
+      for appid6 in $(cat ${appuid_file[@]}) ; do
+        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid6} -j MARK --set-mark ${mark_id}
+        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid6} -j MARK --set-mark ${mark_id}
       done
     fi
     ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
-    if [ "${ipv6}" == "true" ] ; then
+    if [ "${ipv6}" = "true" ] ; then
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
@@ -281,7 +289,7 @@ start_tproxy() {
   fi
 
   ${iptables_wait} -t mangle -I OUTPUT -j BOX_LOCAL
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -I OUTPUT -j BOX_LOCAL
   fi
 
@@ -289,7 +297,7 @@ start_tproxy() {
   ${iptables_wait} -t mangle -F DIVERT
   ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
   ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -N DIVERT
     ${ip6tables_wait} -t mangle -F DIVERT
     ${ip6tables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
@@ -299,13 +307,13 @@ start_tproxy() {
   ${iptables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
   # This rule blocks local access to tproxy-port to prevent traffic loopback.
   ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
     # This rule blocks local access to tproxy-port to prevent traffic loopback.
-    ${ip6tables_wait} -A OUTPUT -d :1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
+    ${ip6tables_wait} -A OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
   fi
 
-  if [ "${Clash_bin_name}" == "clash" ] ; then
+  if [ "${Clash_bin_name}" = "clash" ] ; then
     ${iptables_wait} -t nat -N CLASH_DNS_EXTERNAL
     ${iptables_wait} -t nat -F CLASH_DNS_EXTERNAL
     ${iptables_wait} -t nat -A CLASH_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
@@ -328,7 +336,7 @@ start_tproxy() {
 stop_tproxy() {
   ip rule del fwmark ${mark_id} table ${mark_id}
   ip route del local default dev lo table ${mark_id}
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ip -6 rule del fwmark ${mark_id} table ${mark_id}
     ip -6 route del local default dev lo table ${mark_id}
   fi
@@ -349,7 +357,7 @@ stop_tproxy() {
   ${iptables_wait} -t mangle -X DIVERT
 
   ${iptables_wait} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
-  if [ "${ipv6}" == "true" ] ; then
+  if [ "${ipv6}" = "true" ] ; then
     ${ip6tables_wait} -t mangle -D PREROUTING -j BOX_EXTERNAL
     
     ${ip6tables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
@@ -385,7 +393,7 @@ stop_tproxy() {
 
 detected_port() {
   sleep 1
-  if [ "${port_detect}" == "true" ]; then
+  if [ "${port_detect}" = "true" ]; then
     if ! (${scripts_dir}/clash.tool -p); then
       return 0
     fi
