@@ -454,8 +454,8 @@ while getopts ":sk" signal ; do
       log "[info] mode: ${mode} disable transparent proxy."
       ;;
     k)
-      stop_tproxy
-      stop_redirect
+      stop_tproxy >> /dev/null 2>&1
+      stop_redirect >> /dev/null 2>&1
       forward -D
       log "[warning] cleaning up proxy rules."
       ;;

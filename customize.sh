@@ -75,7 +75,7 @@ mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
 
 ui_print "- Move Cert&Geo"
 mv ${clash_data_dir}/scripts/cacert.pem ${MODPATH}${ca_path}
-mv ${MODPATH}/GeoX/* ${clash_data_dir}/
+mv ${MODPATH}/geo/* ${clash_data_dir}/
 
 if [ ! -d /data/adb/service.d ] ; then
     ui_print "- Make folder service"
@@ -118,7 +118,7 @@ fi
 
 rm -rf ${MODPATH}/dashboard.zip
 rm -rf ${MODPATH}/scripts
-rm -rf ${MODPATH}/GeoX
+rm -rf ${MODPATH}/geo
 rm -rf ${MODPATH}/binary
 rm -rf ${MODPATH}/clash_service.sh
 rm -rf ${clash_data_dir}/scripts/config.yaml

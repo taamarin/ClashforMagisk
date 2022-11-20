@@ -1,4 +1,8 @@
-## ⟳ Changelog v2.3
+#### ⟳ Changelog v2.5
+- add IPv6 support
+- Optimize clash dns hijack
+
+#### ⟳ Changelog v2.3
 - fix `cgroup_limit`
 
 #### ⟳ Changelog v2.2
