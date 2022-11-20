@@ -229,8 +229,6 @@ dnstt_client() {
     else
       log "[error] kernel ${dnstt_bin_name} tidak ada."
     fi
-  else
-    log "[info] ${dnstt_bin_name} is disabled"
   fi
 }
 

@@ -35,21 +35,23 @@ hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1
 tun:
   enable: false
   device: utun
-  stack: system # gvisor / lwip / system
+  stack: system
   dns-hijack:
     - any:53
   auto-route: false
   auto-detect-interface: false
-  #  inet4-address: 198.18.0.1/30
-  #  inet6-address: [fdfe:dcba:9876::1/126]
-  mtu: 9000
-  strict_route: false
-  inet4_route_address:
+  inet4-address: 198.18.0.1/30
+  inet6-address: [fdfe:dcba:9876::1/126]
+  mtu: 30000
+  strict-route: false
+  inet4-route-address:
     - 0.0.0.0/1
     - 128.0.0.0/1
-  inet6_route_address:
+  inet6-route-address:
     - '::/1'
     - '8000::/1'
+  include-android-user:
+    - 0
 dns:
   enable: true
   ipv6: true
@@ -62,19 +64,19 @@ dns:
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter: ["*.local", "*.localhost"]
-  proxy-server-nameserver:
-    - '8.8.8.8'
+  # proxy-server-nameserver:
+    # - '8.8.8.8'
   nameserver:
     - 'tcp://1.0.0.1'
     - 'tcp://8.8.4.4'
   # fallback-filter:
-  #   geoip: true
-  #   geoip-code: ID
-  #   geosite:
-  #     - gfw
-  #   ipcidr:
-  #     - 240.0.0.0/4
-  #   domain:
-  #     - '+.google.com'
-  #     - '+.facebook.com'
-  #     - '+.youtube.com'
+    # geoip: true
+    # geoip-code: ID
+    # geosite:
+      # - gfw
+    # ipcidr:
+      # - 240.0.0.0/4
+    # domain:
+      # - '+.google.com'
+      # - '+.facebook.com'
+      # - '+.youtube.com'

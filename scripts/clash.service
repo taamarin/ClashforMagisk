@@ -229,7 +229,7 @@ start_clash() {
   if [ "${run_mosdns}" == "1" ]; then
     mosdns
   else
-    log "[info] mos-dns is disabled" && rm -rf ${Clash_run_path}/mosdns.log
+    rm -rf ${Clash_run_path}/mosdns.log
   fi
   if [ -f ${temporary_config_file} ]; then
     if (${Clash_bin_path} -v > /dev/null 2>&1); then
