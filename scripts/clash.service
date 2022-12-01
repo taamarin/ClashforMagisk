@@ -189,7 +189,7 @@ start_clash() {
   replace_kernel
   echo $(date) > $CFM_logs_file
   echo "$(${Clash_bin_path} -v)" >> $CFM_logs_file
-  echo "Clash for Magisk v2.5" > /dev/null
+  echo "Clash for Magisk v2.5.1" > /dev/null
   echo "CPU: % | RES: kb" >> $CFM_logs_file
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━" >> $CFM_logs_file
   if [ "${ipv6}" = "false" ] ; then
