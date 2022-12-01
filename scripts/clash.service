@@ -199,7 +199,7 @@ start_clash() {
     echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
     ip -6 rule add unreachable pref 100
-    log "[info] "Ipv6: disable"
+    log "[info] Ipv6: disable"
   else
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
@@ -207,7 +207,7 @@ start_clash() {
     echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
     ip -6 rule del unreachable pref 100
-    log "[info] "Ipv6: enable"
+    log "[info] Ipv6: enable"
   fi
   use_clash
   ceks_clash
