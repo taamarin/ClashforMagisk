@@ -1,5 +1,5 @@
 tproxy-port: 9898
-redir-port: 9454
+redir-port: 9797
 mode: rule
 allow-lan: true
 unified-delay: true
@@ -15,23 +15,25 @@ enable-process: false
 geodata-loader: memconservative
 # routing-mark: 233
 inbound-tfo: false
-secret: ""
+# secret: ""
 # geox-url: {mmdb: "", geoip: "", geosite: ""}
 profile:
   store-selected: true
   store-fake-ip: false
 experimental: {sniff-tls-sni: true, fingerprint: ""}
 sniffer:
-  enable: true
+  enable: false
   sniffing: [tls, http]
   force-domain:
     - '+'
   skip-domain:
     - '+.google.com'
-  port-whitelist: [443, 80]
+  port-whitelist:
+    - '443'
+    - '80'
   force-dns-mapping: true
   parse-pure-ip: true
-hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1", "ota-cache1.googlezip.net": "127.0.0.1", "ota-cache2.googlezip.net": "127.0.0.1"}
+# hosts: {"cacerts.digicert.com": "104.21.21.147", "ota.googlezip.net": "127.0.0.1", "ota-cache1.googlezip.net": "127.0.0.1", "ota-cache2.googlezip.net": "127.0.0.1"}
 tun:
   enable: false
   device: utun
@@ -42,23 +44,22 @@ tun:
   auto-detect-interface: false
   inet4-address: 198.18.0.1/30
   inet6-address: [fdfe:dcba:9876::1/126]
-  mtu: 30000
+  mtu: 9000
   strict-route: false
-  inet4-route-address:
-    - 0.0.0.0/1
-    - 128.0.0.0/1
-  inet6-route-address:
-    - '::/1'
-    - '8000::/1'
-  include-android-user:
-    - 0
+  # inet4-route-address:
+    # - 0.0.0.0/1
+    # - 128.0.0.0/1
+  # inet6-route-address:
+    # - '::/1'
+    # - '8000::/1'
+  # include-android-user:
+    # - 0
 dns:
   enable: true
   ipv6: true
   prefer-h3: false
   default-nameserver:
     - '1.1.1.1'
-    - '112.215.248.124#REJECT'  #dnsxl
   listen: 0.0.0.0:1053
   use-hosts: true
   enhanced-mode: fake-ip
@@ -69,14 +70,17 @@ dns:
   nameserver:
     - 'tcp://1.0.0.1'
     - 'tcp://8.8.4.4'
-  # fallback-filter:
-    # geoip: true
-    # geoip-code: ID
+  fallback:
+    - 'https://1.1.1.1/dns-query'
+    - 'https://8.8.8.8/dns-query'
+  fallback-filter:
+    geoip: false
+    geoip-code: '!ID'
     # geosite:
       # - gfw
     # ipcidr:
       # - 240.0.0.0/4
-    # domain:
-      # - '+.google.com'
-      # - '+.facebook.com'
-      # - '+.youtube.com'
+    domain:
+      - '+.google.com'
+      - '+.facebook.com'
+      - '+.youtube.com'

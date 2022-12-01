@@ -1,12 +1,14 @@
 proxies:
+  - {name: "free", server: 172.67.199.34, port: 80, type: vmess, uuid: 109acde5-d130-4a0c-822d-751769f3db3a, alterId: 0, cipher: auto, tls: false, skip-cert-verify: false, servername: do-gayeng.potatonc.my.id, network: ws, ws-opts: {path: /vmess, headers: {Host: do-gayeng.potatonc.my.id}}, udp: true}
 proxy-groups:
   - name: "LLYCORIS"
     type: select
-    use: [
-        🌸
-    ]
+    proxies:
+      - free
+    use:
+      - provide
 proxy-providers:
-  🌸:
+  provide:
     type: file
     path: ./assets/akun.yaml
     health-check:

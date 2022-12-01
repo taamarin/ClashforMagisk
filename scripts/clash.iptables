@@ -30,56 +30,56 @@ start_redirect() {
     #    ${iptables_wait} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_redir_port}
   fi
 
-  for subnet in ${reserved_ip[@]} ; do
+  for subnet in ${reserved_ip[*]} ; do
     ${iptables_wait} -t nat -A BOX_EXTERNAL -d ${subnet} -j RETURN
     ${iptables_wait} -t nat -A BOX_LOCAL -d ${subnet} -j RETURN
   done
 
   ${iptables_wait} -t nat -A BOX_EXTERNAL -p tcp -i lo -j REDIRECT --to-ports ${Clash_redir_port}
 
-  for ap in ${ap_list[@]} ; do
+  for ap in ${ap_list[*]} ; do
     ${iptables_wait} -t nat -A BOX_EXTERNAL -p tcp -i ${ap} -j REDIRECT --to-ports ${Clash_redir_port}
   done
 
   ${iptables_wait} -t nat -I PREROUTING -j BOX_EXTERNAL
 
   ${iptables_wait} -t nat -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-  for ignore in ${ignore_out_list[@]} ; do
+  for ignore in ${ignore_out_list[*]} ; do
     ${iptables_wait} -t nat -I BOX_LOCAL -o ${ignore} -j RETURN
   done
 
   if [ "${mode}" = "blacklist" ] ; then
-    if [ "$(cat ${filter_packages_file[@]})" = "" ] ; then
+    if [ "$(cat ${filter_packages_file[*]})" = "" ] ; then
       # Route Everything
       ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
       log "[info] transparent proxy for all apps."
     else
       # Bypass apps
-      for appid in $(cat ${appuid_file[@]}) ; do
+      for appid in $(cat ${appuid_file[*]}) ; do
         ${iptables_wait} -t nat -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
       done
       # Allow !app
       ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
       logs "[info] proxy mode: ${mode} "
-      for package in $(cat ${filter_packages_file[@]}) ; do
-        echo -n "${package} / " >> ${CFM_logs_file}
+      for package in $(cat ${filter_packages_file[*]}) ; do
+        echo -n "${package} " >> ${CFM_logs_file}
       done
       echo "has no transparent proxy." >> ${CFM_logs_file}
-      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[*]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
-    for appid in $(cat ${appuid_file[@]}) ; do
+    for appid in $(cat ${appuid_file[*]}) ; do
       ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j REDIRECT --to-ports ${Clash_redir_port}
     done
     ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${Clash_redir_port}
     ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${Clash_redir_port}
     logs "[info] proxy mode: ${mode} "
-    for package in $(cat ${filter_packages_file[@]}) ; do
-      echo -n "${package} / " >> ${CFM_logs_file}
+    for package in $(cat ${filter_packages_file[*]}) ; do
+      echo -n "${package} " >> ${CFM_logs_file}
     done
     echo "transparent proxy." >> ${CFM_logs_file}
-    # log "proxy mode: ${mode} $(cat ${filter_packages_file[@]}) transparent proxy."
+    # log "proxy mode: ${mode} $(cat ${filter_packages_file[*]}) transparent proxy."
   fi
 
   ${iptables_wait} -t nat -I OUTPUT -j BOX_LOCAL
@@ -128,21 +128,21 @@ start_tproxy() {
 
   # Bypass reserved_ip
   if [ "${Clash_bin_name}" = "clash" ] ; then
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
       ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
-      for subnet6 in ${reserved_ip6[@]} ; do
+      for subnet6 in ${reserved_ip6[*]} ; do
         ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} -j RETURN
       done
     fi
   else
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
       ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
-      for subnet6 in ${reserved_ip6[@]} ; do
+      for subnet6 in ${reserved_ip6[*]} ; do
         ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
         ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} ! -p udp -j RETURN
       done
@@ -158,12 +158,12 @@ start_tproxy() {
   # Allow ap interface
   # Notice: Old android device may only have one wlan interface.
   # Some new android device have multiple wlan interface like wlan0(for internet), wlan1(for AP).
-  for ap in ${ap_list[@]} ; do
+  for ap in ${ap_list[*]} ; do
     ${iptables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
   done
   if [ "${ipv6}" = "true" ] ; then
-    for ap6 in ${ap_list[@]} ; do
+    for ap6 in ${ap_list[*]} ; do
       ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap6} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p udp -i ${ap6} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
     done
@@ -180,11 +180,11 @@ start_tproxy() {
     ${ip6tables_wait} -t mangle -F BOX_LOCAL
   fi
   # Bypass ignored interfaces
-  for ignore in ${ignore_out_list[@]} ; do
+  for ignore in ${ignore_out_list[*]} ; do
     ${iptables_wait} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
   done
   if [ "${ipv6}" = "true" ] ; then
-    for ignore6 in ${ignore_out_list[@]} ; do
+    for ignore6 in ${ignore_out_list[*]} ; do
       ${ip6tables_wait} -t mangle -I BOX_LOCAL -o ${ignore6} -j RETURN
     done
   fi
@@ -192,24 +192,24 @@ start_tproxy() {
   # Bypass reserved_ip
   if [ "${Clash_bin_name}" = "clash" ] ; then
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
       ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-      for subnet6 in ${reserved_ip6[@]} ; do
+      for subnet6 in ${reserved_ip6[*]} ; do
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} -j RETURN
       done
     fi
   else
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-    for subnet in ${reserved_ip[@]} ; do
+    for subnet in ${reserved_ip[*]} ; do
       ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
       ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
     done
     if [ "${ipv6}" = "true" ] ; then
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-      for subnet6 in ${reserved_ip6[@]} ; do
+      for subnet6 in ${reserved_ip6[*]} ; do
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} ! -p udp -j RETURN
       done
@@ -226,7 +226,7 @@ start_tproxy() {
   # ${iptables_wait} -t mangle -A BOX_LOCAL -m owner ! --uid 0-99999999 -j DROP
 
   if [ "${mode}" = "blacklist" ] ; then
-    if [ "$(cat ${filter_packages_file[@]})" = "" ] ; then
+    if [ "$(cat ${filter_packages_file[*]})" = "" ] ; then
       # Route Everything
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
@@ -237,11 +237,11 @@ start_tproxy() {
       log "[info] transparent proxy for all apps."
     else
       # Bypass apps
-      for appid in $(cat ${appuid_file[@]}) ; do
+      for appid in $(cat ${appuid_file[*]}) ; do
         ${iptables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
       done
       if [ "${ipv6}" = "true" ] ; then
-        for appid6 in $(cat ${appuid_file[@]}) ; do
+        for appid6 in $(cat ${appuid_file[*]}) ; do
           ${ip6tables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid6} -j RETURN
         done
       fi
@@ -253,37 +253,42 @@ start_tproxy() {
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
       fi
       logs "[info] proxy mode: ${mode} "
-      for package in $(cat ${filter_packages_file[@]}) ; do
-        echo -n "${package} / " >> ${CFM_logs_file}
+      for package in $(cat ${filter_packages_file[*]}) ; do
+        echo -n "${package} " >> ${CFM_logs_file}
       done
       echo "has no transparent proxy." >> ${CFM_logs_file}
-      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[@]}) has no transparent proxy."
+      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[*]}) has no transparent proxy."
     fi
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
-    for appid in $(cat ${appuid_file[@]}) ; do
+    for appid in $(cat ${appuid_file[*]}) ; do
       ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
       ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
     done
     if [ "${ipv6}" = "true" ] ; then
-      for appid6 in $(cat ${appuid_file[@]}) ; do
+      for appid6 in $(cat ${appuid_file[*]}) ; do
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid6} -j MARK --set-mark ${mark_id}
         ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid6} -j MARK --set-mark ${mark_id}
       done
     fi
     ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
+    # Route dnsmasq to Box
     ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
     ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
+    # Route DNS request to Box
+    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${mark_id}
     if [ "${ipv6}" = "true" ] ; then
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
       ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
+      # Route DNS request to Box
+      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${mark_id}
     fi
     logs "[info] proxy mode: ${mode} "
-    for package in $(cat ${filter_packages_file[@]}) ; do
-      echo -n "${package} / " >> ${CFM_logs_file}
+    for package in $(cat ${filter_packages_file[*]}) ; do
+      echo -n "${package} " >> ${CFM_logs_file}
     done
     echo "transparent proxy." >> ${CFM_logs_file}
   fi
@@ -403,65 +408,65 @@ detected_port() {
 }
 
 if [ "${mode}" != "core" ] ; then
-while getopts ":sk" signal ; do
-  case ${signal} in
-    s)
-      ${scripts_dir}/clash.tool -f
-      ${scripts_dir}/clash.tool -v
-      stop_tproxy >> /dev/null 2>&1
-      stop_redirect >> /dev/null 2>&1
-      forward -D >> /dev/null 2>&1
-      sleep 0.75
-      detected_port
-      if [ "${network_mode}" = "UDP" ] ; then
-        if (zcat /proc/config.gz | grep -q TPROXY) ; then
+  while getopts ":sk" signal ; do
+    case ${signal} in
+      s)
+        ${scripts_dir}/clash.tool -f
+        ${scripts_dir}/clash.tool -v
+        stop_tproxy >> /dev/null 2>&1
+        stop_redirect >> /dev/null 2>&1
+        forward -D >> /dev/null 2>&1
+        sleep 0.75
+        detected_port
+        if [ "${network_mode}" = "UDP" ] ; then
+          # if (zcat /proc/config.gz | grep -q TPROXY) ; then
           log "[info] use TPROXY:TCP+UDP."
           log "[info] creating iptables transparent proxy rules."
           start_tproxy && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
+          # else
+            # log "[warning] the device does not support TPROXY, please switch network_mode."
+            # log "[info] use REDIRECT:TCP."
+            # log "[info] creating iptables transparent proxy rules."
+            # start_redirect && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
+          # fi
         else
-          log "[warning] the device does not support TPROXY, please switch network_mode."
-          log "[info] use REDIRECT:TCP."
+          [ "${network_mode}" = "TCP" ] && log "[info] use REDIRECT:TCP." || log "[info] use MIXED:TCP+TUN."
           log "[info] creating iptables transparent proxy rules."
           start_redirect && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
+          forward -I
         fi
-      else
-        [ "${network_mode}" = "TCP" ] && log "[info] use REDIRECT:TCP." || log "[info] use MIXED:TCP+TUN."
-        log "[info] creating iptables transparent proxy rules."
-        start_redirect && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
-        forward -I
-      fi
-      ;;
-    k)
-      log "[warning] cleaning up iptables transparent proxy rules."
-      stop_tproxy
-      stop_redirect
-      forward -D
-      log "[warning] clean up iptables transparent proxy rules done."
-      ;;
-    ?)
-      echo ""
-      ;;
-  esac
-done
+        ;;
+      k)
+        log "[warning] cleaning up iptables transparent proxy rules."
+        stop_tproxy
+        stop_redirect
+        forward -D
+        log "[warning] clean up iptables transparent proxy rules done."
+        ;;
+      ?)
+        echo ""
+        ;;
+    esac
+  done
 else
-while getopts ":sk" signal ; do
-  case ${signal} in
-    s)
-      stop_tproxy >> /dev/null 2>&1
-      stop_redirect >> /dev/null 2>&1
-      forward -D >> /dev/null 2>&1
-      forward -I
-      log "[info] mode: ${mode} disable transparent proxy."
-      ;;
-    k)
-      stop_tproxy >> /dev/null 2>&1
-      stop_redirect >> /dev/null 2>&1
-      forward -D
-      log "[warning] cleaning up proxy rules."
-      ;;
-    *)
-      echo "$0:  usage: $0 {enable|disable}"
-      ;;
-  esac
-done
+  while getopts ":sk" signal ; do
+    case ${signal} in
+      s)
+        stop_tproxy >> /dev/null 2>&1
+        stop_redirect >> /dev/null 2>&1
+        forward -D >> /dev/null 2>&1
+        forward -I
+        log "[info] mode: ${mode} disable transparent proxy."
+        ;;
+      k)
+        stop_tproxy >> /dev/null 2>&1
+        stop_redirect >> /dev/null 2>&1
+        forward -D
+        log "[warning] cleaning up proxy rules."
+        ;;
+      *)
+        echo "$0:  usage: $0 {enable|disable}"
+        ;;
+    esac
+  done
 fi

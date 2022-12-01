@@ -192,20 +192,22 @@ start_clash() {
   echo "Clash for Magisk v2.5" > /dev/null
   echo "CPU: % | RES: kb" >> $CFM_logs_file
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━" >> $CFM_logs_file
-  if [ "${ipv6}" == "false" ]; then
-    echo 1 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
-    echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+  if [ "${ipv6}" = "false" ] ; then
     echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+    echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+    ip -6 rule add unreachable pref 100
+    log "[info] "Ipv6: disable"
   else
-    echo 0 > /proc/sys/net/ipv6/conf/lo/disable_ipv6
-    echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
     echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
     echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+    echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
     echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+    ip -6 rule del unreachable pref 100
+    log "[info] "Ipv6: enable"
   fi
   use_clash
   ceks_clash
