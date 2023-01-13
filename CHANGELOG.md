@@ -1,3 +1,10 @@
+#### ⟳ Changelog v2.5.4
+- replace curl, with /data/adb/magisk/busybox wget
+- fix tool download core
+- remove mosdns
+- optimize cfm service scripts
+- update kernel
+
 #### ⟳ Changelog v2.5.1
 - add usb network share
 - add routing table to disable ipv6
