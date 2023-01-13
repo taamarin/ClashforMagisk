@@ -1,6 +1,6 @@
 {
-    "version": "v2.5.1",
-    "versionCode": "20221201",
-    "zipUrl": "https://github.com/taamarin/ClashforMagisk/releases/download/v2.5.1/Clash_for_Magisk-v2.5.1.zip",
+    "version": "v3.0",
+    "versionCode": "20230113",
+    "zipUrl": "https://github.com/taamarin/ClashforMagisk/releases/download/v3.0/Clash_for_Magisk-v3.0.zip",
     "changelog": "https://github.com/taamarin/ClashforMagisk/raw/master/CHANGELOG.md"
 }
