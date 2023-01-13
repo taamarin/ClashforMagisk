@@ -1,10 +1,9 @@
 #!/system/bin/sh
 
 getmemory(){
-  clash_pid=$(cat /data/clash/run/clash.pid)
+  local clash_pid=$(cat /data/clash/run/clash.pid)
   clash_alive=$(grep VmRSS /proc/${clash_pid}/status | /data/adb/magisk/busybox awk -F':' '{print $2}' | /data/adb/magisk/busybox awk '{print $1}')
-  if [ ${clash_alive} -ge 1024 ]
-  then
+  if [ ${clash_alive} -ge 1024 ] ; then
     clash_res="$(expr ${clash_alive} / 1024)Mb"
   else
     clash_res="${clash_alive}Kb"
@@ -15,12 +14,11 @@ getmemory(){
 }
 
 usage() {
-    interval="1"
-    while [ -f /data/clash/run/clash.pid ]
-    do
+    local interval="1"
+    while [ -f /data/clash/run/clash.pid ] ; do
         getmemory &> /dev/null
         [ ! -f /data/clash/run/clash.pid ] && break
-        now=$(date +%s)
+        local now=$(date +%s)
         sleep $(( $interval - $now % $interval ))
     done
 }

@@ -19,10 +19,32 @@ mod_config="${clash_data_sc}/clash.config"
 yacd_dir="${clash_data_dir}/dashboard"
 latest=$(date +%Y%m%d%H%M)
 
-if [ $BOOTMODE ! = true ] ; then
-	ui_print "- Installing through TWRP Not supported"
-	ui_print "- Intsall this module via Magisk Manager"
-	abort "- ! Aborting installation !"
+if $BOOTMODE; then
+  ui_print "- Installing from Magisk app"
+else
+  ui_print "*********************************************************"
+  ui_print "! Install from recovery is NOT supported"
+  ui_print "! Some recovery has broken implementations, install with such recovery will finally cause CFM modules not working"
+  ui_print "! Please install from Magisk app"
+  abort "*********************************************************"
+fi
+
+# check Magisk
+ui_print "- Magisk version: $MAGISK_VER ($MAGISK_VER_CODE)"
+
+# check android
+if [ "$API" -lt 19 ]; then
+  ui_print "! Unsupported sdk: $API"
+  abort "! Minimal supported sdk is 19 (Android 4.4)"
+else
+  ui_print "- Device sdk: $API"
+fi
+
+# check architecture
+if [ "$ARCH" != "arm" ] && [ "$ARCH" != "arm64" ] && [ "$ARCH" != "x86" ] && [ "$ARCH" != "x64" ]; then
+  abort "! Unsupported platform: $ARCH"
+else
+  ui_print "- Device platform: $ARCH"
 fi
 
 ui_print "- Installing Clash for Magisk"
@@ -46,7 +68,6 @@ mkdir -p ${clash_data_dir}/dashboard
 mkdir -p ${MODPATH}/system/bin
 mkdir -p ${clash_data_dir}/run
 mkdir -p ${clash_data_dir}/scripts
-mkdir -p ${clash_data_dir}/mosdns
 mkdir -p ${clash_data_dir}/assets
 
 case "${ARCH}" in
@@ -71,6 +92,7 @@ unzip -o ${MODPATH}/dashboard.zip -d ${clash_data_dir}/dashboard/ >&2
 
 ui_print "- Move Scripts Clash"
 mv ${MODPATH}/scripts/* ${clash_data_dir}/scripts/
+mv ${clash_data_dir}/scripts/config.yaml ${clash_data_dir}/
 mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
 
 ui_print "- Move Cert&Geo"
@@ -106,9 +128,7 @@ mv ${clash_data_dir_kernel}/setcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir_kernel}/getpcaps ${MODPATH}${bin_path}/
 mv ${clash_data_dir_kernel}/getcap ${MODPATH}${bin_path}/
 mv ${clash_data_dir}/scripts/clash.config ${clash_data_dir}/
-mv ${clash_data_dir}/scripts/mosdns ${clash_data_dir}/
-mv ${clash_data_dir}/mosdns/mosdns ${clash_data_dir_kernel}/
-mv ${clash_data_dir}/mosdns/dnstt-client ${clash_data_dir_kernel}/
+mv ${clash_data_dir}/scripts/dnstt/dnstt-client ${clash_data_dir_kernel}/
 
 if [ ! -f "${bin_path}/ss" ] ; then
     mv ${clash_data_dir_kernel}/ss ${MODPATH}${bin_path}/
@@ -122,6 +142,7 @@ rm -rf ${MODPATH}/geo
 rm -rf ${MODPATH}/binary
 rm -rf ${MODPATH}/clash_service.sh
 rm -rf ${clash_data_dir}/scripts/config.yaml
+rm -rf ${clash_data_dir}/scripts/dnstt
 rm -rf ${clash_data_dir_kernel}/curl
 
 sleep 1
@@ -150,7 +171,6 @@ set_perm  ${clash_data_dir}/scripts/clash.cron 0  0  0755
 set_perm  ${clash_data_dir}/scripts/start.sh 0  0  0755
 set_perm  ${clash_data_dir}/scripts/usage.sh 0  0  0755
 set_perm  ${clash_data_dir}/clash.config ${uid} ${gid} 0755
-set_perm  ${clash_data_dir}/kernel/mosdns  0  0  0755
 set_perm  ${clash_data_dir}/kernel/dnstt-client  0  0  0755
 set_perm  ${clash_service_dir}/clash_service.sh  0  0  0755
 sleep 1

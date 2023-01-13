@@ -22,7 +22,7 @@ service_control() {
         if [ "${events}" = "d" ]; then
             ${service_path} -s &> ${log} && ${iptables_path} -s &>> ${log} &
         elif [ "${events}" = "n" ]; then
-            ${service_path} -k &>> ${log} && ${iptables_path} -k &>> ${log} &
+            ${iptables_path} -k &>> ${log} && ${service_path} -k &>> ${log} &
         fi
     fi
 }
