@@ -2,6 +2,7 @@
 
 scripts=$(realpath $0)
 scripts_dir=$(dirname ${scripts})
+user_agent="ClashForMagisk"
 source /data/clash/clash.config
 
 find_packages_uid() {
@@ -35,8 +36,13 @@ update_file() {
     if [ -f ${file} ] ; then
       mv -f ${file} ${file_bak}
     fi
-    echo "/data/adb/magisk/busybox wget --no-check-certificate ${update_url} -o ${file}"
-    /data/adb/magisk/busybox wget --no-check-certificate ${update_url} -O ${file} 2>&1
+    request="/data/adb/magisk/busybox wget"
+    request+=" --no-check-certificate"
+    request+=" --user-agent ${user_agent}"
+    request+=" -O ${file}"
+    request+=" ${update_url}"
+    echo $request
+    $request 2>&1
     sleep 0.5
     if [ -f "${file}" ] ; then
       echo ""
