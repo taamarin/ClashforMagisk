@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
-scripts=`realpath $0`
-scripts_dir=`dirname ${scripts}`
+scripts=$(realpath $0)
+scripts_dir=$(dirname ${scripts})
 
 service_path="/data/clash/scripts/clash.service"
 iptables_path="/data/clash/scripts/clash.iptables"
@@ -10,12 +10,6 @@ log="/data/clash/run/service.log"
 events=$1
 monitor_dir=$2
 monitor_file=$3
-
-create_run() {
-    if [ ! -d "/data/clash/run" ]; then
-        mkdir -p /data/clash/run
-    fi
-}
 
 service_control() {
     if [ "${monitor_file}" = "disable" ]; then
@@ -26,5 +20,7 @@ service_control() {
         fi
     fi
 }
-create_run
-service_control
+
+[ -d /data/clash/run ] || (mkdir -p /data/clash/run)
+[ -f /data/clash/clash.config ] \
+&& service_control || echo "[ERROR] clash.config file not found" > /data/clash/run/error.inotify.log

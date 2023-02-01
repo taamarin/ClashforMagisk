@@ -4,408 +4,391 @@ scripts=$(realpath $0)
 scripts_dir=$(dirname ${scripts})
 source /data/clash/clash.config
 
+id="233"
+disable_ipv6() {
+  echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra
+  echo 0 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+  echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+  echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+  echo 1 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+}
+ipv6_enable() {
+  echo 1 > /proc/sys/net/ipv6/conf/all/accept_ra
+  echo 1 > /proc/sys/net/ipv6/conf/wlan0/accept_ra
+  echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+  echo 0 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+  echo 0 > /proc/sys/net/ipv6/conf/wlan0/disable_ipv6
+}
+
+intranet=(0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 192.0.0.0/24 192.0.2.0/24 192.88.99.0/24 192.168.0.0/16 198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4 255.255.255.255/32)
+intranet6=(::/128 ::1/128 ::ffff:0:0/96 100::/64 64:ff9b::/96 2001::/32 2001:10::/28 2001:20::/28 2001:db8::/32 2002::/16 fe80::/10 ff00::/8)
+
+# iptables_version=$(iptables -V | grep -o "v1\.[0-9]")
+# if [ "${iptables_version}" = "v1.4" ] ; then
+  # iptables="iptables"
+  # ip6tables="ip6tables"
+# else
+  # iptables="iptables -w 100"
+  # ip6tables="ip6tables -w 100"
+# fi
+
+find_packages_uid() {
+  echo -n "" > ${appuid_file} 
+  for package in $(cat ${filter_packages_file[*]}) ; do
+    ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
+  done
+}
+
 forward() {
-  ${iptables_wait} $1 FORWARD -o ${tun_device} -j ACCEPT
-  ${iptables_wait} $1 FORWARD -i ${tun_device} -j ACCEPT
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} $1 FORWARD -o ${tun_device} -j ACCEPT
-    ${ip6tables_wait} $1 FORWARD -i ${tun_device} -j ACCEPT
-  fi
+    ${iptables} $1 FORWARD -o ${tun_device} -j ACCEPT
+    ${iptables} $1 FORWARD -i ${tun_device} -j ACCEPT
 }
 
 start_redirect() {
-  ${iptables_wait} -t nat -N BOX_EXTERNAL
-  ${iptables_wait} -t nat -F BOX_EXTERNAL
-  ${iptables_wait} -t nat -N BOX_LOCAL
-  ${iptables_wait} -t nat -F BOX_LOCAL
-
-  if [ "${Clash_bin_name}" = "clash" ] ; then
-    ${iptables_wait} -t nat -A BOX_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-    ${iptables_wait} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-    ${iptables_wait} -t nat -A BOX_EXTERNAL -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
-    ${iptables_wait} -t nat -A BOX_LOCAL -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
-    #  else
-    #    Other types of inbound should be added here to receive DNS traffic instead of sniffing
-    #    ${iptables_wait} -t nat -A BOX_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_redir_port}
-    #    ${iptables_wait} -t nat -A BOX_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_redir_port}
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -t nat -N CLASH_EXTERNAL
+    ${iptables} -t nat -F CLASH_EXTERNAL
+    ${iptables} -t nat -N CLASH_LOCAL
+    ${iptables} -t nat -F CLASH_LOCAL
   fi
 
-  for subnet in ${reserved_ip[*]} ; do
-    ${iptables_wait} -t nat -A BOX_EXTERNAL -d ${subnet} -j RETURN
-    ${iptables_wait} -t nat -A BOX_LOCAL -d ${subnet} -j RETURN
-  done
-
-  ${iptables_wait} -t nat -A BOX_EXTERNAL -p tcp -i lo -j REDIRECT --to-ports ${Clash_redir_port}
-
-  for ap in ${ap_list[*]} ; do
-    ${iptables_wait} -t nat -A BOX_EXTERNAL -p tcp -i ${ap} -j REDIRECT --to-ports ${Clash_redir_port}
-  done
-  log "[info] ${ap_list[*]} transparent proxy."
-
-  ${iptables_wait} -t nat -I PREROUTING -j BOX_EXTERNAL
-
-  ${iptables_wait} -t nat -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-  for ignore in ${ignore_out_list[*]} ; do
-    ${iptables_wait} -t nat -I BOX_LOCAL -o ${ignore} -j RETURN
-  done
-
-  if [ "${mode}" = "blacklist" ] ; then
-    if [ "$(cat ${filter_packages_file[*]})" = "" ] ; then
-      # Route Everything
-      ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
-      log "[info] transparent proxy for all apps."
-    else
-      # Bypass apps
-      for appid in $(cat ${appuid_file[*]}) ; do
-        ${iptables_wait} -t nat -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
-      done
-      # Allow !app
-      ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -j REDIRECT --to-ports ${Clash_redir_port}
-      logs "[info] proxy mode: ${mode} "
-      for package in $(cat ${filter_packages_file[*]}) ; do
-        echo -n "${package} " >> ${CFM_logs_file}
-      done
-      echo "has no transparent proxy." >> ${CFM_logs_file}
-      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[*]}) has no transparent proxy."
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    if [ "${clash_bin_name}" = "clash" ] ; then
+      ${iptables} -t nat -A CLASH_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+      ${iptables} -t nat -A CLASH_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+      ${iptables} -t nat -A CLASH_EXTERNAL -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+      ${iptables} -t nat -A CLASH_LOCAL -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+      #  else
+      #    Other types of inbound should be added here to receive DNS traffic instead of sniffing
+      #    ${iptables} -t nat -A CLASH_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${redir_port}
+      #    ${iptables} -t nat -A CLASH_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${redir_port}
     fi
-  elif [ "${mode}" = "whitelist" ] ; then
-    # Route apps to Box
-    for appid in $(cat ${appuid_file[*]}) ; do
-      ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j REDIRECT --to-ports ${Clash_redir_port}
+  
+    for subnet in ${intranet[*]} ; do
+      ${iptables} -t nat -A CLASH_EXTERNAL -d ${subnet} -j RETURN
+      ${iptables} -t nat -A CLASH_LOCAL -d ${subnet} -j RETURN
     done
-    ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${Clash_redir_port}
-    ${iptables_wait} -t nat -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${Clash_redir_port}
-    logs "[info] proxy mode: ${mode} "
-    for package in $(cat ${filter_packages_file[*]}) ; do
-      echo -n "${package} " >> ${CFM_logs_file}
-    done
-    echo "transparent proxy." >> ${CFM_logs_file}
-    # log "proxy mode: ${mode} $(cat ${filter_packages_file[*]}) transparent proxy."
+  
+    ${iptables} -t nat -A CLASH_EXTERNAL -p tcp -i lo -j REDIRECT --to-ports ${redir_port}
+  
+    if [ "${ap_list}" != "" ] ; then
+      for ap in ${ap_list[*]} ; do
+        ${iptables} -t nat -A CLASH_EXTERNAL -p tcp -i ${ap} -j REDIRECT --to-ports ${redir_port}
+      done
+      log "[info] ${ap_list[*]} transparent proxy."
+    fi
+    ${iptables} -t nat -I PREROUTING -j CLASH_EXTERNAL
+  
+    ${iptables} -t nat -I CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+    if [ "${ignore_out_list}" != "" ] ; then
+      for ignore in ${ignore_out_list[*]} ; do
+        ${iptables} -t nat -I CLASH_LOCAL -o ${ignore} -j RETURN
+      done
+      log "[info] ${ignore_out_list[*]} ignore transparent proxy."
+    fi
   fi
 
-  ${iptables_wait} -t nat -I OUTPUT -j BOX_LOCAL
-  ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_redir_port} -j REJECT
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    if [ "${mode}" = "blacklist" ] ; then
+      if [ "$(cat ${appuid_file[*]})" = "" ] ; then
+        # Route Everything
+        ${iptables} -t nat -A CLASH_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
+        log "[info] transparent proxy for all apps."
+      else
+        # Bypass apps
+        for appid in $(cat ${appuid_file[*]}) ; do
+          ${iptables} -t nat -I CLASH_LOCAL -m owner --uid-owner ${appid} -j RETURN
+        done
+        # Allow !app
+        ${iptables} -t nat -A CLASH_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
+        log "[info] proxy mode: ${mode}, $(cat ${filter_packages_file[*]}) no transparent proxy."
+      fi
+    elif [ "${mode}" = "whitelist" ] ; then
+      # Route apps to Box
+      for appid in $(cat ${appuid_file[*]}) ; do
+        ${iptables} -t nat -A CLASH_LOCAL -p tcp -m owner --uid-owner ${appid} -j REDIRECT --to-ports ${redir_port}
+      done
+      ${iptables} -t nat -A CLASH_LOCAL -p tcp -m owner --uid-owner 0 -j REDIRECT --to-ports ${redir_port}
+      ${iptables} -t nat -A CLASH_LOCAL -p tcp -m owner --uid-owner 1052 -j REDIRECT --to-ports ${redir_port}
+      log "[info] proxy mode: ${mode}, $(cat ${filter_packages_file[*]}) transparent proxy."
+    else
+      log warn "proxy mode: ${mode}, error."
+      ${iptables} -t nat -A CLASH_LOCAL -p tcp -j REDIRECT --to-ports ${redir_port}
+      log "[info] transparent proxy for all apps."
+    fi
+  fi
+
+  ${iptables} -t nat -I OUTPUT -j CLASH_LOCAL
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  else
+    ${iptables} -A OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  fi
 }
 
 stop_redirect() {
-  ${iptables_wait} -t nat -D PREROUTING -j BOX_EXTERNAL
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -t nat -D PREROUTING -j CLASH_EXTERNAL
+    ${iptables} -t nat -D OUTPUT -j CLASH_LOCAL
+  fi
 
-  ${iptables_wait} -t nat -D OUTPUT -j BOX_LOCAL
-  ${iptables_wait} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_redir_port} -j REJECT
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  else
+    ${iptables} -D OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${redir_port} -j REJECT
+  fi
 
-  ${iptables_wait} -t nat -F BOX_EXTERNAL
-  ${iptables_wait} -t nat -X BOX_EXTERNAL
-  ${iptables_wait} -t nat -F BOX_LOCAL
-  ${iptables_wait} -t nat -X BOX_LOCAL
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -t nat -D CLASH_EXTERNAL -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+    ${iptables} -t nat -D CLASH_LOCAL -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  
+    ${iptables} -t nat -F CLASH_EXTERNAL
+    ${iptables} -t nat -X CLASH_EXTERNAL
+    ${iptables} -t nat -F CLASH_LOCAL
+    ${iptables} -t nat -X CLASH_LOCAL
+  fi
 }
 
 start_tproxy() {
-  ip rule add fwmark ${mark_id} lookup ${mark_id}
-  ip route add local default dev lo table ${mark_id}
-  if [ "${ipv6}" = "true" ] ; then
-    ip -6 rule add fwmark ${mark_id} lookup ${mark_id}
-    ip -6 route add local default dev lo table ${mark_id}
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ip rule add fwmark ${id} table ${id}
+    ip route add local default dev lo table ${id}
+  else
+    ip -6 rule add fwmark ${id} table ${id}
+    ip -6 route add local default dev lo table ${id}
   fi
 
-  ${iptables_wait} -t mangle -N BOX_EXTERNAL
-  ${iptables_wait} -t mangle -F BOX_EXTERNAL
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -N BOX_EXTERNAL
-    ${ip6tables_wait} -t mangle -F BOX_EXTERNAL
-  fi
+  ${iptables} -t mangle -N CLASH_EXTERNAL
+  ${iptables} -t mangle -F CLASH_EXTERNAL
 
   # Bypass box itself
-  # ${iptables_wait} -t mangle -A BOX_EXTERNAL -j RETURN -m mark --mark ${routing_mark}
+  # ${iptables} -t mangle -A CLASH_EXTERNAL -m mark --mark ${routing_mark} -j RETURN
 
   # Bypass other if
   # Notice: Some interface is named with r_ / oem / nm_ / qcom_
   # It might need more complicated solution.
-  ${iptables_wait} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
-  ${iptables_wait} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -I BOX_EXTERNAL -i rmnet_data+ -j RETURN
-    ${ip6tables_wait} -t mangle -I BOX_EXTERNAL -i ccmni+ -j RETURN
-  fi
+  ${iptables} -t mangle -I CLASH_EXTERNAL -i rmnet_data+ -j RETURN
+  ${iptables} -t mangle -I CLASH_EXTERNAL -i ccmni+ -j RETURN
 
-  # Bypass reserved_ip
-  if [ "${Clash_bin_name}" = "clash" ] ; then
-    for subnet in ${reserved_ip[*]} ; do
-      ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} -j RETURN
-    done
-    if [ "${ipv6}" = "true" ] ; then
-      for subnet6 in ${reserved_ip6[*]} ; do
-        ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} -j RETURN
+  # Bypass intranet
+  if [ "${clash_bin_name}" = "clash" ] ; then
+    if [ "${iptables}" != "ip6tables -w 100" ] ; then
+      for subnet in ${intranet[*]} ; do
+        ${iptables} -t mangle -A CLASH_EXTERNAL -d ${subnet} -j RETURN
+      done
+    else
+      for subnet6 in ${intranet6[*]} ; do
+        ${iptables} -t mangle -A CLASH_EXTERNAL -d ${subnet6} -j RETURN
       done
     fi
   else
-    for subnet in ${reserved_ip[*]} ; do
-      ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
-      ${iptables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet} ! -p udp -j RETURN
-    done
-    if [ "${ipv6}" = "true" ] ; then
-      for subnet6 in ${reserved_ip6[*]} ; do
-        ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
-        ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -d ${subnet6} ! -p udp -j RETURN
+    if [ "${iptables}" != "ip6tables -w 100" ] ; then
+      for subnet in ${intranet[*]} ; do
+        ${iptables} -t mangle -A CLASH_EXTERNAL -d ${subnet} -p udp ! --dport 53 -j RETURN
+        ${iptables} -t mangle -A CLASH_EXTERNAL -d ${subnet} ! -p udp -j RETURN
+      done
+    else
+      for subnet6 in ${intranet6[*]} ; do
+        ${iptables} -t mangle -A CLASH_EXTERNAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
+        ${iptables} -t mangle -A CLASH_EXTERNAL -d ${subnet6} ! -p udp -j RETURN
       done
     fi
   fi
 
-  ${iptables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-  ${iptables_wait} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p udp -i lo -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-  fi
+  ${iptables} -t mangle -A CLASH_EXTERNAL -p tcp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+  ${iptables} -t mangle -A CLASH_EXTERNAL -p udp -i lo -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+
   # Allow ap interface
   # Notice: Old android device may only have one wlan interface.
   # Some new android device have multiple wlan interface like wlan0(for internet), wlan1(for AP).
-  for ap in ${ap_list[*]} ; do
-    ${iptables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-    ${iptables_wait} -t mangle -A BOX_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-  done
-  log "[info] ${ap_list[*]} transparent proxy."
-  if [ "${ipv6}" = "true" ] ; then
-    for ap6 in ${ap_list[*]} ; do
-      ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p tcp -i ${ap6} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
-      ${ip6tables_wait} -t mangle -A BOX_EXTERNAL -p udp -i ${ap6} -j TPROXY --on-port ${Clash_tproxy_port} --tproxy-mark ${mark_id}
+  if [ "${ap_list}" != "" ] ; then
+    for ap in ${ap_list[*]} ; do
+      ${iptables} -t mangle -A CLASH_EXTERNAL -p tcp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
+      ${iptables} -t mangle -A CLASH_EXTERNAL -p udp -i ${ap} -j TPROXY --on-port ${tproxy_port} --tproxy-mark ${id}
     done
+    [ "${iptables}" != "ip6tables -w 100" ] \
+    && log "[info] ${ap_list[*]} transparent proxy."
   fi
 
-  ${iptables_wait} -t mangle -I PREROUTING -j BOX_EXTERNAL
+  ${iptables} -t mangle -I PREROUTING -j CLASH_EXTERNAL
+  ${iptables} -t mangle -N CLASH_LOCAL
+  ${iptables} -t mangle -F CLASH_LOCAL
 
-  ${iptables_wait} -t mangle -N BOX_LOCAL
-  ${iptables_wait} -t mangle -F BOX_LOCAL
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -I PREROUTING -j BOX_EXTERNAL
-
-    ${ip6tables_wait} -t mangle -N BOX_LOCAL
-    ${ip6tables_wait} -t mangle -F BOX_LOCAL
-  fi
   # Bypass ignored interfaces
-  for ignore in ${ignore_out_list[*]} ; do
-    ${iptables_wait} -t mangle -I BOX_LOCAL -o ${ignore} -j RETURN
-  done
-  if [ "${ipv6}" = "true" ] ; then
-    for ignore6 in ${ignore_out_list[*]} ; do
-      ${ip6tables_wait} -t mangle -I BOX_LOCAL -o ${ignore6} -j RETURN
+  if [ "${ignore_out_list}" != "" ] ; then
+    for ignore in ${ignore_out_list[*]} ; do
+      ${iptables} -t mangle -I CLASH_LOCAL -o ${ignore} -j RETURN
     done
+    [ "${iptables}" != "ip6tables -w 100" ] \
+    && log "[info] ${ignore_out_list[*]} ignore transparent proxy."
   fi
 
-  # Bypass reserved_ip
-  if [ "${Clash_bin_name}" = "clash" ] ; then
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-    for subnet in ${reserved_ip[*]} ; do
-      ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} -j RETURN
-    done
-    if [ "${ipv6}" = "true" ] ; then
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-      for subnet6 in ${reserved_ip6[*]} ; do
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} -j RETURN
+  # Bypass intranet
+  if [ "${clash_bin_name}" = "clash" ] ; then
+    if [ "${iptables}" != "ip6tables -w 100" ] ; then
+      ${iptables} -t mangle -A CLASH_LOCAL -p udp --dport 53 -j RETURN
+      for subnet in ${intranet[*]} ; do
+        ${iptables} -t mangle -A CLASH_LOCAL -d ${subnet} -j RETURN
+      done
+    else
+      ${iptables} -t mangle -A CLASH_LOCAL -p udp --dport 53 -j RETURN
+      for subnet6 in ${intranet6[*]} ; do
+        ${iptables} -t mangle -A CLASH_LOCAL -d ${subnet6} -j RETURN
       done
     fi
   else
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-    for subnet in ${reserved_ip[*]} ; do
-      ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
-      ${iptables_wait} -t mangle -A BOX_LOCAL -d ${subnet} ! -p udp -j RETURN
-    done
-    if [ "${ipv6}" = "true" ] ; then
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j RETURN
-      for subnet6 in ${reserved_ip6[*]} ; do
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -d ${subnet6} ! -p udp -j RETURN
+    if [ "${iptables}" != "ip6tables -w 100" ] ; then
+      for subnet in ${intranet[*]} ; do
+        ${iptables} -t mangle -A CLASH_LOCAL -d ${subnet} -p udp ! --dport 53 -j RETURN
+        ${iptables} -t mangle -A CLASH_LOCAL -d ${subnet} ! -p udp -j RETURN
+      done
+    else
+      for subnet6 in ${intranet6[*]} ; do
+        ${iptables} -t mangle -A CLASH_LOCAL -d ${subnet6} -p udp ! --dport 53 -j RETURN
+        ${iptables} -t mangle -A CLASH_LOCAL -d ${subnet6} ! -p udp -j RETURN
       done
     fi
   fi
 
   # Bypass box itself
-  ${iptables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-  fi
-  # ${iptables_wait} -t mangle -I BOX_LOCAL -j RETURN -m mark --mark ${routing_mark}
+  ${iptables} -t mangle -I CLASH_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+
+  # ${iptables} -t mangle -I CLASH_LOCAL -m mark --mark ${routing_mark} -j RETURN
   # Disable kernel
-  # ${iptables_wait} -t mangle -A BOX_LOCAL -m owner ! --uid 0-99999999 -j DROP
+  # ${iptables} -t mangle -A CLASH_LOCAL -m owner ! --uid 0-99999999 -j DROP
 
   if [ "${mode}" = "blacklist" ] ; then
-    if [ "$(cat ${filter_packages_file[*]})" = "" ] ; then
+    if [ "$(cat ${appuid_file[*]})" = "" ] ; then
       # Route Everything
-      ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
-      ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      fi
-      log "[info] transparent proxy for all apps."
+      ${iptables} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${id}
+      ${iptables} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${id}
+      [ "${iptables}" != "ip6tables -w 100" ] && log "[info] transparent proxy for all apps."
     else
       # Bypass apps
       for appid in $(cat ${appuid_file[*]}) ; do
-        ${iptables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid} -j RETURN
+        ${iptables} -t mangle -I CLASH_LOCAL -m owner --uid-owner ${appid} -j RETURN
       done
-      if [ "${ipv6}" = "true" ] ; then
-        for appid6 in $(cat ${appuid_file[*]}) ; do
-          ${ip6tables_wait} -t mangle -I BOX_LOCAL -m owner --uid-owner ${appid6} -j RETURN
-        done
-      fi
       # Allow !app
-      ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
-      ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      if [ "${ipv6}" = "true" ] ; then
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -j MARK --set-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -j MARK --set-mark ${mark_id}
-      fi
-      logs "[info] proxy mode: ${mode} "
-      for package in $(cat ${filter_packages_file[*]}) ; do
-        echo -n "${package} " >> ${CFM_logs_file}
-      done
-      echo "has no transparent proxy." >> ${CFM_logs_file}
-      # log "[info] proxy mode: ${mode} $(cat ${filter_packages_file[*]}) has no transparent proxy."
+      ${iptables} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${id}
+      ${iptables} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${id}
+      [ "${iptables}" != "ip6tables -w 100" ] \
+      && log "[info] proxy mode: ${mode}, $(cat ${filter_packages_file[*]}) no transparent proxy."
     fi
+
   elif [ "${mode}" = "whitelist" ] ; then
     # Route apps to Box
     for appid in $(cat ${appuid_file[*]}) ; do
-      ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
-      ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${mark_id}
+      ${iptables} -t mangle -A CLASH_LOCAL -p tcp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
+      ${iptables} -t mangle -A CLASH_LOCAL -p udp -m owner --uid-owner ${appid} -j MARK --set-mark ${id}
     done
-    if [ "${ipv6}" = "true" ] ; then
-      for appid6 in $(cat ${appuid_file[*]}) ; do
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner ${appid6} -j MARK --set-mark ${mark_id}
-        ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner ${appid6} -j MARK --set-mark ${mark_id}
-      done
-    fi
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
+
+    ${iptables} -t mangle -A CLASH_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A CLASH_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${id}
     # Route dnsmasq to Box
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
+    ${iptables} -t mangle -A CLASH_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A CLASH_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${id}
     # Route DNS request to Box
-    ${iptables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${mark_id}
-    if [ "${ipv6}" = "true" ] ; then
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 0 -j MARK --set-mark ${mark_id}
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p tcp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp -m owner --uid-owner 1052 -j MARK --set-mark ${mark_id}
-      # Route DNS request to Box
-      ${ip6tables_wait} -t mangle -A BOX_LOCAL -p udp --dport 53 -j MARK --set-mark ${mark_id}
-    fi
-    logs "[info] proxy mode: ${mode} "
-    for package in $(cat ${filter_packages_file[*]}) ; do
-      echo -n "${package} " >> ${CFM_logs_file}
-    done
-    echo "transparent proxy." >> ${CFM_logs_file}
+    [ "${clash_bin_name}" != "clash" ] && ${iptables} -t mangle -A CLASH_LOCAL -p udp --dport 53 -j MARK --set-mark ${id}
+    [ "${iptables}" != "ip6tables -w 100" ] \
+    && log "[info] proxy mode: ${mode}, $(cat ${filter_packages_file[*]}) transparent proxy."
+  else
+    log warn "proxy mode: ${mode}, error"
+    ${iptables} -t mangle -A CLASH_LOCAL -p tcp -j MARK --set-mark ${id}
+    ${iptables} -t mangle -A CLASH_LOCAL -p udp -j MARK --set-mark ${id}
+    [ "${iptables}" != "ip6tables -w 100" ] \
+    && log "[info] transparent proxy for all apps."
   fi
 
-  ${iptables_wait} -t mangle -I OUTPUT -j BOX_LOCAL
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -I OUTPUT -j BOX_LOCAL
-  fi
+  ${iptables} -t mangle -I OUTPUT -j CLASH_LOCAL
 
-  ${iptables_wait} -t mangle -N DIVERT
-  ${iptables_wait} -t mangle -F DIVERT
-  ${iptables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
-  ${iptables_wait} -t mangle -A DIVERT -j ACCEPT
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -N DIVERT
-    ${ip6tables_wait} -t mangle -F DIVERT
-    ${ip6tables_wait} -t mangle -A DIVERT -j MARK --set-mark ${mark_id}
-    ${ip6tables_wait} -t mangle -A DIVERT -j ACCEPT
-  fi
+  ${iptables} -t mangle -N DIVERT
+  ${iptables} -t mangle -F DIVERT
+  ${iptables} -t mangle -A DIVERT -j MARK --set-mark ${id}
+  ${iptables} -t mangle -A DIVERT -j ACCEPT
 
-  ${iptables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+  ${iptables} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
+
   # This rule blocks local access to tproxy-port to prevent traffic loopback.
-  ${iptables_wait} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -I PREROUTING -p tcp -m socket -j DIVERT
-    # This rule blocks local access to tproxy-port to prevent traffic loopback.
-    ${ip6tables_wait} -A OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
+  else
+    ${iptables} -A OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
   fi
 
-  if [ "${Clash_bin_name}" = "clash" ] ; then
-    ${iptables_wait} -t nat -N CLASH_DNS_EXTERNAL
-    ${iptables_wait} -t nat -F CLASH_DNS_EXTERNAL
-    ${iptables_wait} -t nat -A CLASH_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-
-    ${iptables_wait} -t nat -I PREROUTING -j CLASH_DNS_EXTERNAL
-
-    ${iptables_wait} -t nat -N CLASH_DNS_LOCAL
-    ${iptables_wait} -t nat -F CLASH_DNS_LOCAL
-    ${iptables_wait} -t nat -A CLASH_DNS_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
-    ${iptables_wait} -t nat -A CLASH_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${Clash_dns_port}
-
-    ${iptables_wait} -t nat -I OUTPUT -j CLASH_DNS_LOCAL
-    # Fix ICMP (ping), this does not guarantee that the ping result is valid (proxies such as clash do not support forwarding ICMP), 
-    # just that it returns a result, "--to-destination" can be set to a reachable address.
-    ${iptables_wait} -t nat -I OUTPUT -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
-    ${iptables_wait} -t nat -I PREROUTING -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    if [ "${clash_bin_name}" = "clash" ] ; then
+      ${iptables} -t nat -N CLASH_DNS_EXTERNAL
+      ${iptables} -t nat -F CLASH_DNS_EXTERNAL
+      ${iptables} -t nat -A CLASH_DNS_EXTERNAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+  
+      ${iptables} -t nat -I PREROUTING -j CLASH_DNS_EXTERNAL
+  
+      ${iptables} -t nat -N CLASH_DNS_LOCAL
+      ${iptables} -t nat -F CLASH_DNS_LOCAL
+      ${iptables} -t nat -A CLASH_DNS_LOCAL -m owner --uid-owner 0 --gid-owner 3005 -j RETURN
+      ${iptables} -t nat -A CLASH_DNS_LOCAL -p udp --dport 53 -j REDIRECT --to-ports ${clash_dns_port}
+  
+      ${iptables} -t nat -I OUTPUT -j CLASH_DNS_LOCAL
+      # Fix ICMP (ping), this does not guarantee that the ping result is valid (proxies such as clash do not support forwarding ICMP), 
+      # just that it returns a result, "--to-destination" can be set to a reachable address.
+      ${iptables} -t nat -I OUTPUT -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  
+      ${iptables} -t nat -I PREROUTING -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+    fi
   fi
 }
 
 stop_tproxy() {
-  ip rule del fwmark ${mark_id} table ${mark_id}
-  ip route del local default dev lo table ${mark_id}
-  if [ "${ipv6}" = "true" ] ; then
-    ip -6 rule del fwmark ${mark_id} table ${mark_id}
-    ip -6 route del local default dev lo table ${mark_id}
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ip rule del fwmark ${id} table ${id}
+    ip route del local default dev lo table ${id}
+    ip route flush table ${id}
+  else
+    ip -6 rule del fwmark ${id} table ${id}
+    ip -6 route del local default dev lo table ${id}
+    ip -6 route flush table ${id}
   fi
 
-  ${iptables_wait} -t mangle -D PREROUTING -j BOX_EXTERNAL
-    
-  ${iptables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
+  ${iptables} -t mangle -D PREROUTING -j CLASH_EXTERNAL
+  ${iptables} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
 
-  ${iptables_wait} -t mangle -D OUTPUT -j BOX_LOCAL
+  ${iptables} -t mangle -D OUTPUT -j CLASH_LOCAL
 
-  ${iptables_wait} -t mangle -F BOX_EXTERNAL
-  ${iptables_wait} -t mangle -X BOX_EXTERNAL
+  ${iptables} -t mangle -F CLASH_EXTERNAL
+  ${iptables} -t mangle -X CLASH_EXTERNAL
 
-  ${iptables_wait} -t mangle -F BOX_LOCAL
-  ${iptables_wait} -t mangle -X BOX_LOCAL
+  ${iptables} -t mangle -F CLASH_LOCAL
+  ${iptables} -t mangle -X CLASH_LOCAL
 
-  ${iptables_wait} -t mangle -F DIVERT
-  ${iptables_wait} -t mangle -X DIVERT
+  ${iptables} -t mangle -F DIVERT
+  ${iptables} -t mangle -X DIVERT
 
-  ${iptables_wait} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
-  if [ "${ipv6}" = "true" ] ; then
-    ${ip6tables_wait} -t mangle -D PREROUTING -j BOX_EXTERNAL
-    
-    ${ip6tables_wait} -t mangle -D PREROUTING -p tcp -m socket -j DIVERT
-
-    ${ip6tables_wait} -t mangle -D OUTPUT -j BOX_LOCAL
-
-    ${ip6tables_wait} -t mangle -F BOX_EXTERNAL
-    ${ip6tables_wait} -t mangle -X BOX_EXTERNAL
-
-    ${ip6tables_wait} -t mangle -F BOX_LOCAL
-    ${ip6tables_wait} -t mangle -X BOX_LOCAL
-
-    ${ip6tables_wait} -t mangle -F DIVERT
-    ${ip6tables_wait} -t mangle -X DIVERT
-
-    ${ip6tables_wait} -D OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${Clash_tproxy_port} -j REJECT
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
+  else
+    ${iptables} -D OUTPUT -d ::1 -p tcp -m owner --uid-owner 0 --gid-owner 3005 -m tcp --dport ${tproxy_port} -j REJECT
   fi
 
-  ${iptables_wait} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
-
-  ${iptables_wait} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
-
-  ${iptables_wait} -t nat -F CLASH_DNS_EXTERNAL
-  ${iptables_wait} -t nat -X CLASH_DNS_EXTERNAL
-
-  ${iptables_wait} -t nat -F CLASH_DNS_LOCAL
-  ${iptables_wait} -t nat -X CLASH_DNS_LOCAL
-
-  ${iptables_wait} -t nat -D OUTPUT -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
-  ${iptables_wait} -t nat -D PREROUTING -d ${Clash_fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  if [ "${iptables}" != "ip6tables -w 100" ] ; then
+    ${iptables} -t nat -D PREROUTING -j CLASH_DNS_EXTERNAL
+  
+    ${iptables} -t nat -D OUTPUT -j CLASH_DNS_LOCAL
+  
+    ${iptables} -t nat -F CLASH_DNS_EXTERNAL
+    ${iptables} -t nat -X CLASH_DNS_EXTERNAL
+  
+    ${iptables} -t nat -F CLASH_DNS_LOCAL
+    ${iptables} -t nat -X CLASH_DNS_LOCAL
+  
+    ${iptables} -t nat -D OUTPUT -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+    ${iptables} -t nat -D PREROUTING -d ${fake_ip_range} -p icmp -j DNAT --to-destination 127.0.0.1
+  fi
 }
-
 
 detected_port() {
   sleep 1
-  if [ "${port_detect}" = "true" ]; then
-    if ! (${scripts_dir}/clash.tool -p); then
-      return 0
-    fi
-  else
-    log "[info] skip!! port detected。"
+  if [ "${port_detect}" = "true" ] || log "[info] skip!! port detected。" ; then
+    ${scripts_dir}/clash.tool -p
   fi
 }
 
@@ -414,30 +397,62 @@ if [ "${mode}" != "core" ] ; then
     case ${signal} in
       s)
         ${scripts_dir}/clash.tool -f
-        ${scripts_dir}/clash.tool -v
-        stop_tproxy >> /dev/null 2>&1
-        stop_redirect >> /dev/null 2>&1
-        forward -D >> /dev/null 2>&1
-        sleep 0.75
+        iptables="iptables -w 100" && stop_tproxy >> /dev/null 2>&1
+        iptables="iptables -w 100" && stop_redirect >> /dev/null 2>&1
+        iptables="iptables -w 100" && forward -D >> /dev/null 2>&1
+        #ipv6
+        iptables="ip6tables -w 100" && stop_tproxy >> /dev/null 2>&1
+        iptables="ip6tables -w 100" && stop_redirect >> /dev/null 2>&1
+        iptables="ip6tables -w 100" && forward -D >> /dev/null 2>&1
         detected_port
         if [ "${network_mode}" = "UDP" ] ; then
           log "[info] use TPROXY: TCP+UDP."
           log "[info] creating iptables transparent proxy rules."
-          time start_tproxy && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
+          iptables="iptables -w 100"
+          intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | /data/adb/magisk/busybox awk '{print $2}')
+          time start_tproxy && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
+          if [ "${ipv6}" = "true" ] ; then
+            log "[debug] use IPv6."
+            ipv6_enable
+            iptables="ip6tables -w 100"
+            intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | /data/adb/magisk/busybox awk '{print $2}')
+            time start_tproxy && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
+          else
+            disable_ipv6
+            log "[warn ]disable IPv6."
+          fi
         else
           [ "${network_mode}" = "TCP" ] && log "[info] use REDIRECT:TCP." || log "[info] use MIXED: TCP+TUN."
           log "[info] creating iptables transparent proxy rules."
-          time start_redirect && log "[info] create iptables transparent proxy rules done." || log "[error] create iptables transparent proxy rule failed."
-          time forward -I
+          iptables="iptables -w 100"
+          intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | /data/adb/magisk/busybox awk '{print $2}')
+          time start_redirect && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+          [ "${tun_status}" = "true" ] && time forward -I || forward -D
+          if [ "${ipv6}" = "true" ] ; then
+            log "[debug] use IPv6."
+            ipv6_enable
+            iptables="ip6tables -w 100"
+            intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | /data/adb/magisk/busybox awk '{print $2}')
+            time start_redirect && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+            [ "${tun_status}" = "true" ] && time forward -I || forward -D
+          else
+            disable_ipv6
+            log "[warn ]disable IPv6."
+          fi
         fi
-        log "[info] Clash terhubung."
+        log "[info] clash terhubung."
         ;;
       k)
         log "[warning] cleaning up iptables transparent proxy rules."
-        time stop_tproxy
-        time stop_redirect
-        time forward -D
+        iptables="iptables -w 100" && time stop_tproxy
+        iptables="iptables -w 100" && time stop_redirect
+        iptables="iptables -w 100" && time forward -D
+        #ipv6
+        iptables="ip6tables -w 100" && time stop_tproxy
+        iptables="ip6tables -w 100" && time stop_redirect
+        iptables="ip6tables -w 100" && time forward -D
         log "[warning] clean up iptables transparent proxy rules done."
+        ipv6_enable
         ;;
       ?)
         echo ""
@@ -448,17 +463,29 @@ else
   while getopts ":sk" signal ; do
     case ${signal} in
       s)
-        stop_tproxy >> /dev/null 2>&1
-        stop_redirect >> /dev/null 2>&1
-        forward -D >> /dev/null 2>&1
-        time forward -I
+        iptables="iptables -w 100" && stop_tproxy >> /dev/null 2>&1
+        iptables="iptables -w 100" && stop_redirect >> /dev/null 2>&1
+        iptables="iptables -w 100" && forward -D >> /dev/null 2>&1
+        #ipv6
+        iptables="ip6tables -w 100" && stop_tproxy >> /dev/null 2>&1
+        iptables="ip6tables -w 100" && stop_redirect >> /dev/null 2>&1
+        iptables="ip6tables -w 100" && forward -D >> /dev/null 2>&1
+ 
+        iptables="iptables -w 100" && time forward -I
+        if [ "${ipv6}" = "true" ] ; then
+          iptables="ip6tables -w 100" && time forward -I
+        fi
         log "[info] mode: ${mode}, disable transparent proxy."
         log "[info] Clash terhubung."
         ;;
       k)
-        stop_tproxy >> /dev/null 2>&1
-        stop_redirect >> /dev/null 2>&1
-        time forward -D
+        iptables="iptables -w 100" && stop_tproxy >> /dev/null 2>&1
+        iptables="iptables -w 100" && stop_redirect >> /dev/null 2>&1
+        iptables="iptables -w 100" && time forward -D
+        #ipv6
+        iptables="ip6tables -w 100" && stop_tproxy >> /dev/null 2>&1
+        iptables="ip6tables -w 100" && stop_redirect >> /dev/null 2>&1
+        iptables="ip6tables -w 100" && time forward -D
         log "[warning] cleaning up proxy rules."
         ;;
       *)
