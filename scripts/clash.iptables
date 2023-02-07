@@ -35,7 +35,7 @@ intranet6=(::/128 ::1/128 ::ffff:0:0/96 100::/64 64:ff9b::/96 2001::/32 2001:10:
 find_packages_uid() {
   echo -n "" > ${appuid_file} 
   for package in $(cat ${filter_packages_file[*]}) ; do
-    ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
+    awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
   done
 }
 
@@ -409,13 +409,13 @@ if [ "${mode}" != "core" ] ; then
           log "[info] use TPROXY: TCP+UDP."
           log "[info] creating iptables transparent proxy rules."
           iptables="iptables -w 100"
-          intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | /data/adb/magisk/busybox awk '{print $2}')
+          intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
           time start_tproxy && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
           if [ "${ipv6}" = "true" ] ; then
             log "[debug] use IPv6."
             ipv6_enable
             iptables="ip6tables -w 100"
-            intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | /data/adb/magisk/busybox awk '{print $2}')
+            intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
             time start_tproxy && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
           else
             disable_ipv6
@@ -425,14 +425,14 @@ if [ "${mode}" != "core" ] ; then
           [ "${network_mode}" = "TCP" ] && log "[info] use REDIRECT:TCP." || log "[info] use MIXED: TCP+TUN."
           log "[info] creating iptables transparent proxy rules."
           iptables="iptables -w 100"
-          intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | /data/adb/magisk/busybox awk '{print $2}')
+          intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
           time start_redirect && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
           [ "${tun_status}" = "true" ] && time forward -I || forward -D
           if [ "${ipv6}" = "true" ] ; then
             log "[debug] use IPv6."
             ipv6_enable
             iptables="ip6tables -w 100"
-            intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | /data/adb/magisk/busybox awk '{print $2}')
+            intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
             time start_redirect && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
             [ "${tun_status}" = "true" ] && time forward -I || forward -D
           else

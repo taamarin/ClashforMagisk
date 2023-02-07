@@ -27,7 +27,7 @@ replace_kernel() {
 
 use_clash() {
   [ "${use_premium}" = "true" ] \
-  && log "[info] ☑ clash Premium is enable." || log "[info] ☑ clash Meta is enable."
+  && log "[info] clash Premium is enable." || log "[info] clash Meta is enable."
     if [ ! -f "${clash_bin_path}" ] ; then
       log "[error] kernel not detected ${clash_bin_path}"
       exit 1
@@ -94,13 +94,13 @@ crontab_sec() {
   if [ ! "${schedule_update_core}" = "false" ] ; then
     echo "${schedule_update_core} ${scripts_dir}/clash.tool -k" >> ${clash_run_path}/root
     log "[info] Crontab Update kernel (${schedule_update_core})"
-    log "[info] Update kernel is ☑ enable."
+    log "[info] Update kernel is enable."
   fi
   if [ ! "${update_interval}" = "false" ] ; then
     echo "${update_interval} ${scripts_dir}/clash.tool -s" >> ${clash_run_path}/root
     log "[info] Crontab (geo) and (subscription) (${update_interval})."
-    log "[info] clash geox ☐ (${auto_updategeox})."
-    log "[info] clash subscription ☐ (${auto_updatesubcript})."
+    log "[info] clash geox (${auto_updategeox})."
+    log "[info] clash subscription (${auto_updatesubcript})."
   else
     log "[info] Crontab geox & subscription is ☒ disable"
   fi
@@ -128,7 +128,7 @@ run_clash() {
   ${clash_bin_path} -t -d ${clash_data_dir} -f ${temporary_config_file} > ${clash_run_path}/error.log
   if [ "$?" = "0" ] ; then
     ulimit -SHn 1000000
-    nohup ${busybox_path} setuidgid 0:3005 ${clash_bin_path} -d ${clash_data_dir} -f ${temporary_config_file} > ${clash_run_path}/output-clash.log 2>&1 &
+    nohup setuidgid 0:3005 ${clash_bin_path} -d ${clash_data_dir} -f ${temporary_config_file} > ${clash_run_path}/output-clash.log 2>&1 &
     echo -n $! > ${clash_pid_file}
     log_suc
   else
@@ -163,8 +163,8 @@ start_clash() {
   if [ -f "${clash_bin_path}" ] ; then
     chown 0:3005 ${clash_bin_path} && chown 0:3005 ${temporary_config_file}
     chmod 0700 ${clash_bin_path} && chmod 0700 ${temporary_config_file}
-    nohup ${busybox_path} crond -c ${clash_run_path} > /dev/null 2>&1 &
-    ${busybox_path} crontab -c ${clash_run_path} -r
+    nohup crond -c ${clash_run_path} > /dev/null 2>&1 &
+    crontab -c ${clash_run_path} -r
     touch ${clash_run_path}/root
     chmod 0600 ${clash_run_path}/root
     crontab_sec
@@ -187,7 +187,7 @@ start_clash() {
 }
 
 kill_tool() {
-  cronkill=$(ps -ef | grep root | grep "crond -c /data/clash/" | ${busybox_path} awk '{ print $2 }' | sort -u)
+  cronkill=$(/system/bin/ps -ef | grep root | grep "crond -c /data/clash/" | awk '{ print $2 }' | sort -u)
   for cron in ${cronkill[*]} ; do
      kill -9 ${cron}
   done

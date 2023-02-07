@@ -9,7 +9,7 @@ find_packages_uid() {
   echo -n "" > ${appuid_file} 
   if [ "${clash_enhanced_mode}" = "redir-host" ] ; then
     for package in $(cat ${filter_packages_file} | sort -u) ; do
-      ${busybox_path} awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
+      awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
     done
   else
     log "[info] enhanced-mode: ${clash_enhanced_mode} "
@@ -84,7 +84,7 @@ port_detection() {
   match_count=0
   
   if (ss -h > /dev/null 2>&1) ; then
-    clash_port=$(ss -antup | grep "clash" | ${busybox_path} awk '$7~/'pid="${clash_pid}"*'/{print $5}' | ${busybox_path} awk -F ':' '{print $2}' | sort -u)
+    clash_port=$(ss -antup | grep "clash" | awk '$7~/'pid="${clash_pid}"*'/{print $5}' | awk -F ':' '{print $2}' | sort -u)
   else
     logs "[info] skip port detected"
     exit 0
@@ -185,7 +185,7 @@ cgroup_limit() {
     return
   fi
   if [ "${cgroup_memory_path}" = "" ] ; then
-    cgroup_memory_path=$(mount | grep cgroup | ${busybox_path} awk '/memory/{print $3}' | head -1)
+    cgroup_memory_path=$(mount | grep cgroup | awk '/memory/{print $3}' | head -1)
   fi
 
   mkdir -p "${cgroup_memory_path}/clash"
@@ -201,7 +201,7 @@ update_dashboard () {
   file_dasboard="${clash_data_dir}/dashboard.zip"
   rm -rf ${clash_data_dir}/dashboard/dist
 
-  /data/adb/magisk/busybox wget --no-check-certificate ${url_dashboard} -o ${file_dasboard} 2>&1
+  wget --no-check-certificate ${url_dashboard} -o ${file_dasboard} 2>&1
   unzip -o  "${file_dasboard}" "yacd-gh-pages/*" -d ${clash_data_dir}/dashboard >&2
   mv -f ${clash_data_dir}/dashboard/yacd-gh-pages ${clash_data_dir}/dashboard/dist 
   rm -rf ${file_dasboard}
