@@ -92,7 +92,6 @@ unzip -o ${MODPATH}/dashboard.zip -d ${clash_data_dir}/dashboard/ >&2
 
 ui_print "- Move Scripts Clash"
 mv ${MODPATH}/scripts/* ${clash_data_dir}/scripts/
-mv ${clash_data_dir}/scripts/config.yaml ${clash_data_dir}/
 mv ${clash_data_dir}/scripts/template ${clash_data_dir}/
 
 ui_print "- Move Cert&Geo"
@@ -140,7 +139,6 @@ rm -rf ${MODPATH}/scripts
 rm -rf ${MODPATH}/geo
 rm -rf ${MODPATH}/binary
 rm -rf ${MODPATH}/clash_service.sh
-rm -rf ${clash_data_dir}/scripts/config.yaml
 rm -rf ${clash_data_dir_kernel}/curl
 
 sleep 1
