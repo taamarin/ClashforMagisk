@@ -14,9 +14,11 @@ monitor_file=$3
 service_control() {
     if [ "${monitor_file}" = "disable" ]; then
         if [ "${events}" = "d" ]; then
-            ${service_path} -s &> ${log} && ${iptables_path} -s &>> ${log} &
+            ${service_path} -s &> ${log} \
+            && ${iptables_path} -s &>> ${log}
         elif [ "${events}" = "n" ]; then
-            ${iptables_path} -k &>> ${log} && ${service_path} -k &>> ${log} &
+            ${iptables_path} -k &>> ${log} \
+            && ${service_path} -k &>> ${log}
         fi
     fi
 }

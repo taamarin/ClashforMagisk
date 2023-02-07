@@ -29,6 +29,11 @@ geox-url:
 #  - off, tidak cocok dengan prosesnya, disarankan untuk menggunakan mode ini di router
 find-process-mode: off # always, strict, off
 
+#  global-client-fingerprint:全局TLS指纹,优先低于proxy内的 client-fingerprint
+#  accepts "chrome","firefox","safari","ios","random","none" options.
+#  Utls is currently support TLS transport in TCP/grpc/WS/HTTP for VLESS/Vmess and trojan.
+# global-client-fingerprint: chrome
+
 profile:
   store-selected: true
   store-fake-ip: false
