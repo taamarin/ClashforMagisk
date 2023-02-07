@@ -7,12 +7,12 @@ source /data/clash/clash.config
 
 find_packages_uid() {
   echo -n "" > ${appuid_file} 
-  if [ "${clash_enhanced_mode}" = "redir-host" ] ; then
+  if [ "${enhanced_mode}" = "redir-host" ] ; then
     for package in $(cat ${filter_packages_file} | sort -u) ; do
       awk '$1~/'^"${package}"$'/{print $2}' ${system_packages_file} >> ${appuid_file}
     done
   else
-    log "[info] enhanced-mode: ${clash_enhanced_mode} "
+    log "[info] enhanced-mode: ${enhanced_mode}"
     log "[info] if you want to use whitelist and blacklist, use enhanced-mode: redr-host"
   fi
 }

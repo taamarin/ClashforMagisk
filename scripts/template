@@ -99,7 +99,7 @@ dns:
   listen: 0.0.0.0:1053
   use-hosts: true
   # redir-host / fake-ip
-  enhanced-mode: redir-host
+  enhanced-mode: fake-ip
   fake-ip-range: 28.0.0.1/8
   fake-ip-filter:
     - '+.lan'
