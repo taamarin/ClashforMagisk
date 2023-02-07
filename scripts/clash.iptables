@@ -410,13 +410,13 @@ if [ "${mode}" != "core" ] ; then
           log "[info] creating iptables transparent proxy rules."
           iptables="iptables -w 100"
           intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-          time start_tproxy && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
+          start_tproxy && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
           if [ "${ipv6}" = "true" ] ; then
             log "[debug] use IPv6."
             ipv6_enable
             iptables="ip6tables -w 100"
             intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
-            time start_tproxy && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
+            start_tproxy && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_tproxy >> /dev/null 2>&1)
           else
             disable_ipv6
             log "[warn ]disable IPv6."
@@ -426,15 +426,15 @@ if [ "${mode}" != "core" ] ; then
           log "[info] creating iptables transparent proxy rules."
           iptables="iptables -w 100"
           intranet[${#intranet[@]}]=$(ip address | grep -w inet | grep -v 127 | awk '{print $2}')
-          time start_redirect && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
-          [ "${tun_status}" = "true" ] && time forward -I || forward -D
+          start_redirect && log "[info] create iptables transparent proxy rules done." || (log "[error] create iptables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+          [ "${tun_status}" = "true" ] && forward -I || forward -D
           if [ "${ipv6}" = "true" ] ; then
             log "[debug] use IPv6."
             ipv6_enable
             iptables="ip6tables -w 100"
             intranet6[${#intranet6[@]}]=$(ip address | grep -w inet6 | grep -v ::1 | grep -v fe80 | awk '{print $2}')
-            time start_redirect && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
-            [ "${tun_status}" = "true" ] && time forward -I || forward -D
+            start_redirect && log "[info] create ip6tables transparent proxy rules done." || (log "[error] create ip6tables transparent proxy rule failed." && stop_redirect >> /dev/null 2>&1)
+            [ "${tun_status}" = "true" ] && forward -I || forward -D
           else
             disable_ipv6
             log "[warn ]disable IPv6."
@@ -444,13 +444,13 @@ if [ "${mode}" != "core" ] ; then
         ;;
       k)
         log "[warning] cleaning up iptables transparent proxy rules."
-        iptables="iptables -w 100" && time stop_tproxy
-        iptables="iptables -w 100" && time stop_redirect
-        iptables="iptables -w 100" && time forward -D
+        iptables="iptables -w 100" && stop_tproxy
+        iptables="iptables -w 100" && stop_redirect
+        iptables="iptables -w 100" && forward -D
         #ipv6
-        iptables="ip6tables -w 100" && time stop_tproxy
-        iptables="ip6tables -w 100" && time stop_redirect
-        iptables="ip6tables -w 100" && time forward -D
+        iptables="ip6tables -w 100" && stop_tproxy
+        iptables="ip6tables -w 100" && stop_redirect
+        iptables="ip6tables -w 100" && forward -D
         log "[warning] clean up iptables transparent proxy rules done."
         ipv6_enable
         ;;
@@ -471,9 +471,9 @@ else
         iptables="ip6tables -w 100" && stop_redirect >> /dev/null 2>&1
         iptables="ip6tables -w 100" && forward -D >> /dev/null 2>&1
  
-        iptables="iptables -w 100" && time forward -I
+        iptables="iptables -w 100" && forward -I
         if [ "${ipv6}" = "true" ] ; then
-          iptables="ip6tables -w 100" && time forward -I
+          iptables="ip6tables -w 100" && forward -I
         fi
         log "[info] mode: ${mode}, disable transparent proxy."
         log "[info] Clash terhubung."
@@ -481,11 +481,11 @@ else
       k)
         iptables="iptables -w 100" && stop_tproxy >> /dev/null 2>&1
         iptables="iptables -w 100" && stop_redirect >> /dev/null 2>&1
-        iptables="iptables -w 100" && time forward -D
+        iptables="iptables -w 100" && forward -D
         #ipv6
         iptables="ip6tables -w 100" && stop_tproxy >> /dev/null 2>&1
         iptables="ip6tables -w 100" && stop_redirect >> /dev/null 2>&1
-        iptables="ip6tables -w 100" && time forward -D
+        iptables="ip6tables -w 100" && forward -D
         log "[warning] cleaning up proxy rules."
         ;;
       *)

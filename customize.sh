@@ -33,9 +33,9 @@ fi
 ui_print "- Magisk version: $MAGISK_VER ($MAGISK_VER_CODE)"
 
 # check android
-if [ "$API" -lt 19 ]; then
+if [ "$API" -lt 28 ]; then
   ui_print "! Unsupported sdk: $API"
-  abort "! Minimal supported sdk is 19 (Android 4.4)"
+  abort "! Minimal supported sdk is 28 (Android 9)"
 else
   ui_print "- Device sdk: $API"
 fi

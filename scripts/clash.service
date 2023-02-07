@@ -152,8 +152,8 @@ start_clash() {
   dow_config
   replace_kernel
   echo $(date) > ${cfm_logs_file}
-  echo "$(${clash_bin_path} -v)" > /dev/null
-  echo "clash for Magisk v3.0" > /dev/null
+  echo "$(${clash_bin_path} -v)" >> ${cfm_logs_file}
+  echo "Clash for Magisk v3.5" >> ${cfm_logs_file}
   echo "CPU: % | RES: kb" >> ${cfm_logs_file}
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━" >> ${cfm_logs_file}
   use_clash
@@ -196,7 +196,7 @@ kill_tool() {
 
 stop_clash() {
   kill_tool
-  if (kill -9 $(pidof clash) || killall -9 clash) ; then
+  if (kill -9 $(pidof clash) || killall -9 clash) || kill -9 $(cat ${clash_pid_file}) ; then
     rm -rf ${clash_pid_file}
     sleep 0.75
     [ $(pidof clash) ] \
@@ -211,10 +211,10 @@ while getopts ":sk" signal ; do
   case ${signal} in
     s)
       stop_clash >> /dev/null 2>&1
-      time start_clash
+      start_clash
       ;;
     k)
-      time stop_clash
+      stop_clash
       ;;
     ?)
       echo ""
