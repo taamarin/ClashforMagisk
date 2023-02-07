@@ -172,3 +172,6 @@ set_perm  ${clash_data_dir}/clash.config ${uid} ${gid} 0755
 set_perm  ${clash_service_dir}/clash_service.sh  0  0  0755
 sleep 1
 ui_print "- Installation is complete, reboot your device"
+ui_print " --- Notes --- "
+ui_print "[+] report issues to @taamarin on Telegram"
+ui_print "[+] Join @taamarin on telegram to get more updates"
