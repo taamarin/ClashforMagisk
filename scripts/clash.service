@@ -161,8 +161,9 @@ start_clash() {
   tun_tproxy
   temporary_config_file
   if [ -f "${clash_bin_path}" ] ; then
-    chown 0:3005 ${clash_bin_path} && chown 0:3005 ${temporary_config_file}
-    chmod 0700 ${clash_bin_path} && chmod 0700 ${temporary_config_file}
+    chown root:net_admin ${clash_bin_path}
+    chmod 6755 ${clash_bin_path}
+    chown -R root:net_admin /data/clash
     nohup crond -c ${clash_run_path} > /dev/null 2>&1 &
     crontab -c ${clash_run_path} -r
     touch ${clash_run_path}/root
