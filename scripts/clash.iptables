@@ -387,8 +387,10 @@ stop_tproxy() {
 
 detected_port() {
   sleep 1
-  if [ "${port_detect}" = "true" ] || log "[info] skip!! port detected。" ; then
+  if [ "${port_detect}" = "true" ] ; then
     ${scripts_dir}/clash.tool -p
+  else
+    log "[info] skip!! port detected."
   fi
 }
 
