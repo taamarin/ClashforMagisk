@@ -1,3 +1,5 @@
+#### ⟳ Changelog v3.5.1
+- fix
 #### ⟳ Changelog v3.5
 - optimize clash service script
 - optimize iptables script

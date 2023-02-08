@@ -30,7 +30,7 @@ update_file() {
     file_bak="${file}.bak"
     update_url="$2"
     [ -f ${file} ] && mv -f ${file} ${file_bak}
-    request="/data/adb/magisk/busybox wget"
+    request="wget"
     request+=" --no-check-certificate"
     request+=" --user-agent ${user_agent}"
     request+=" -O ${file}"
@@ -64,7 +64,7 @@ config_online() {
   clash_pid=$(cat ${clash_pid_file})
   match_count=0
   log "[warning] Download Config online" > ${cfm_logs_file}
-  update_file ${clash_config_file} ${Subcript_url}
+  update_file ${clash_config_file} ${subcript_url}
   sleep 0.5
   if [ -f "${clash_config_file}" ] ; then
     match_count=$((${match_count} + 1))
@@ -124,18 +124,18 @@ update_kernel() {
 
   if [ "${use_premium}" = "false" ] ; then
     if [ "${meta_alpha}" = "false" ] ; then
-      tag_meta=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+      tag_meta=$(wget --no-check-certificate -qO- ${url_meta} | grep -oE "v[0-9]+\.[0-9]+\.[0-9]+" | head -1)
       filename="${file_kernel}-${platform}-${arch}-${tag_meta}"
       update_file "${clash_data_dir}/${file_kernel}.gz" "${url_meta}/download/${tag_meta}/${filename}.gz"
       [ "$?" = "0" ] && flag=false
     else
-      tag_meta=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
+      tag_meta=$(wget --no-check-certificate -qO- ${url_meta}/expanded_assets/${tag} | grep -oE "${tag_name}" | head -1)
       filename="${file_kernel}-${platform}-${arch}-${tag_meta}"
       update_file "${clash_data_dir}/${file_kernel}.gz" "${url_meta}/download/${tag}/${filename}.gz"
       [ "$?" = "0" ] && flag=false
     fi
   else
-    filename=$(/data/adb/magisk/busybox wget --no-check-certificate -qO- "${url_premium}/expanded_assets/premium" | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
+    filename=$(wget --no-check-certificate -qO- "${url_premium}/expanded_assets/premium" | grep -oE "clash-${platform}-${arch}-[0-9]+.[0-9]+.[0-9]+" | head -1)
     update_file "${clash_data_dir}/${file_kernel}.gz" "${url_premium}/download/premium/${filename}.gz"
     [ "$?" = "0" ] && flag=false
   fi

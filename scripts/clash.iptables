@@ -453,8 +453,8 @@ if [ "${mode}" != "core" ] ; then
         iptables="ip6tables -w 100" && stop_tproxy
         iptables="ip6tables -w 100" && stop_redirect
         iptables="ip6tables -w 100" && forward -D
-        log "[warning] clean up iptables transparent proxy rules done."
         ipv6_enable
+        log "[warning] clean up iptables transparent proxy rules done."
         ;;
       ?)
         echo ""
@@ -476,6 +476,9 @@ else
         iptables="iptables -w 100" && forward -I
         if [ "${ipv6}" = "true" ] ; then
           iptables="ip6tables -w 100" && forward -I
+        else
+          disable_ipv6
+          log "[warn ]disable IPv6."
         fi
         log "[info] mode: ${mode}, disable transparent proxy."
         log "[info] Clash terhubung."
@@ -488,6 +491,7 @@ else
         iptables="ip6tables -w 100" && stop_tproxy >> /dev/null 2>&1
         iptables="ip6tables -w 100" && stop_redirect >> /dev/null 2>&1
         iptables="ip6tables -w 100" && forward -D
+        ipv6_enable
         log "[warning] cleaning up proxy rules."
         ;;
       *)
