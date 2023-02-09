@@ -43,6 +43,7 @@ You can download the release [installer zip](https://github.com/taamarin/Clashfo
 ### Normal usage ( Default and Recommended )
 ##### Manage service start / stop
 - Clash service is auto-run after system boot up by default.
+
 - You can use Magisk Manager App to manage it. Be patient to wait it take effect (about 3 second).
 
 ### Advanced usage
@@ -51,7 +52,7 @@ You can download the release [installer zip](https://github.com/taamarin/Clashfo
 ##### Change proxy mode
 - Clash uses `TPROXY` transparent proxy `TCP + UDP` by default, if it detects that the device does not support `TPROXY`, it will automatically use `REDIRECT` to proxy only `TCP`
 
-- Open `${MODDIR}/clash.config` file line [14-15](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L14-#L15), modify the value of `network_mode` to `TCP` or `MIXED `to use `REDIRECT` to proxy `TCP`, and `UDP` will not be proxied when `TUN` is not enabled in the Clash kernel
+- Open `${MODDIR}/clash.config` file line [14-15](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L14-#L15), modify the value of `network_mode` to `TCP` or `MIXED `to use `REDIRECT` to proxy `TCP`, and `UDP` will not be proxied when `TUN` is not enabled in the (Clash kernel)
 
 ##### Bypass transparent proxy when connected to Wi-Fi or open a hotspot
 Clash default transparent proxy local and hotspot, line [17-21](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L17-#L21)
@@ -101,20 +102,24 @@ ${MODDIR}/scripts/clash.tool -s
 - **clash.config** line [36-37](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L36-#L37), If true,
 - use it to download the subscription configuration, when starting Clash , So no need to type `${MODDIR}/scripts/clash.tool -s` anymore
 
+##### costum config
+- you can custom the config A-Z.yaml [67](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L67)
+- default: config.yaml `use_config="false"` 
+
 ##### Change Clash kernel
-You can use Clash.Premium and Clash.Meta
+You can use Clash.Premium and Clash.Meta line [26](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L26)
 - Clash Meta 
   - `${MODDIR}/kernel/lib/Clash.Meta`
 - Clash Premium 
   - `${MODDIR}/kernel/lib/Clash.Premium`
 
-you can download the Kernel automatically, for the settings in the **clash.config** line [79-103](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L79-#L103)
+you can download the Kernel automatically, for the settings in the **clash.config** line [73-75](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L73-#L75)
 ```shell
 ${MODDIR}/scripts/clash.tool -k
 ```
 
 ##### GeoSite, GeoIP, and Mmdb
-- settings are in clash.config line [105-116](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L105-#L116)
+- settings are in clash.config line [77-87](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L77-#L87)
 - if true, will be updated every day at 00.00
 - you can change the URL
 
