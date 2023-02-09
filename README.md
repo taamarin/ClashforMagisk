@@ -51,14 +51,14 @@ You can download the release [installer zip](https://github.com/taamarin/Clashfo
 ##### Change proxy mode
 - Clash uses `TPROXY` transparent proxy `TCP + UDP` by default, if it detects that the device does not support `TPROXY`, it will automatically use `REDIRECT` to proxy only `TCP`
 
-- Open `${MODDIR}/scripts/clash.config` file line [14-15](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L14-#L15), modify the value of `network_mode` to `TCP` or `MIXED `to use `REDIRECT` to proxy `TCP`, and `UDP` will not be proxied when `TUN` is not enabled in the Clash kernel
+- Open `${MODDIR}/clash.config` file line [14-15](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L14-#L15), modify the value of `network_mode` to `TCP` or `MIXED `to use `REDIRECT` to proxy `TCP`, and `UDP` will not be proxied when `TUN` is not enabled in the Clash kernel
 
 ##### Bypass transparent proxy when connected to Wi-Fi or open a hotspot
 Clash default transparent proxy local and hotspot, line [17-21](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L17-#L21)
 
-- Open the `${MODDIR}/scripts/clash.config` file, modify the `ignore_out_list` array and add the `wlan+` element, the transparent proxy will `bypass` the `WLAN`, and the hotspot will not be affected
+- Open the `${MODDIR}/clash.config` file, modify the `ignore_out_list` array and add the `wlan+` element, the transparent proxy will `bypass` the `WLAN`, and the hotspot will not be affected
 
-- Open the `${MODDIR}/scripts/clash.config` file, modify the ap_list array and delete the `wlan+` element to opaque proxy `WLAN` and hotspot (the `MediaTek` model may be `ap+` instead of `wlan+`)
+- Open the `${MODDIR}/clash.config` file, modify the ap_list array and delete the `wlan+` element to opaque proxy `WLAN` and hotspot (the `MediaTek` model may be `ap+` instead of `wlan+`)
 
 ##### Select which packages to proxy
 - If you expect all Apps proxy by Clash with transparent proxy EXCEPT specific Apps, write down bypass at the first line then these Apps' packages separated as above in file `/data/clash/packages.list`
@@ -87,7 +87,7 @@ Clash default transparent proxy local and hotspot, line [17-21](https://github.c
 
 ##### subscription
 you can use SubScription
-- open `/data/clash/clash.config` line [29-34](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L29-#L34)
+- open `${MODDIR}/clash.config` line [29-34](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L29-#L34)
   - update_interval="interval contab"
   - Subcript_url="your_link"
   - auto_updateSubcript="true"
@@ -104,9 +104,9 @@ ${MODDIR}/scripts/clash.tool -s
 ##### Change Clash kernel
 You can use Clash.Premium and Clash.Meta
 - Clash Meta 
-  - `/data/clash/kernel/lib/Clash.Meta`
+  - `${MODDIR}/kernel/lib/Clash.Meta`
 - Clash Premium 
-  - `/data/clash/kernel/lib/Clash.Premium`
+  - `${MODDIR}/kernel/lib/Clash.Premium`
 
 you can download the Kernel automatically, for the settings in the **clash.config** line [79-103](https://github.com/taamarin/ClashforMagisk/blob/master/scripts/clash.config#L79-#L103)
 ```shell
